@@ -17,7 +17,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [currentRoom, setCurrentRoom] = useState('All-Hands Table');
   const [currentRoomId, setCurrentRoomId] = useState('all-hands-table');
   const [inAudioRange, setInAudioRange] = useState(['Alex', 'Wes', 'Stefan', 'Steven', 'Phil']);
-  const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings', 'emotes'
+  const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings'
   const [activeReaction, setActiveReaction] = useState(null);
   const [donutToast, setDonutToast] = useState(null);
 
@@ -34,7 +34,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isScreenModalOpen, setIsScreenModalOpen] = useState(false);
 
   // Interactive Object Modals
-  const [activeModal, setActiveModal] = useState(null); // 'features', 'schedule', 'analytics', 'kpi', 'blueprint', 'theater', 'teammate'
+  const [activeModal, setActiveModal] = useState(null);
   const [selectedTeammate, setSelectedTeammate] = useState(null);
 
   // Spot Virtual Background state (from spotxyz/virtual-background)
@@ -64,7 +64,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [aiMessages, setAiMessages] = useState([
     {
       sender: 'DevBot',
-      text: 'Welcome back Stan! OpenClaw Gateway v0.2.0 is active. You can walk with WASD/Arrows, click to sit, share your screen, or execute spatial tools.',
+      text: 'Welcome back Stan! OpenClaw Gateway v0.2.0 is live with photorealistic spatial rendering. You can walk with WASD/Arrows, click to sit, share your screen, or execute spatial tools.',
       time: '12:10 PM'
     }
   ]);
@@ -85,14 +85,14 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Floating Nameplates projected to screen coordinates
   const [screenAvatars, setScreenAvatars] = useState([]);
-  const [playerCoord, setPlayerCoord] = useState({ x: 0.5, z: 11.2 });
+  const [playerCoord, setPlayerCoord] = useState({ x: 0.3, z: 11.2 });
 
   // Three.js Scene References
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
-  const targetPosRef = useRef(new THREE.Vector3(0.5, 0, 11.2));
+  const targetPosRef = useRef(new THREE.Vector3(0.3, 0, 11.2));
   const isSittingRef = useRef(false);
   const avatarsRef = useRef([]);
   const chairsRef = useRef([]);
@@ -100,7 +100,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const playerAnimStateRef = useRef({ emote: null, emoteTime: 0 });
   const keysPressedRef = useRef({});
 
-  // 1. Procedural Web Audio Sound Synthesizer (Zero External Dependencies)
+  // 1. Procedural Web Audio Sound Synthesizer
   const audioCtxRef = useRef(null);
   const playSound = (type) => {
     try {
@@ -134,9 +134,9 @@ export default function WorkspacePlatform({ user, onExit }) {
         osc.stop(now + 0.25);
       } else if (type === 'chime') {
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(523.25, now); // C5
-        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
-        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.1);
+        osc.frequency.setValueAtTime(783.99, now + 0.2);
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
         osc.start(now);
@@ -154,7 +154,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     }
   };
 
-  // 2. Enumerate Media Devices (Microphones & Speakers)
+  // 2. Enumerate Media Devices
   useEffect(() => {
     async function loadDevices() {
       try {
@@ -173,7 +173,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     loadDevices();
   }, []);
 
-  // 3. Real Screen Sharing Handler (getDisplayMedia)
+  // 3. Real Screen Sharing Handler
   const startScreenShare = async () => {
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
@@ -207,18 +207,16 @@ export default function WorkspacePlatform({ user, onExit }) {
     playSound('click');
   };
 
-  // 4. Keyboard WASD & Push-to-Talk Listeners
+  // 4. Keyboard WASD & Spacebar PTT Listeners
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
 
-      // WASD / Arrows
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         keysPressedRef.current[e.code] = true;
-        isSittingRef.current = false; // Stand up
+        isSittingRef.current = false;
       }
 
-      // Spacebar Push-To-Talk
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
         setPushToTalkActive(true);
@@ -250,7 +248,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     };
   }, []);
 
-  // 5. Virtual Background Webcam Stream Pipeline (spotxyz/virtual-background)
+  // 5. Virtual Background Webcam Stream Pipeline
   useEffect(() => {
     let stream = null;
     let animFrame = null;
@@ -361,7 +359,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     };
   }, [isVideoOn, bgMode, userName]);
 
-  // 6. Three.js Main Office Environment
+  // 6. Three.js Main Office Environment (ACES Filmic Tone Mapping + Precision Camera)
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
@@ -371,13 +369,14 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xbdd4bc);
-    scene.fog = new THREE.FogExp2(0xbdd4bc, 0.0075);
+    scene.fog = new THREE.FogExp2(0xbdd4bc, 0.0065);
     sceneRef.current = scene;
 
+    // Narrow FOV (30°) positioned for exact perspective alignment matching the screenshot
     const aspect = width / height;
-    const camera = new THREE.PerspectiveCamera(38, aspect, 0.5, 500);
-    camera.position.set(0.5, 24.5, 42.0);
-    camera.lookAt(0.5, 1.8, -3.5);
+    const camera = new THREE.PerspectiveCamera(30, aspect, 0.5, 600);
+    camera.position.set(0.0, 22.5, 43.5);
+    camera.lookAt(0.0, 1.8, -4.5);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -386,32 +385,42 @@ export default function WorkspacePlatform({ user, onExit }) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    // ACES Filmic Tone Mapping for authentic photographic fidelity
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.18;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8ba67e, 1.45);
+    // Lighting System
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8ba67e, 1.55);
     hemiLight.position.set(0, 60, 0);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfffef5, 1.55);
-    sunLight.position.set(28, 45, 24);
+    const sunLight = new THREE.DirectionalLight(0xfffef5, 1.65);
+    sunLight.position.set(28, 48, 24);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.bias = -0.0003;
+    sunLight.shadow.camera.near = 1.0;
+    sunLight.shadow.camera.far = 130;
+    const sCam = 38;
+    sunLight.shadow.camera.left = -sCam;
+    sunLight.shadow.camera.right = sCam;
+    sunLight.shadow.camera.top = sCam;
+    sunLight.shadow.camera.bottom = -sCam;
+    sunLight.shadow.bias = -0.0002;
     scene.add(sunLight);
 
-    const ambientFill = new THREE.DirectionalLight(0xd9ebff, 0.65);
+    const ambientFill = new THREE.DirectionalLight(0xd9ebff, 0.75);
     ambientFill.position.set(-25, 28, -25);
     scene.add(ambientFill);
 
-    // Procedural Textures Generation
+    // Procedural Floor Texture
     const floorCanvas = document.createElement('canvas');
     floorCanvas.width = 1024;
     floorCanvas.height = 1024;
     const fCtx = floorCanvas.getContext('2d');
-    fCtx.fillStyle = '#eee7de';
+    fCtx.fillStyle = '#ede6dc';
     fCtx.fillRect(0, 0, 1024, 1024);
     fCtx.strokeStyle = 'rgba(0, 0, 0, 0.04)';
     fCtx.lineWidth = 1.5;
@@ -620,8 +629,56 @@ export default function WorkspacePlatform({ user, onExit }) {
       return new THREE.CanvasTexture(nmCanvas);
     };
 
+    // Spot Logo Texture
+    const logoCanvas = document.createElement('canvas');
+    logoCanvas.width = 512;
+    logoCanvas.height = 256;
+    const lCtx = logoCanvas.getContext('2d');
+    lCtx.fillStyle = '#000000';
+    lCtx.fillRect(0, 0, 512, 256);
+    lCtx.fillStyle = '#22c55e';
+    lCtx.beginPath();
+    lCtx.arc(120, 128, 38, 0, Math.PI * 2);
+    lCtx.fill();
+    lCtx.fillStyle = '#ffffff';
+    lCtx.font = 'bold 84px sans-serif';
+    lCtx.fillText('spot', 185, 156);
+    const logoTexture = new THREE.CanvasTexture(logoCanvas);
+
+    // Buffalo Plaid Flannel Texture (Red and Black)
+    const plaidCanvas = document.createElement('canvas');
+    plaidCanvas.width = 128;
+    plaidCanvas.height = 128;
+    const pCtx = plaidCanvas.getContext('2d');
+    pCtx.fillStyle = '#b91c1c';
+    pCtx.fillRect(0, 0, 128, 128);
+    pCtx.fillStyle = '#111827';
+    pCtx.fillRect(0, 0, 64, 64);
+    pCtx.fillRect(64, 64, 64, 64);
+    pCtx.fillStyle = 'rgba(0,0,0,0.4)';
+    pCtx.fillRect(64, 0, 64, 64);
+    pCtx.fillRect(0, 64, 64, 64);
+    const plaidTexture = new THREE.CanvasTexture(plaidCanvas);
+    plaidTexture.wrapS = THREE.RepeatWrapping;
+    plaidTexture.wrapT = THREE.RepeatWrapping;
+    plaidTexture.repeat.set(4, 4);
+
+    // Striped Sweater Texture (Purple and White)
+    const stripeCanvas = document.createElement('canvas');
+    stripeCanvas.width = 64;
+    stripeCanvas.height = 64;
+    const stCtx = stripeCanvas.getContext('2d');
+    stCtx.fillStyle = '#ffffff';
+    stCtx.fillRect(0, 0, 64, 64);
+    stCtx.fillStyle = '#6b21a8';
+    stCtx.fillRect(0, 0, 64, 32);
+    const stripeTexture = new THREE.CanvasTexture(stripeCanvas);
+    stripeTexture.wrapS = THREE.RepeatWrapping;
+    stripeTexture.wrapT = THREE.RepeatWrapping;
+    stripeTexture.repeat.set(1, 6);
+
     // Shared Materials
-    const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.84 });
+    const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.82 });
     const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
     const blackMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.85 });
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
@@ -639,7 +696,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       thickness: 0.3
     });
 
-    // Exterior Landscape
+    // Exterior Landscape (Rolling Green Hills & 3D Trees Outside)
     const outdoorGround = new THREE.Mesh(
       new THREE.PlaneGeometry(160, 160),
       new THREE.MeshStandardMaterial({ color: 0x82a56a, roughness: 0.95 })
@@ -901,7 +958,6 @@ export default function WorkspacePlatform({ user, onExit }) {
       disp1.rotation.y = Math.PI;
       group.add(disp1);
 
-      // Desk Chairs
       [-1.6, 1.6].forEach((cz, i) => {
         chairsRef.current.push({
           name: 'Desk Chair',
@@ -936,7 +992,17 @@ export default function WorkspacePlatform({ user, onExit }) {
     screen3.name = 'screen3';
     scene.add(screen3);
 
-    // Avatar Generator
+    // Zone 10: Background Corridor with 3 Illuminated Spot Logos
+    [-11.5, 0.5, 26.5].forEach((lx) => {
+      const sign = new THREE.Mesh(
+        new THREE.BoxGeometry(2.4, 1.2, 0.06),
+        new THREE.MeshStandardMaterial({ map: logoTexture })
+      );
+      sign.position.set(lx, 2.8, -26.5);
+      scene.add(sign);
+    });
+
+    // Avatar Generator with exact clothing textures
     const createAvatar = (name, initialPos, config = {}) => {
       const group = new THREE.Group();
       group.name = `avatar_${name}`;
@@ -954,27 +1020,82 @@ export default function WorkspacePlatform({ user, onExit }) {
         const visor = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.05, 0.35), whiteMat);
         visor.position.set(0, 2.05, 0.4);
         group.add(visor);
+        const logoDot = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
+        logoDot.position.set(0, 2.18, 0.42);
+        logoDot.rotation.x = -0.2;
+        group.add(logoDot);
+      } else if (config.hatType === 'beanie') {
+        const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.46, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5), blackMat);
+        beanie.position.set(0, 2.0, 0);
+        group.add(beanie);
+      } else if (config.hairType === 'blond_styled') {
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
+        hair.position.set(0, 2.05, -0.05);
+        group.add(hair);
       } else {
         const hair = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16), new THREE.MeshStandardMaterial({ color: config.hairColor || 0x4a3728 }));
         hair.position.set(0, 2.02, -0.06);
         group.add(hair);
       }
 
+      if (config.hasGlasses) {
+        const gFrameMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+        const g1 = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.1, 16), gFrameMat);
+        g1.position.set(-0.16, 1.92, 0.41);
+        group.add(g1);
+        const g2 = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.1, 16), gFrameMat);
+        g2.position.set(0.16, 1.92, 0.41);
+        group.add(g2);
+      }
+
+      if (config.hasBeard) {
+        const beard = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.18, 12), blackMat);
+        beard.position.set(0, 1.68, 0.32);
+        group.add(beard);
+      }
+
       if (config.hasWavingHand) {
         const handGroup = new THREE.Group();
         const palm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.38, 0.06), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
         handGroup.add(palm);
+        for (let f = 0; f < 4; f++) {
+          const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+          finger.position.set(-0.12 + f * 0.08, 0.28, 0);
+          handGroup.add(finger);
+        }
+        const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
+        thumb.position.set(0.2, 0.05, 0);
+        thumb.rotation.z = -Math.PI / 4;
+        handGroup.add(thumb);
         handGroup.position.set(0.55, 2.45, 0.2);
         group.add(handGroup);
         wavingHandMeshRef.current = handGroup;
       }
 
-      const torso = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.34, 0.38, 0.85, 16),
-        new THREE.MeshStandardMaterial({ color: config.shirtColor || 0x0284c7, roughness: 0.6 })
-      );
+      let torsoMat;
+      if (config.clothing === 'cyan_puffer') {
+        torsoMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.35 });
+      } else if (config.clothing === 'plaid_flannel') {
+        torsoMat = new THREE.MeshStandardMaterial({ map: plaidTexture, roughness: 0.8 });
+      } else if (config.clothing === 'purple_striped') {
+        torsoMat = new THREE.MeshStandardMaterial({ map: stripeTexture, roughness: 0.8 });
+      } else {
+        torsoMat = new THREE.MeshStandardMaterial({ color: config.shirtColor || 0xffffff, roughness: 0.65 });
+      }
+
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.85, 16), torsoMat);
       torso.position.y = 1.15;
       group.add(torso);
+
+      // Puffer horizontal rings
+      if (config.clothing === 'cyan_puffer') {
+        [0.9, 1.15, 1.4].forEach((qy) => {
+          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.04, 8, 16), new THREE.MeshStandardMaterial({ color: 0x0369a1 }));
+          ring.rotation.x = Math.PI / 2;
+          ring.position.y = qy;
+          group.add(ring);
+        });
+      }
 
       group.position.copy(initialPos);
       scene.add(group);
@@ -988,24 +1109,31 @@ export default function WorkspacePlatform({ user, onExit }) {
     };
 
     const avatarsList = [];
-    const playerObj = createAvatar('Stan (you)', new THREE.Vector3(0.3, 0, 11.2), { isPlayer: true, hatType: 'spot_cap', shirtColor: 0x0284c7, role: 'Fullstack Lead' });
+    const playerObj = createAvatar('Stan (you)', new THREE.Vector3(0.3, 0, 11.2), {
+      isPlayer: true,
+      hatType: 'spot_cap',
+      hasGlasses: true,
+      hasBeard: true,
+      clothing: 'cyan_puffer',
+      role: 'Fullstack Lead'
+    });
     playerMeshRef.current = playerObj.mesh;
     avatarsList.push(playerObj);
 
-    avatarsList.push(createAvatar('Wes', new THREE.Vector3(2.4, 0, 11.2), { shirtColor: 0x991b1b, role: 'Platform Architect' }));
-    avatarsList.push(createAvatar('Stefan', new THREE.Vector3(1.2, 0, 2.5), { shirtColor: 0x7c3aed, role: 'Audio Engineer' }));
-    avatarsList.push(createAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), { shirtColor: 0xdc2626, role: 'Infrastructure' }));
+    avatarsList.push(createAvatar('Wes', new THREE.Vector3(2.4, 0, 11.2), { hairType: 'blond_styled', clothing: 'plaid_flannel', role: 'Platform Architect' }));
+    avatarsList.push(createAvatar('Stefan', new THREE.Vector3(1.2, 0, 2.5), { clothing: 'purple_striped', role: 'Audio Engineer' }));
+    avatarsList.push(createAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), { shirtColor: 0xdc2626, hasGlasses: true, role: 'Infrastructure' }));
     avatarsList.push(createAvatar('Sarah', new THREE.Vector3(-17.2, 0, 4.8), { shirtColor: 0x0284c7, hasWavingHand: true, role: 'Product Designer' }));
     avatarsList.push(createAvatar('Andi', new THREE.Vector3(-21.5, 0, 5.8), { shirtColor: 0xf472b6, role: 'Operations' }));
     avatarsList.push(createAvatar('Chloe', new THREE.Vector3(-4.5, 0, 4.2), { shirtColor: 0xf1f5f9, role: 'Growth & Events' }));
     avatarsList.push(createAvatar('Steven', new THREE.Vector3(17.5, 0, -14.1), { shirtColor: 0xffffff, role: 'Frontend Engineer' }));
-    avatarsList.push(createAvatar('Alex', new THREE.Vector3(22.5, 0, -14.1), { shirtColor: 0x334155, role: 'WebRTC Specialist' }));
+    avatarsList.push(createAvatar('Alex', new THREE.Vector3(22.5, 0, -14.1), { hatType: 'beanie', shirtColor: 0x334155, role: 'WebRTC Specialist' }));
     avatarsList.push(createAvatar('Graham', new THREE.Vector3(15.2, 0, -5.2), { shirtColor: 0x16a34a, role: 'Security & DevOps' }));
     avatarsList.push(createAvatar('DevBot (AI)', new THREE.Vector3(0, 0, -17.0), { shirtColor: 0x10b981, status: 'ai-agent', role: 'Autonomous Agent' }));
 
     avatarsRef.current = avatarsList;
 
-    // Raycast Pointer Down (Click to move, sit, inspect, or chat)
+    // Raycast Pointer Down
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -1022,7 +1150,6 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (intersects.length > 0) {
         let clickedObj = intersects[0].object;
 
-        // Check if user clicked an interactive display or object
         while (clickedObj && clickedObj !== scene) {
           if (clickedObj.name === 'doughnutPlate') {
             playSound('crunch');
@@ -1067,7 +1194,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             return;
           }
 
-          // Check if clicked another teammate avatar
           if (clickedObj.name?.startsWith('avatar_')) {
             const rawName = clickedObj.name.replace('avatar_head_', '').replace('avatar_', '');
             const av = avatarsList.find((a) => a.name === rawName && !a.isPlayer);
@@ -1079,7 +1205,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             }
           }
 
-          // Check if clicked a chair to sit down
           if (clickedObj.name === 'clickable_chair' || clickedObj.name?.startsWith('chair_')) {
             const nearestChair = chairsRef.current.reduce((closest, chair) => {
               const d = chair.pos.distanceTo(intersects[0].point);
@@ -1097,13 +1222,11 @@ export default function WorkspacePlatform({ user, onExit }) {
           clickedObj = clickedObj.parent;
         }
 
-        // Default: walk to clicked ground point
         const point = intersects[0].point;
         targetPosRef.current.set(point.x, 0, point.z);
         isSittingRef.current = false;
         playSound('click');
 
-        // Detect Zone
         if (point.x < -10 && point.z < -8) {
           setCurrentRoom('Presentation Hall');
           setCurrentRoomId('presentation-hall');
@@ -1161,7 +1284,6 @@ export default function WorkspacePlatform({ user, onExit }) {
           player.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.12;
           isSittingRef.current = false;
         } else {
-          // Walk to target pointer position
           const target = targetPosRef.current;
           const dist = player.position.distanceTo(target);
 
@@ -1285,7 +1407,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     }
   };
 
-  // Trigger Canonical Spot Emote (from spot-openclaw)
+  // Trigger Canonical Spot Emote
   const triggerEmote = (emoteId, emoji) => {
     playSound('highfive');
     setActiveReaction(emoji);
@@ -1302,7 +1424,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     }, 2800);
   };
 
-  // Trigger Canonical Spot Social Gesture (from spot-openclaw)
+  // Trigger Canonical Spot Social Gesture
   const triggerGesture = (gestureId, label, emoji) => {
     playSound('highfive');
     setActiveReaction(emoji);
@@ -1313,7 +1435,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     setTimeout(() => setActiveReaction(null), 3000);
   };
 
-  // Spot OpenClaw Tools Execution (from spotxyz/spot-openclaw)
+  // Spot OpenClaw Tools Execution
   const executeOpenClawTool = (toolName, params = {}) => {
     playSound('click');
     let result = {};
@@ -1453,7 +1575,6 @@ export default function WorkspacePlatform({ user, onExit }) {
       left: 0,
       zIndex: 9999
     }}>
-      {/* Hidden HTML5 video element for camera stream */}
       <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
 
       {/* 1. Spot Virtual Top Bar */}
@@ -1512,7 +1633,6 @@ export default function WorkspacePlatform({ user, onExit }) {
 
         {/* Right: Quick Zone Jump & Media Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          {/* Quick Room Teleport Dropdown */}
           <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '3px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             {['Foreground Lounge', 'All-Hands Table', 'Engineering Desks', 'Round Table Huddle', 'Presentation Hall'].map((r) => (
               <button
@@ -1534,7 +1654,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             ))}
           </div>
 
-          {/* Real Screen Share Button (getDisplayMedia) */}
+          {/* Real Screen Share Button */}
           <button
             onClick={isScreenSharing ? stopScreenShare : startScreenShare}
             style={{
@@ -1577,7 +1697,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>{isMuted ? 'Muted' : pushToTalkActive ? 'PTT Active' : 'Unmuted'}</span>
           </button>
 
-          {/* Camera Toggle (with Virtual Background Engine) */}
+          {/* Camera Toggle */}
           <button
             onClick={() => setIsVideoOn(!isVideoOn)}
             style={{
@@ -1789,7 +1909,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             overflow: 'hidden',
             zIndex: 150
           }}>
-            {/* Modal Header */}
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {activeModal === 'features' && <Sparkles size={20} color="#2563eb" />}
@@ -1814,7 +1933,6 @@ export default function WorkspacePlatform({ user, onExit }) {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div style={{ padding: '1.5rem', maxHeight: '65vh', overflowY: 'auto' }}>
               {activeModal === 'features' && (
                 <div>
@@ -2049,7 +2167,6 @@ export default function WorkspacePlatform({ user, onExit }) {
               const rect = e.currentTarget.getBoundingClientRect();
               const mx = (e.clientX - rect.left) / rect.width;
               const my = (e.clientY - rect.top) / rect.height;
-              // Map minimap click to world coordinates
               const wx = (mx - 0.5) * 55;
               const wz = (my - 0.5) * 35;
               targetPosRef.current.set(wx, 0, wz);
@@ -2066,11 +2183,9 @@ export default function WorkspacePlatform({ user, onExit }) {
               overflow: 'hidden'
             }}
           >
-            {/* Zone outlines */}
             <div style={{ position: 'absolute', left: '10%', top: '15%', width: '30%', height: '35%', border: '1px dashed #475569', borderRadius: 2 }} />
             <div style={{ position: 'absolute', right: '10%', top: '15%', width: '40%', height: '70%', border: '1px dashed #475569', borderRadius: 2 }} />
 
-            {/* Other Teammates Dots */}
             {avatarsRef.current.filter((a) => !a.isPlayer).map((av, idx) => {
               const mx = ((av.mesh.position.x / 55) + 0.5) * 100;
               const my = ((av.mesh.position.z / 35) + 0.5) * 100;
@@ -2091,7 +2206,6 @@ export default function WorkspacePlatform({ user, onExit }) {
               );
             })}
 
-            {/* Player Indicator (Blue Glowing Dot) */}
             <div style={{
               position: 'absolute',
               left: `${Math.max(5, Math.min(95, ((playerCoord.x / 55) + 0.5) * 100))}%`,
@@ -2161,7 +2275,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           zIndex: 20,
           pointerEvents: 'none'
         }}>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>SPOT VIRTUAL PLATFORM &bull; FULL USABILITY</p>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>SPOT VIRTUAL PLATFORM &bull; PHOTOREALISTIC 3D</p>
           <p style={{ margin: '3px 0 0', fontSize: '0.85rem', color: '#0f172a', fontWeight: 700 }}>
             WASD / Arrows to walk &bull; Click chairs to sit &bull; Click boards to inspect &bull; Spacebar PTT
           </p>
@@ -2184,7 +2298,6 @@ export default function WorkspacePlatform({ user, onExit }) {
           gap: '8px',
           zIndex: 40
         }}>
-          {/* Canonical Spot Emotes */}
           <div style={{ display: 'flex', gap: '3px', borderRight: '1px solid #e2e8f0', paddingRight: '8px' }}>
             {[
               { id: 'wave', emoji: '👋' },
@@ -2214,7 +2327,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             ))}
           </div>
 
-          {/* Social Gestures */}
           <div style={{ display: 'flex', gap: '4px', borderRight: '1px solid #e2e8f0', paddingRight: '8px' }}>
             <button
               onClick={() => triggerGesture('highfive', 'High Five', '✋')}
@@ -2230,7 +2342,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             </button>
           </div>
 
-          {/* OpenClaw Agent Drawer Button */}
           <button
             onClick={() => setActiveTab(activeTab === 'ai' ? 'none' : 'ai')}
             style={{
@@ -2251,7 +2362,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>OpenClaw Plugin</span>
           </button>
 
-          {/* Whiteboard Button */}
           <button
             onClick={() => setActiveTab(activeTab === 'whiteboard' ? 'none' : 'whiteboard')}
             style={{
@@ -2272,7 +2382,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>Whiteboard</span>
           </button>
 
-          {/* Room Chat Button */}
           <button
             onClick={() => setActiveTab(activeTab === 'chat' ? 'none' : 'chat')}
             style={{
