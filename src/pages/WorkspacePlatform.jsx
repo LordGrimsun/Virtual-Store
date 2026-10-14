@@ -379,14 +379,15 @@ export default function WorkspacePlatform({ user, onExit }) {
     const height = container.clientHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xbdd4bc);
-    scene.fog = new THREE.FogExp2(0xbdd4bc, 0.0065);
+    scene.background = new THREE.Color(0xc9e0e8);
+    scene.fog = new THREE.FogExp2(0xc9e0e8, 0.0042);
     sceneRef.current = scene;
 
-    // Calibrated FOV (33°) and elevated perspective camera for comprehensive 1:1 office framing
+    // Elevated three-quarter view: keep the same working distance, but tilt down
+    // more so the office fills the viewport and the distant landscape stays secondary.
     const aspect = width / height;
     const camera = new THREE.PerspectiveCamera(33, aspect, 0.5, 600);
-    camera.position.set(-2.0, 24.5, 48.5);
+    camera.position.set(-2.0, 31.0, 45.0);
     camera.lookAt(-2.0, 1.8, -4.0);
     cameraRef.current = camera;
 
