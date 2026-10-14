@@ -21,10 +21,50 @@ export default function App() {
     companyName: 'Spot Virtual HQ'
   });
 
-  // Handle URL hash changes for deep linking & browser history
+  // Handle Spot deep linking (/org/space/room) and URL hash navigation
   useEffect(() => {
-    const handleHashChange = () => {
+    const handleUrlChange = () => {
+      const pathname = window.location.pathname;
       const hash = window.location.hash.replace('#', '').trim();
+
+      // Check if pathname or hash matches Spot URL structure (/@org/@space/@room)
+      if (pathname.includes('/@') || hash.includes('/@') || hash.includes('@conference')) {
+        const fullUri = pathname.includes('/@') ? pathname : hash;
+        let wsName = 'Sunn Kesh Digital HQ';
+        let wsSlug = '@sunnkesh-4c24f4f3d747fffc';
+        let spaceSlug = '@office';
+        let targetRoom = 'Conference Room B';
+
+        if (fullUri.includes('conference-b') || fullUri.includes('conference')) {
+          targetRoom = 'Conference Room B';
+        } else if (fullUri.includes('huddle')) {
+          targetRoom = 'Round Table Huddle';
+        } else if (fullUri.includes('cafe')) {
+          targetRoom = 'Cafe / Bar';
+        } else if (fullUri.includes('desks')) {
+          targetRoom = 'Engineering Desks';
+        } else if (fullUri.includes('all-hands')) {
+          targetRoom = 'All-Hands Table';
+        }
+
+        if (fullUri.includes('sunnkesh')) {
+          wsName = 'Sunn Kesh Digital HQ';
+          wsSlug = '@sunnkesh-4c24f4f3d747fffc';
+        }
+
+        setCurrentUser((prev) => ({
+          ...prev,
+          fullName: 'Ayush',
+          companyName: wsName,
+          workspaceSlug: wsSlug,
+          spaceSlug: spaceSlug,
+          targetRoom: targetRoom,
+          spotUri: fullUri
+        }));
+        setIsPlatformActive(true);
+        return;
+      }
+
       const validPages = ['home', 'pricing', 'ai-agents', 'virtual-offices', 'virtual-events', 'downloads', 'platform'];
       if (validPages.includes(hash)) {
         if (hash === 'platform') {
@@ -36,9 +76,13 @@ export default function App() {
       }
     };
 
-    handleHashChange();
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+    handleUrlChange();
+    window.addEventListener('hashchange', handleUrlChange);
+    window.addEventListener('popstate', handleUrlChange);
+    return () => {
+      window.removeEventListener('hashchange', handleUrlChange);
+      window.removeEventListener('popstate', handleUrlChange);
+    };
   }, []);
 
   const changePage = (page) => {
@@ -62,7 +106,11 @@ export default function App() {
 
   const exitPlatform = () => {
     setIsPlatformActive(false);
-    window.location.hash = 'home';
+    try {
+      window.history.pushState({}, '', '/#home');
+    } catch (e) {
+      window.location.hash = 'home';
+    }
     setCurrentPage('home');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

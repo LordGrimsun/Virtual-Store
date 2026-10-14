@@ -54,12 +54,13 @@ export default function SpacesSidebar({
       ]
     },
     {
-      id: 'boardroom',
-      name: 'Glass Boardroom',
-      roomName: 'Glass Boardroom',
+      id: 'conference-b',
+      name: 'Conference Room B 🎙️',
+      roomName: 'Conference Room B',
       active: true,
       members: [
-        { name: 'DevBot (AI)', role: 'Autonomous Agent', isMe: false }
+        { name: 'DevBot (AI)', role: 'Autonomous Agent', isMe: false },
+        { name: 'Sunn Kesh (Host)', role: 'Digital Lead', isMe: false }
       ]
     },
     {
@@ -111,16 +112,16 @@ export default function SpacesSidebar({
           width: 36,
           height: 36,
           borderRadius: '50%',
-          background: '#22c55e',
+          background: '#0284c7',
           color: '#ffffff',
           fontWeight: 800,
           fontSize: '13px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 0 10px rgba(34, 197, 94, 0.4)'
+          boxShadow: '0 0 10px rgba(2, 132, 199, 0.4)'
         }}>
-          ST
+          SK
         </div>
 
         <div style={{ width: '28px', height: '1px', background: '#1e293b' }} />
@@ -173,7 +174,7 @@ export default function SpacesSidebar({
           justifyContent: 'space-between'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#ffffff' }}>Spot Team</span>
+            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#ffffff' }}>Sunn Kesh Digital HQ</span>
             <ChevronDown size={14} color="#94a3b8" />
           </div>
 

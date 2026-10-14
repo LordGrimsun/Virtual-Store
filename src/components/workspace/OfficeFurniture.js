@@ -503,13 +503,14 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   };
   createAllHandsTable();
 
-  // 6. Zone 6: Glass Boardroom Interior Furniture
-  const innerTable = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.12, 1.8), darkTableMat);
+  // 6. Zone 6: Glass Boardroom / Conference Room B (spotvirtual.com/@office/@conference-b)
+  const innerTable = new THREE.Mesh(new THREE.BoxGeometry(5.6, 0.12, 1.8), darkTableMat);
   innerTable.position.set(0, 1.1, -17.0);
   innerTable.castShadow = true;
   innerTable.receiveShadow = true;
   scene.add(innerTable);
 
+  // Conference B Backwall Presentation Screen
   const boardroomScreen = new THREE.Mesh(
     new THREE.BoxGeometry(4.8, 2.6, 0.08),
     new THREE.MeshStandardMaterial({
@@ -518,12 +519,91 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     })
   );
   boardroomScreen.position.set(0, 2.4, -21.6);
+  boardroomScreen.name = 'boardroomScreen';
+  boardroomScreen.castShadow = true;
   scene.add(boardroomScreen);
 
-  // 6 Chairs in Boardroom
-  [-1.6, 0, 1.6].forEach((bx, idx) => {
-    createCantileverChair(bx, -18.4, 0, `Boardroom Chair N${idx + 1}`);
-    createCantileverChair(bx, -15.6, Math.PI, `Boardroom Chair S${idx + 1}`);
+  // Illuminated "CONFERENCE B" Glass Entrance Sign (media_1791967521136.png)
+  const signCanvas = document.createElement('canvas');
+  signCanvas.width = 512;
+  signCanvas.height = 128;
+  const sCtx = signCanvas.getContext('2d');
+  sCtx.fillStyle = '#0f172a';
+  sCtx.fillRect(0, 0, 512, 128);
+  sCtx.strokeStyle = '#38bdf8';
+  sCtx.lineWidth = 6;
+  sCtx.strokeRect(6, 6, 500, 116);
+  sCtx.font = 'bold 36px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  sCtx.fillStyle = '#ffffff';
+  sCtx.textAlign = 'center';
+  sCtx.fillText('CONFERENCE B', 230, 75);
+  // Status indicator
+  sCtx.fillStyle = '#22c55e';
+  sCtx.beginPath();
+  sCtx.arc(430, 68, 12, 0, Math.PI * 2);
+  sCtx.fill();
+  const signTex = new THREE.CanvasTexture(signCanvas);
+  const confSign = new THREE.Mesh(
+    new THREE.BoxGeometry(3.6, 0.55, 0.08),
+    new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.25 })
+  );
+  confSign.position.set(0, 4.35, -12.4);
+  scene.add(confSign);
+
+  // Conference Table Audio Puck / Speakerphone
+  const confPuck = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 0.07, 16), blackMetalMat);
+  confPuck.position.set(0, 1.2, -17.0);
+  confPuck.name = 'confAudioPuck';
+  confPuck.castShadow = true;
+  scene.add(confPuck);
+
+  const confPuckRing = new THREE.Mesh(
+    new THREE.TorusGeometry(0.25, 0.015, 8, 20),
+    new THREE.MeshBasicMaterial({ color: 0x22c55e })
+  );
+  confPuckRing.rotation.x = Math.PI / 2;
+  confPuckRing.position.set(0, 1.23, -17.0);
+  scene.add(confPuckRing);
+
+  // Tabletop Interactive Game: Connect Four Widget Prop
+  const c4Prop = new THREE.Mesh(
+    new THREE.BoxGeometry(0.48, 0.36, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.3 })
+  );
+  c4Prop.position.set(-1.4, 1.34, -17.0);
+  c4Prop.castShadow = true;
+  c4Prop.name = 'widget_connectFour';
+  scene.add(c4Prop);
+
+  // Tabletop Interactive Game: Spin The Wheel Widget Prop
+  const wheelProp = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.22, 0.04, 16),
+    new THREE.MeshStandardMaterial({ color: 0x8b5cf6, roughness: 0.3 })
+  );
+  wheelProp.position.set(1.4, 1.2, -17.0);
+  wheelProp.castShadow = true;
+  wheelProp.name = 'widget_spinWheel';
+  scene.add(wheelProp);
+
+  // Corner Watercooler Station
+  const waterCoolerGrp = new THREE.Group();
+  const wcBase = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.1, 0.6), whiteMat);
+  wcBase.position.y = 0.55;
+  waterCoolerGrp.add(wcBase);
+  const wcBottle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.22, 0.22, 0.65, 16),
+    new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, roughness: 0.1 })
+  );
+  wcBottle.position.y = 1.45;
+  waterCoolerGrp.add(wcBottle);
+  waterCoolerGrp.position.set(3.8, 0, -20.5);
+  waterCoolerGrp.name = 'widget_watercooler';
+  scene.add(waterCoolerGrp);
+
+  // 8 Executive Cantilever Chairs in Conference Room B
+  [-2.0, -0.67, 0.67, 2.0].forEach((bx, idx) => {
+    createCantileverChair(bx, -18.4, 0, `Conference B Chair N${idx + 1}`);
+    createCantileverChair(bx, -15.6, Math.PI, `Conference B Chair S${idx + 1}`);
   });
 
   // 7. Zone 7: Mobile Whiteboard Stand ("10:42 1 on 1 with Stan")
@@ -875,6 +955,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     mobileScreen,
     screen1,
     screen2,
-    screen3
+    screen3,
+    boardroomScreen
   };
 }

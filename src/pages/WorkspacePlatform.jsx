@@ -16,14 +16,21 @@ import { createAvatarSystem } from '../components/workspace/AvatarSystem';
 import ScreenDisplayManager from '../components/workspace/ScreenDisplayManager';
 import UserProfileDrawer from '../components/workspace/UserProfileDrawer';
 import SpacesSidebar from '../components/workspace/SpacesSidebar';
+import ConnectFourWidget from '../components/workspace/widgets/ConnectFourWidget';
+import SpinWheelWidget from '../components/workspace/widgets/SpinWheelWidget';
+import WatercoolerWidget from '../components/workspace/widgets/WatercoolerWidget';
+import SpotLinkModal from '../components/workspace/SpotLinkModal';
 
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
 
-  // User & Room state
-  const [userName, setUserName] = useState(user?.fullName || 'Stan');
-  const [currentRoom, setCurrentRoom] = useState('All-Hands Table');
-  const [currentRoomId, setCurrentRoomId] = useState('all-hands-table');
+  // User & Room state (defaults to Conference Room B / Sunn Kesh HQ)
+  const [userName, setUserName] = useState(user?.fullName || 'Ayush');
+  const [currentRoom, setCurrentRoom] = useState(user?.targetRoom || 'Conference Room B');
+  const [currentRoomId, setCurrentRoomId] = useState(
+    user?.targetRoom === 'All-Hands Table' ? 'all-hands-table' : 'conference-b'
+  );
+  const [workspaceSlug, setWorkspaceSlug] = useState(user?.workspaceSlug || '@sunnkesh-4c24f4f3d747fffc');
   const [inAudioRange, setInAudioRange] = useState(['Alex', 'Wes', 'Stefan', 'Steven', 'Phil']);
   const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings'
   const [activeReaction, setActiveReaction] = useState(null);
@@ -48,6 +55,12 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isSpacesSidebarOpen, setIsSpacesSidebarOpen] = useState(false);
   const screensRef = useRef({});
   const screenTexturesRef = useRef(null);
+
+  // Spot Tabletop Widgets & Link Modal
+  const [isConnectFourOpen, setIsConnectFourOpen] = useState(false);
+  const [isSpinWheelOpen, setIsSpinWheelOpen] = useState(false);
+  const [isWatercoolerOpen, setIsWatercoolerOpen] = useState(false);
+  const [isSpotLinkModalOpen, setIsSpotLinkModalOpen] = useState(false);
 
   // Interactive Object Modals
   const [activeModal, setActiveModal] = useState(null);
@@ -109,7 +122,11 @@ export default function WorkspacePlatform({ user, onExit }) {
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
   const playerPartsRef = useRef(null);
-  const targetPosRef = useRef(new THREE.Vector3(0.3, 0, 11.2));
+  const targetPosRef = useRef(
+    user?.targetRoom === 'All-Hands Table'
+      ? new THREE.Vector3(4.5, 0, 5.5)
+      : new THREE.Vector3(0, 0, -16.5)
+  );
   const isSittingRef = useRef(false);
   const avatarsRef = useRef([]);
   const chairsRef = useRef([]);
@@ -474,7 +491,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
 
           // 12-Icon Screen Display Target Click (media_1791967521142.png)
-          if (['featBoard', 'mobileSchedule', 'screen1', 'screen2', 'screen3', 'theaterScreen'].includes(clickedObj.name)) {
+          if (['featBoard', 'mobileSchedule', 'screen1', 'screen2', 'screen3', 'theaterScreen', 'boardroomScreen'].includes(clickedObj.name)) {
             playSound('chime');
             const screenDisplayNames = {
               theaterScreen: 'Main Auditorium Theater Screen',
@@ -482,13 +499,38 @@ export default function WorkspacePlatform({ user, onExit }) {
               mobileSchedule: 'Mobile Stand Schedule Whiteboard',
               screen1: 'Telemetry Area Chart Display',
               screen2: 'Digital LED KPI Scoreboard',
-              screen3: 'Architecture Blueprint Display'
+              screen3: 'Architecture Blueprint Display',
+              boardroomScreen: 'Conference Room B Presentation Screen'
             };
             setActiveScreenTarget({
               id: clickedObj.name,
               name: screenDisplayNames[clickedObj.name] || 'Spot Office Screen',
               mesh: clickedObj
             });
+            return;
+          }
+
+          // Conference Room B Tabletop Widgets & Audio Controls
+          if (clickedObj.name === 'widget_connectFour') {
+            playSound('chime');
+            setIsConnectFourOpen(true);
+            return;
+          }
+          if (clickedObj.name === 'widget_spinWheel') {
+            playSound('chime');
+            setIsSpinWheelOpen(true);
+            return;
+          }
+          if (clickedObj.name === 'widget_watercooler') {
+            playSound('chime');
+            setIsWatercoolerOpen(true);
+            return;
+          }
+          if (clickedObj.name === 'confAudioPuck') {
+            playSound('click');
+            setIsMuted((prev) => !prev);
+            setDonutToast(!isMuted ? 'Conference Room B: Muted 🔇' : 'Conference Room B: Unmuted 🎙️');
+            setTimeout(() => setDonutToast(null), 3000);
             return;
           }
 
@@ -731,9 +773,13 @@ export default function WorkspacePlatform({ user, onExit }) {
     } else if (roomName === 'Engineering Desks') {
       targetPosRef.current.set(18.5, 0, -6.0);
       setCurrentRoomId('engineering-desks');
-    } else if (roomName === 'Glass Boardroom') {
-      targetPosRef.current.set(0, 0, -16.0);
-      setCurrentRoomId('glass-boardroom');
+    } else if (roomName === 'Glass Boardroom' || roomName.includes('Conference')) {
+      targetPosRef.current.set(0, 0, -16.5);
+      setCurrentRoomId('conference-b');
+      setCurrentRoom('Conference Room B');
+      try {
+        window.history.pushState({}, '', `/${workspaceSlug}/@office/@conference-b`);
+      } catch (e) {}
     } else if (roomName === 'Round Table Huddle') {
       targetPosRef.current.set(-17.0, 0, 5.0);
       setCurrentRoomId('round-table-huddle');
@@ -1138,8 +1184,8 @@ export default function WorkspacePlatform({ user, onExit }) {
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 800
-            }}>ST</span>
-            <span>Spot Team</span>
+            }}>SK</span>
+            <span>{user?.companyName || 'Sunn Kesh HQ'}</span>
             <ChevronDown size={14} color="#64748b" />
           </button>
 
@@ -1155,6 +1201,28 @@ export default function WorkspacePlatform({ user, onExit }) {
             <MapPin size={14} color="#0284c7" />
             <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>{currentRoom}</span>
           </div>
+
+          {/* Spot Room Deep Link Trigger (spotvirtual.com/@sunnkesh-4c24f4f3d747fffc/@office/@conference-b) */}
+          <button
+            onClick={() => setIsSpotLinkModalOpen(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#f0fdf4',
+              border: '1px solid #86efac',
+              padding: '5px 12px',
+              borderRadius: '2rem',
+              color: '#15803d',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+            title="Open or Copy Spot Room URL"
+          >
+            <span>🔗</span>
+            <span>@conference-b</span>
+          </button>
 
           {/* Spatial Audio Range Counter */}
           <div style={{
@@ -1177,10 +1245,10 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Center: Quick Room Switcher Tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {[
+            'Conference Room B',
             'All-Hands Table',
             'Round Table Huddle',
             'Engineering Desks',
-            'Glass Boardroom',
             'Foreground Lounge',
             'Presentation Hall'
           ].map((r) => (
@@ -2051,6 +2119,33 @@ export default function WorkspacePlatform({ user, onExit }) {
           isHeadphonesOn={isHeadphonesOn}
           onToggleHeadphones={() => setIsHeadphonesOn(!isHeadphonesOn)}
           onExit={onExit}
+        />
+
+        {/* 11. Connect Four Tabletop Widget (spotvirtual.com ConnectFourWidget) */}
+        <ConnectFourWidget
+          isOpen={isConnectFourOpen}
+          onClose={() => setIsConnectFourOpen(false)}
+        />
+
+        {/* 12. Spin The Wheel Tabletop Widget (spotvirtual.com SpinWheelWidget) */}
+        <SpinWheelWidget
+          isOpen={isSpinWheelOpen}
+          onClose={() => setIsSpinWheelOpen(false)}
+        />
+
+        {/* 13. Watercooler Prompt Generator (spotvirtual.com WatercoolerWidget) */}
+        <WatercoolerWidget
+          isOpen={isWatercoolerOpen}
+          onClose={() => setIsWatercoolerOpen(false)}
+        />
+
+        {/* 14. Spot Room Link Modal & Deep Link Teleport */}
+        <SpotLinkModal
+          isOpen={isSpotLinkModalOpen}
+          onClose={() => setIsSpotLinkModalOpen(false)}
+          currentRoom={currentRoom}
+          workspaceSlug={workspaceSlug}
+          onTeleportToRoom={jumpToRoom}
         />
       </main>
 
