@@ -139,16 +139,22 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   const sunLight = new THREE.DirectionalLight(0xfffef5, 1.35);
   sunLight.position.set(28, 48, 24);
   sunLight.castShadow = true;
-  sunLight.shadow.mapSize.width = 2048;
-  sunLight.shadow.mapSize.height = 2048;
+  // Higher-resolution shadow maps and a tighter camera frustum keep contact
+  // shadows crisp around desks, chairs, and architectural edges without wasting
+  // resolution on the distant landscape.
+  sunLight.shadow.mapSize.width = 3072;
+  sunLight.shadow.mapSize.height = 3072;
   sunLight.shadow.camera.near = 1.0;
-  sunLight.shadow.camera.far = 135;
-  const sCam = 40;
+  sunLight.shadow.camera.far = 110;
+  const sCam = 32;
   sunLight.shadow.camera.left = -sCam;
   sunLight.shadow.camera.right = sCam;
   sunLight.shadow.camera.top = sCam;
   sunLight.shadow.camera.bottom = -sCam;
-  sunLight.shadow.bias = -0.0003;
+  sunLight.shadow.bias = -0.00015;
+  sunLight.shadow.normalBias = 0.025;
+  sunLight.shadow.radius = 3;
+  sunLight.shadow.camera.updateProjectionMatrix();
   scene.add(sunLight);
 
   const fillLight = new THREE.DirectionalLight(0xd9ebff, 0.65);

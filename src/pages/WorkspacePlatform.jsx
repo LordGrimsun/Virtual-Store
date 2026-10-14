@@ -395,7 +395,8 @@ export default function WorkspacePlatform({ user, onExit }) {
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    // Soft PCF filtering removes harsh, pixelated edges from the office shadows.
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // ACES Filmic Tone Mapping for authentic photographic fidelity
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
