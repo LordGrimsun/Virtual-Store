@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Menu, X, ArrowRight, Sparkles, Building2, Calendar, Bot } from 'lucide-react';
 
-export default function Navbar({ currentPage, setCurrentPage, openAuthModal, theme = 'light' }) {
+export default function Navbar({ currentPage, setCurrentPage, openAuthModal, onLaunchPlatform, theme = 'light' }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
@@ -240,10 +240,12 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                 </button>
                 <button
                   type="button"
-                  onClick={() => openAuthModal('signup')}
+                  onClick={onLaunchPlatform}
                   className="ButtonLink_button ButtonLink_green ButtonLink_small Navbar_navButton"
+                  style={{ gap: '6px' }}
                 >
-                  Start Free
+                  <Sparkles size={14} />
+                  <span>Access Platform</span>
                 </button>
               </div>
             </div>
@@ -252,10 +254,12 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
             <div className="Navbar_mobileNavbarRight">
               <button
                 type="button"
-                onClick={() => openAuthModal('signup')}
+                onClick={onLaunchPlatform}
                 className="ButtonLink_button ButtonLink_green Navbar_mobileNavButton"
+                style={{ gap: '4px' }}
               >
-                Start Free
+                <Sparkles size={13} />
+                <span>Platform</span>
               </button>
               <button
                 type="button"
@@ -386,10 +390,12 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                 </button>
                 <button
                   type="button"
-                  onClick={() => openAuthModal('signup')}
+                  onClick={onLaunchPlatform}
                   className="ButtonLink_button ButtonLink_green ButtonLink_small Navbar_navButton"
+                  style={{ gap: '6px' }}
                 >
-                  Start Free
+                  <Sparkles size={14} />
+                  <span>Access Platform</span>
                 </button>
               </div>
             </div>

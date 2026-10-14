@@ -170,3 +170,120 @@
   font-size: 0.8rem;
   color: #94a3b8;
 }
+
+/* Global App Centering & Layout Alignment */
+.SpotApp_root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 auto;
+  overflow-x: hidden;
+}
+
+.SpotApp_mainContent {
+  width: 100%;
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.HomePage_wrapper,
+.PricingPage_wrapper,
+.AIAgentsPage_wrapper,
+.VirtualOfficesPage_wrapper,
+.VirtualEventsPage_wrapper,
+.DownloadsPage_wrapper {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.HeroSection_pricingHero,
+.PricingOptionsSection_section,
+.ComparisonSection_section_pricing,
+.TestimonialSection_section_pricing,
+.FaqSection_section,
+.CTASection_section,
+.ai-agents_heroSection,
+.ai-agents_valueSection,
+.ai-agents_controlSection,
+.ai-agents_availabilitySection,
+.virtual-offices_heroContainer,
+.virtual-events_heroContainer,
+.virtual-events_eventBulletsContainer {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+/* Virtual Office Platform Fullscreen Workspace */
+.Platform_container {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  color: #f8fafc;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+}
+
+.Platform_topBar {
+  height: 64px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 20;
+  flex-shrink: 0;
+}
+
+.Platform_mainArea {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.Platform_sidebar {
+  width: 320px;
+  background: #1e293b;
+  border-right: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  z-index: 15;
+  transition: transform 0.25s ease;
+}
+@media (max-width: 900px) {
+  .Platform_sidebar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+  }
+  .Platform_sidebar.collapsed {
+    transform: translateX(-100%);
+  }
+}
+
+.Platform_stage {
+  flex: 1;
+  position: relative;
+  background: #090d16;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+

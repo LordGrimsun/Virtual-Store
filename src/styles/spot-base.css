@@ -165,28 +165,32 @@ h2 {
 /* Sections & Containers */
 .Section_section {
   width: 100%;
-  padding: 0 8rem;
-}
-@media (max-width: 1200px) {
-  .Section_section { padding: 0 3rem; }
-}
-@media (max-width: 992px) {
-  .Section_section { padding: 0 2rem; }
-}
-@media (max-width: 768px) {
-  .Section_section { padding: 0 1.25rem; }
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .Section_container {
   width: 100%;
-  height: 100%;
-  margin: auto;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  box-sizing: border-box;
 }
+@media (max-width: 768px) {
+  .Section_container {
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+}
+
 .Section_normal {
-  max-width: 1440px;
+  max-width: 1280px;
 }
 .Section_narrow {
-  max-width: 1080px;
+  max-width: 1040px;
 }
 .Section_noContainer {
   max-width: none;

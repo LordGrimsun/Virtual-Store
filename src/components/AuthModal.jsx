@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Sparkles, Check, ArrowRight, Building, Mail, Lock, User } from 'lucide-react';
 
-export default function AuthModal({ isOpen, onClose, initialMode = 'signup', selectedPlan = 'Growth' }) {
+export default function AuthModal({ isOpen, onClose, initialMode = 'signup', selectedPlan = 'Free Forever', onLoginSuccess }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +15,18 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
   const handleSubmit = (e) => {
     e.preventDefault();
     setIsSuccess(true);
+  };
+
+  const handleEnterWorkspace = () => {
+    setIsSuccess(false);
+    onClose();
+    if (onLoginSuccess) {
+      onLoginSuccess({
+        fullName: fullName || (email ? email.split('@')[0] : 'Ayush'),
+        email: email || 'user@spotvirtual.com',
+        companyName: companyName || 'Spot Virtual HQ'
+      });
+    }
   };
 
   const resetAndClose = () => {
@@ -43,15 +55,15 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
               Welcome to Spot!
             </h2>
             <p className="mediumBodyText" style={{ marginBottom: '2rem' }}>
-              Your workspace <strong>{companyName || 'Virtual HQ'}</strong> on the <strong>{plan}</strong> plan is ready to launch.
+              Your workspace <strong>{companyName || 'Spot Virtual HQ'}</strong> is ready. All features, AI agents, and rooms are 100% free and unlocked.
             </p>
             <button
               type="button"
-              onClick={resetAndClose}
+              onClick={handleEnterWorkspace}
               className="ButtonLink_button ButtonLink_green ButtonLink_regular"
               style={{ width: '100%', borderRadius: '2rem' }}
             >
-              Enter Virtual Workspace
+              Enter Virtual Workspace Platform
             </button>
           </div>
         ) : (
