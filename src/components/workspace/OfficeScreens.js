@@ -307,6 +307,96 @@ export function createOfficeScreenTextures() {
 
   const logoTexture = new THREE.CanvasTexture(logoCanvas);
 
+  // 8. Starry Space Spot Galaxy Screensaver (Matching media_1791967521142.png)
+  const createStarryLogoTexture = () => {
+    const sCanvas = document.createElement('canvas');
+    sCanvas.width = 1024;
+    sCanvas.height = 576;
+    const sCtx = sCanvas.getContext('2d');
+
+    // Deep space black backdrop
+    sCtx.fillStyle = '#05070e';
+    sCtx.fillRect(0, 0, 1024, 576);
+
+    // Scattered twinkling stars
+    for (let i = 0; i < 350; i++) {
+      const sx = Math.random() * 1024;
+      const sy = Math.random() * 576;
+      const sr = Math.random() * 1.8 + 0.4;
+      const alpha = Math.random() * 0.85 + 0.15;
+      sCtx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      sCtx.beginPath();
+      sCtx.arc(sx, sy, sr, 0, Math.PI * 2);
+      sCtx.fill();
+    }
+
+    // Centered Glowing Green Spot Orb & Typography
+    const centerX = 512;
+    const centerY = 288;
+
+    // Soft Radial Glow
+    const glowGrad = sCtx.createRadialGradient(centerX - 110, centerY, 10, centerX - 110, centerY, 120);
+    glowGrad.addColorStop(0, 'rgba(34, 197, 94, 0.45)');
+    glowGrad.addColorStop(1, 'rgba(34, 197, 94, 0)');
+    sCtx.fillStyle = glowGrad;
+    sCtx.beginPath();
+    sCtx.arc(centerX - 110, centerY, 120, 0, Math.PI * 2);
+    sCtx.fill();
+
+    // 3D Beveled Green Sphere
+    const orbGrad = sCtx.createRadialGradient(centerX - 125, centerY - 15, 12, centerX - 110, centerY, 52);
+    orbGrad.addColorStop(0, '#86efac');
+    orbGrad.addColorStop(0.5, '#22c55e');
+    orbGrad.addColorStop(1, '#15803d');
+    sCtx.fillStyle = orbGrad;
+    sCtx.beginPath();
+    sCtx.arc(centerX - 110, centerY, 52, 0, Math.PI * 2);
+    sCtx.fill();
+
+    // White "spot" typography
+    sCtx.fillStyle = '#ffffff';
+    sCtx.font = 'bold 120px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    sCtx.textAlign = 'left';
+    sCtx.textBaseline = 'middle';
+    sCtx.fillText('spot', centerX - 25, centerY + 8);
+
+    return new THREE.CanvasTexture(sCanvas);
+  };
+
+  // 9. Countdown Timer & Meeting Clock Texture
+  const createTimerTexture = (timeString = '24:59', title = 'Lightning Talk Timer') => {
+    const tCanvas = document.createElement('canvas');
+    tCanvas.width = 1024;
+    tCanvas.height = 512;
+    const tCtx = tCanvas.getContext('2d');
+    tCtx.fillStyle = '#0f172a';
+    tCtx.fillRect(0, 0, 1024, 512);
+
+    tCtx.strokeStyle = '#38bdf8';
+    tCtx.lineWidth = 6;
+    tCtx.strokeRect(20, 20, 984, 472);
+
+    tCtx.fillStyle = '#94a3b8';
+    tCtx.font = 'bold 32px sans-serif';
+    tCtx.textAlign = 'center';
+    tCtx.fillText(title.toUpperCase(), 512, 100);
+
+    tCtx.fillStyle = '#38bdf8';
+    tCtx.font = 'bold 160px "Courier New", monospace';
+    tCtx.shadowColor = '#0284c7';
+    tCtx.shadowBlur = 24;
+    tCtx.fillText(timeString, 512, 280);
+    tCtx.shadowBlur = 0;
+
+    tCtx.fillStyle = '#22c55e';
+    tCtx.font = 'bold 24px sans-serif';
+    tCtx.fillText('● PRESENTATION ACTIVE &bull; SPOT SYNC', 512, 420);
+
+    return new THREE.CanvasTexture(tCanvas);
+  };
+
+  const starryLogoTexture = createStarryLogoTexture();
+
   return {
     chartTexture,
     kpiTexture,
@@ -314,6 +404,9 @@ export function createOfficeScreenTextures() {
     featTexture,
     schedTexture,
     logoTexture,
-    createNoMeetTexture
+    starryLogoTexture,
+    createNoMeetTexture,
+    createStarryLogoTexture,
+    createTimerTexture
   };
 }

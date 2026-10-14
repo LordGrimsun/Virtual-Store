@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {
   Mic, MicOff, Video, VideoOff, Monitor, Headphones, Volume2,
   Users, Bot, MessageSquare, Edit3, Share2, LogOut, Settings,
-  Sparkles, Send, Plus, Check, ChevronRight, X, PhoneCall, VolumeX,
+  Sparkles, Send, Plus, Check, ChevronRight, ChevronDown, X, PhoneCall, VolumeX,
   Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
   Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
   TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag
@@ -13,6 +13,9 @@ import { createOfficeScreenTextures } from '../components/workspace/OfficeScreen
 import { buildOfficeEnvironment } from '../components/workspace/OfficeEnvironment';
 import { buildOfficeFurniture } from '../components/workspace/OfficeFurniture';
 import { createAvatarSystem } from '../components/workspace/AvatarSystem';
+import ScreenDisplayManager from '../components/workspace/ScreenDisplayManager';
+import UserProfileDrawer from '../components/workspace/UserProfileDrawer';
+import SpacesSidebar from '../components/workspace/SpacesSidebar';
 
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
@@ -38,6 +41,13 @@ export default function WorkspacePlatform({ user, onExit }) {
   const screenShareVideoRef = useRef(null);
   const [screenStream, setScreenStream] = useState(null);
   const [isScreenModalOpen, setIsScreenModalOpen] = useState(false);
+
+  // Spot Dynamic Screen Displays & Sidebars
+  const [activeScreenTarget, setActiveScreenTarget] = useState(null);
+  const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
+  const [isSpacesSidebarOpen, setIsSpacesSidebarOpen] = useState(false);
+  const screensRef = useRef({});
+  const screenTexturesRef = useRef(null);
 
   // Interactive Object Modals
   const [activeModal, setActiveModal] = useState(null);
@@ -408,12 +418,13 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     // Build Screen Textures
     const screenTextures = createOfficeScreenTextures();
+    screenTexturesRef.current = screenTextures;
 
     // Build Architecture Environment & Lighting
     buildOfficeEnvironment(scene, screenTextures);
 
     // Build Office Furniture, Desks, Cantilever Chairs, Props
-    buildOfficeFurniture(scene, screenTextures, chairsRef);
+    screensRef.current = buildOfficeFurniture(scene, screenTextures, chairsRef);
 
     // Build Stylized 3D Humanoid Avatars
     const avatarSystem = createAvatarSystem();
@@ -461,34 +472,23 @@ export default function WorkspacePlatform({ user, onExit }) {
             setTimeout(() => setDonutToast(null), 3000);
             return;
           }
-          if (clickedObj.name === 'featBoard') {
+
+          // 12-Icon Screen Display Target Click (media_1791967521142.png)
+          if (['featBoard', 'mobileSchedule', 'screen1', 'screen2', 'screen3', 'theaterScreen'].includes(clickedObj.name)) {
             playSound('chime');
-            setActiveModal('features');
-            return;
-          }
-          if (clickedObj.name === 'mobileSchedule') {
-            playSound('chime');
-            setActiveModal('schedule');
-            return;
-          }
-          if (clickedObj.name === 'screen1') {
-            playSound('chime');
-            setActiveModal('analytics');
-            return;
-          }
-          if (clickedObj.name === 'screen2') {
-            playSound('chime');
-            setActiveModal('kpi');
-            return;
-          }
-          if (clickedObj.name === 'screen3') {
-            playSound('chime');
-            setActiveModal('blueprint');
-            return;
-          }
-          if (clickedObj.name === 'theaterScreen') {
-            playSound('chime');
-            setActiveModal('theater');
+            const screenDisplayNames = {
+              theaterScreen: 'Main Auditorium Theater Screen',
+              featBoard: 'Roadmap & Sprints Feature Board',
+              mobileSchedule: 'Mobile Stand Schedule Whiteboard',
+              screen1: 'Telemetry Area Chart Display',
+              screen2: 'Digital LED KPI Scoreboard',
+              screen3: 'Architecture Blueprint Display'
+            };
+            setActiveScreenTarget({
+              id: clickedObj.name,
+              name: screenDisplayNames[clickedObj.name] || 'Spot Office Screen',
+              mesh: clickedObj
+            });
             return;
           }
 
@@ -743,7 +743,180 @@ export default function WorkspacePlatform({ user, onExit }) {
     } else if (roomName === 'Foreground Lounge') {
       targetPosRef.current.set(0.5, 0, 11.2);
       setCurrentRoomId('foreground-lounge');
+    } else if (roomName.includes('Cafe') || roomName.includes('Bar')) {
+      targetPosRef.current.set(-11.5, 0, 11.0);
+      setCurrentRoomId('cafe-bar');
+    } else if (roomName.includes('Beanbag')) {
+      targetPosRef.current.set(-9.5, 0, 3.5);
+      setCurrentRoomId('beanbag-lounge');
     }
+  };
+
+  // Spot 3D Screen Content Switcher (media_1791967521142.png)
+  const handleUpdateScreenContent = (screenId, contentType, payload) => {
+    playSound('chime');
+
+    let targetMesh = null;
+    if (screensRef.current && screensRef.current[screenId]) {
+      targetMesh = screensRef.current[screenId];
+    } else if (sceneRef.current) {
+      targetMesh = sceneRef.current.getObjectByName(screenId);
+    }
+
+    if (!targetMesh) {
+      console.warn(`Screen mesh "${screenId}" not found in scene.`);
+      return;
+    }
+
+    const texSys = screenTexturesRef.current;
+
+    if (contentType === 'starry-logo') {
+      const tex = texSys?.createStarryLogoTexture ? texSys.createStarryLogoTexture() : texSys?.starryLogoTexture;
+      if (tex) {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        targetMesh.material.map = tex;
+        targetMesh.material.needsUpdate = true;
+      }
+    } else if (contentType === 'timer') {
+      const minutes = payload?.minutes || 15;
+      const tex = texSys?.createTimerTexture ? texSys.createTimerTexture(`${minutes}:00`, 'Session Countdown') : null;
+      if (tex) {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        targetMesh.material.map = tex;
+        targetMesh.material.needsUpdate = true;
+      }
+    } else if (contentType === 'kpi') {
+      if (texSys?.kpiTexture) {
+        targetMesh.material.map = texSys.kpiTexture;
+        targetMesh.material.needsUpdate = true;
+      }
+    } else if (contentType === 'screenshare') {
+      if (screenShareVideoRef.current && screenStream) {
+        const vidTex = new THREE.VideoTexture(screenShareVideoRef.current);
+        vidTex.colorSpace = THREE.SRGBColorSpace;
+        targetMesh.material.map = vidTex;
+        targetMesh.material.needsUpdate = true;
+      }
+    } else if (contentType === 'youtube') {
+      const ytCanvas = document.createElement('canvas');
+      ytCanvas.width = 1024;
+      ytCanvas.height = 512;
+      const yCtx = ytCanvas.getContext('2d');
+      yCtx.fillStyle = '#0f0f0f';
+      yCtx.fillRect(0, 0, 1024, 512);
+
+      // YouTube red badge icon
+      yCtx.fillStyle = '#ff0000';
+      yCtx.beginPath();
+      yCtx.roundRect(462, 190, 100, 70, 16);
+      yCtx.fill();
+      yCtx.fillStyle = '#ffffff';
+      yCtx.beginPath();
+      yCtx.moveTo(502, 210);
+      yCtx.lineTo(534, 225);
+      yCtx.lineTo(502, 240);
+      yCtx.closePath();
+      yCtx.fill();
+
+      // Title & URL
+      yCtx.font = 'bold 36px sans-serif';
+      yCtx.fillStyle = '#ffffff';
+      yCtx.textAlign = 'center';
+      yCtx.fillText('Spot Office YouTube Stream', 512, 120);
+
+      yCtx.font = '22px monospace';
+      yCtx.fillStyle = '#94a3b8';
+      const cleanUrl = payload?.url ? payload.url.substring(0, 50) + (payload.url.length > 50 ? '...' : '') : 'https://youtube.com';
+      yCtx.fillText(cleanUrl, 512, 310);
+
+      yCtx.fillStyle = '#22c55e';
+      yCtx.font = 'bold 20px sans-serif';
+      yCtx.fillText('● SYNCED PLAYBACK ACROSS ALL WORKSPACES', 512, 420);
+
+      const ytTex = new THREE.CanvasTexture(ytCanvas);
+      ytTex.colorSpace = THREE.SRGBColorSpace;
+      targetMesh.material.map = ytTex;
+      targetMesh.material.needsUpdate = true;
+    } else if (contentType === 'image') {
+      if (payload?.url) {
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+        loader.load(
+          payload.url,
+          (loadedTex) => {
+            loadedTex.colorSpace = THREE.SRGBColorSpace;
+            targetMesh.material.map = loadedTex;
+            targetMesh.material.needsUpdate = true;
+          },
+          undefined,
+          (err) => console.warn('Image texture load err:', err)
+        );
+      }
+    } else if (contentType === 'document') {
+      const docCanvas = document.createElement('canvas');
+      docCanvas.width = 1024;
+      docCanvas.height = 512;
+      const dCtx = docCanvas.getContext('2d');
+      dCtx.fillStyle = '#ffffff';
+      dCtx.fillRect(0, 0, 1024, 512);
+
+      dCtx.fillStyle = '#0f172a';
+      dCtx.font = 'bold 36px sans-serif';
+      dCtx.textAlign = 'left';
+      dCtx.fillText('📄 Spot Collaborative Workspace Notes', 60, 70);
+
+      dCtx.fillStyle = '#334155';
+      dCtx.font = '24px sans-serif';
+      const rawText = payload?.text || '# Sprint Architecture\n- Realtime 3D office collaboration\n- Dynamic display projection\n- Spatial audio & status presence';
+      const lines = rawText.split('\n');
+      lines.slice(0, 9).forEach((line, idx) => {
+        dCtx.fillText(line, 60, 130 + idx * 36);
+      });
+
+      const docTex = new THREE.CanvasTexture(docCanvas);
+      docTex.colorSpace = THREE.SRGBColorSpace;
+      targetMesh.material.map = docTex;
+      targetMesh.material.needsUpdate = true;
+    } else if (contentType === 'webpage') {
+      const webCanvas = document.createElement('canvas');
+      webCanvas.width = 1024;
+      webCanvas.height = 512;
+      const wCtx = webCanvas.getContext('2d');
+      wCtx.fillStyle = '#f8fafc';
+      wCtx.fillRect(0, 0, 1024, 512);
+
+      // Browser Chrome header
+      wCtx.fillStyle = '#e2e8f0';
+      wCtx.fillRect(0, 0, 1024, 60);
+      wCtx.fillStyle = '#ffffff';
+      wCtx.beginPath();
+      wCtx.roundRect(140, 12, 744, 36, 8);
+      wCtx.fill();
+
+      wCtx.fillStyle = '#475569';
+      wCtx.font = '16px monospace';
+      wCtx.textAlign = 'left';
+      wCtx.fillText(payload?.url || 'https://spotvirtual.com', 160, 36);
+
+      // Content preview
+      wCtx.fillStyle = '#0284c7';
+      wCtx.font = 'bold 44px sans-serif';
+      wCtx.fillText('🌐 Live Web Application Embed', 60, 150);
+
+      wCtx.fillStyle = '#64748b';
+      wCtx.font = '24px sans-serif';
+      wCtx.fillText('Interactive browser frame projected in Spot virtual office space', 60, 210);
+
+      const webTex = new THREE.CanvasTexture(webCanvas);
+      webTex.colorSpace = THREE.SRGBColorSpace;
+      targetMesh.material.map = webTex;
+      targetMesh.material.needsUpdate = true;
+    }
+
+    setChatMessages((prev) => [
+      ...prev,
+      { sender: userName, text: `🖥️ Updated **${screenId}** to display **${contentType}**!`, time: 'Just now' }
+    ]);
   };
 
   // Trigger Canonical Spot Emote
@@ -928,13 +1101,47 @@ export default function WorkspacePlatform({ user, onExit }) {
         zIndex: 50,
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
       }}>
-        {/* Left: Spot Logo & Active Room Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+        {/* Left: Spot Logo, Team Selector & Active Room Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={onExit}>
             <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#60c449', display: 'inline-block' }} />
             <strong style={{ fontSize: '1.25rem', letterSpacing: '-0.5px', color: '#1e293b' }}>Spot</strong>
             <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>/ Virtual Office</span>
           </div>
+
+          {/* Spaces & Teams Dropdown Button (media_1791967544265.webp) */}
+          <button
+            onClick={() => setIsSpacesSidebarOpen(!isSpacesSidebarOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: isSpacesSidebarOpen ? '#e0f2fe' : '#f1f5f9',
+              border: isSpacesSidebarOpen ? '1px solid #7dd3fc' : '1px solid #e2e8f0',
+              padding: '5px 11px',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              color: '#1e293b',
+              cursor: 'pointer'
+            }}
+            title="Toggle Spaces & Team Presence Sidebar"
+          >
+            <span style={{
+              width: 20,
+              height: 20,
+              borderRadius: '4px',
+              background: '#0284c7',
+              color: '#ffffff',
+              fontSize: '11px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 800
+            }}>ST</span>
+            <span>Spot Team</span>
+            <ChevronDown size={14} color="#64748b" />
+          </button>
 
           <div style={{
             display: 'flex',
@@ -1085,6 +1292,28 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>{isVideoOn ? 'Camera Active' : 'Camera Off'}</span>
           </button>
 
+          {/* Headphones Mode Toggle (media_1791967544187.webp) */}
+          <button
+            onClick={() => setIsHeadphonesOn(!isHeadphonesOn)}
+            title="Headphones Mode (Mutes proximity spatial audio)"
+            style={{
+              padding: '7px 12px',
+              borderRadius: '2rem',
+              background: isHeadphonesOn ? '#fef3c7' : '#f8fafc',
+              border: isHeadphonesOn ? '1px solid #fde68a' : '1px solid #cbd5e1',
+              color: isHeadphonesOn ? '#b45309' : '#64748b',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <Headphones size={15} />
+            <span>{isHeadphonesOn ? 'Headphones On' : 'Headphones'}</span>
+          </button>
+
           {/* Audio Devices & Settings Button */}
           <button
             onClick={() => setActiveTab(activeTab === 'settings' ? 'none' : 'settings')}
@@ -1099,6 +1328,50 @@ export default function WorkspacePlatform({ user, onExit }) {
             title="Audio Devices & Settings"
           >
             <Sliders size={16} />
+          </button>
+
+          {/* User Profile & Status Trigger (media_1791967544187.webp) */}
+          <button
+            onClick={() => setIsUserProfileOpen(!isUserProfileOpen)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '4px 12px 4px 6px',
+              borderRadius: '2rem',
+              background: isUserProfileOpen ? '#e0f2fe' : '#f8fafc',
+              border: isUserProfileOpen ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+              cursor: 'pointer'
+            }}
+            title="Open User Profile & Status Menu"
+          >
+            <div style={{ position: 'relative' }}>
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {userName.charAt(0).toUpperCase()}
+              </div>
+              <span style={{
+                position: 'absolute',
+                bottom: 0,
+                right: 0,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#22c55e',
+                border: '1.5px solid #ffffff'
+              }} />
+            </div>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>{userName}</span>
           </button>
 
           {/* Leave Button */}
@@ -1553,6 +1826,21 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         </div>
 
+        {/* Spot Desktop Client Build Watermark (media_1791967544189.webp) */}
+        <div style={{
+          position: 'absolute',
+          bottom: '8px',
+          right: '24px',
+          color: '#64748b',
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          pointerEvents: 'none',
+          userSelect: 'none',
+          zIndex: 35
+        }}>
+          0.0.1-re1fb443a / 60fps (N) (F)
+        </div>
+
         {/* Click Feedback Toast */}
         {donutToast && (
           <div style={{
@@ -1734,6 +2022,36 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>Room Chat</span>
           </button>
         </div>
+
+        {/* 8. Spot 12-Icon Screen Display Manager Toolbar (media_1791967521142.png) */}
+        {activeScreenTarget && (
+          <ScreenDisplayManager
+            activeScreen={activeScreenTarget.id}
+            onClose={() => setActiveScreenTarget(null)}
+            onUpdateScreenContent={handleUpdateScreenContent}
+            onStartScreenShare={startScreenShare}
+          />
+        )}
+
+        {/* 9. Spot Spaces & Team Presence Sidebar (media_1791967544265.webp) */}
+        <SpacesSidebar
+          isOpen={isSpacesSidebarOpen}
+          onClose={() => setIsSpacesSidebarOpen(false)}
+          currentRoom={currentRoom}
+          onSelectRoom={(rm) => jumpToRoom(rm)}
+          userName={userName}
+        />
+
+        {/* 10. Spot User Profile & Status Drawer (media_1791967544187.webp) */}
+        <UserProfileDrawer
+          isOpen={isUserProfileOpen}
+          onClose={() => setIsUserProfileOpen(false)}
+          userName={userName}
+          userEmail="ayush@spotvirtual.com"
+          isHeadphonesOn={isHeadphonesOn}
+          onToggleHeadphones={() => setIsHeadphonesOn(!isHeadphonesOn)}
+          onExit={onExit}
+        />
       </main>
 
       {/* 9. Sliding Side Drawers (AI Agent, Room Chat, Whiteboard, Settings) */}

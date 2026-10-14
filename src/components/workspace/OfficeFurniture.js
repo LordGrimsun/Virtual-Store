@@ -613,6 +613,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
         screenFace.position.set(mx, 1.58, dz + (sideIdx === 0 ? 0.26 : -0.26));
         screenFace.rotation.y = facingRot + (monIdx === 0 ? 0.12 : -0.12);
         podGrp.add(screenFace);
+
+        // Spot logo decal on rear casing of monitor (media_1791967544189.webp)
+        const spotLogoDecal = new THREE.Mesh(
+          new THREE.CircleGeometry(0.065, 16),
+          new THREE.MeshBasicMaterial({ color: 0x22c55e })
+        );
+        spotLogoDecal.position.set(mx, 1.58, dz + (sideIdx === 0 ? 0.30 : -0.30));
+        spotLogoDecal.rotation.y = facingRot + (monIdx === 0 ? 0.12 : -0.12) + (sideIdx === 0 ? Math.PI : 0);
+        podGrp.add(spotLogoDecal);
       });
 
       // Keyboard & Mouse
@@ -680,6 +689,185 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   screen3.name = 'screen3';
   screen3.castShadow = true;
   scene.add(screen3);
+
+  // 10. Zone 10: Cafe & Bar Area (media_1791967521136.png, media_1791967544187.webp)
+  const barGrp = new THREE.Group();
+
+  // Modern Bar Counter Body
+  const barBody = new THREE.Mesh(new THREE.BoxGeometry(5.2, 1.15, 1.1), darkWallMat);
+  barBody.position.set(0, 0.575, 0);
+  barBody.castShadow = true;
+  barBody.receiveShadow = true;
+  barGrp.add(barBody);
+
+  // Polished White Marble Countertop with Overhang
+  const barTop = new THREE.Mesh(new THREE.BoxGeometry(5.4, 0.09, 1.3), whiteMat);
+  barTop.position.set(0, 1.19, 0);
+  barTop.castShadow = true;
+  barTop.receiveShadow = true;
+  barGrp.add(barTop);
+
+  // Kickplate & Accent Trim
+  const kickPlate = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.08, 1.05), brassMat);
+  kickPlate.position.set(0, 0.04, 0);
+  barGrp.add(kickPlate);
+
+  // Professional Espresso Machine (Stainless Chrome)
+  const espressoMachine = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.52, 0.55), chromeMat);
+  espressoMachine.position.set(-1.2, 1.48, 0.05);
+  espressoMachine.castShadow = true;
+  barGrp.add(espressoMachine);
+
+  // Espresso Portafilters & Dials
+  [-1.38, -1.02].forEach((hx) => {
+    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.22, 8), blackMetalMat);
+    handle.rotation.x = Math.PI / 2;
+    handle.position.set(hx, 1.36, 0.38);
+    barGrp.add(handle);
+  });
+
+  // Coffee Bean Grinder
+  const grinder = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.44, 16), blackMetalMat);
+  grinder.position.set(-0.45, 1.44, 0.05);
+  grinder.castShadow = true;
+  barGrp.add(grinder);
+
+  // Stack of Ceramic Coffee Cups
+  for (let c = 0; c < 3; c++) {
+    const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.1, 14), whiteMat);
+    cup.position.set(0.4, 1.28 + c * 0.09, 0.1);
+    barGrp.add(cup);
+  }
+
+  // Fresh Fruit Basket
+  const fruitBowl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.24, 0.14, 18), brassMat);
+  fruitBowl.position.set(1.4, 1.3, 0);
+  barGrp.add(fruitBowl);
+
+  const fruitMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.6 });
+  for (let f = 0; f < 4; f++) {
+    const orange = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), fruitMat);
+    orange.position.set(1.4 + (f % 2) * 0.09 - 0.04, 1.4, Math.floor(f / 2) * 0.09 - 0.04);
+    barGrp.add(orange);
+  }
+
+  // 3 Suspended Modern Brass Pendant Lamps
+  [-1.6, 0, 1.6].forEach((lx) => {
+    // Cord
+    const cord = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 2.2, 8), blackMetalMat);
+    cord.position.set(lx, 3.2, 0);
+    barGrp.add(cord);
+
+    // Brass Shade
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(0.24, 0.28, 16), brassMat);
+    shade.position.set(lx, 2.1, 0);
+    shade.castShadow = true;
+    barGrp.add(shade);
+
+    // Warm Light Bulb
+    const bulb = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 12, 12),
+      new THREE.MeshBasicMaterial({ color: 0xfef08a })
+    );
+    bulb.position.set(lx, 1.95, 0);
+    barGrp.add(bulb);
+  });
+
+  barGrp.position.set(-11.5, 0, 11.5);
+  scene.add(barGrp);
+
+  // 5 Gold Metal Swivel Bar Stools with Round White Cushions
+  [-1.8, -0.9, 0, 0.9, 1.8].forEach((bx, idx) => {
+    const stoolGrp = new THREE.Group();
+
+    // Round Brass Base
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.04, 20), brassMat);
+    base.position.y = 0.02;
+    base.castShadow = true;
+    stoolGrp.add(base);
+
+    // Center Brass Stem
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.82, 12), brassMat);
+    stem.position.y = 0.43;
+    stem.castShadow = true;
+    stoolGrp.add(stem);
+
+    // Footrest Ring
+    const footRing = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.015, 8, 20), brassMat);
+    footRing.rotation.x = Math.PI / 2;
+    footRing.position.y = 0.32;
+    stoolGrp.add(footRing);
+
+    // Round White Fabric Cushion
+    const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 20), chairFabricMat);
+    cushion.position.y = 0.88;
+    cushion.castShadow = true;
+    cushion.name = 'clickable_chair';
+    stoolGrp.add(cushion);
+
+    const stoolX = -11.5 + bx;
+    const stoolZ = 12.85; // Just in front of the bar counter
+    stoolGrp.position.set(stoolX, 0, stoolZ);
+    scene.add(stoolGrp);
+
+    chairsRef.current.push({
+      name: `Cafe Bar Stool ${idx + 1}`,
+      pos: new THREE.Vector3(stoolX, 0, stoolZ),
+      rot: Math.PI
+    });
+  });
+
+  // 11. Zone 11: Beanbag Lounge Circle (media_1791967544265.webp)
+  const loungeCenter = new THREE.Vector3(-9.5, 0, 3.5);
+
+  // Round Scandinavian Low Wood Coffee Table
+  const loungeTable = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.34, 28), whiteMat);
+  loungeTable.position.set(loungeCenter.x, 0.17, loungeCenter.z);
+  loungeTable.castShadow = true;
+  loungeTable.receiveShadow = true;
+  scene.add(loungeTable);
+
+  // Succulent Dish on table
+  const succPot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.16, 0.08, 16), darkWallMat);
+  succPot.position.set(loungeCenter.x, 0.38, loungeCenter.z);
+  scene.add(succPot);
+
+  const succGreen = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(0.12, 1),
+    new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.8 })
+  );
+  succGreen.position.set(loungeCenter.x, 0.46, loungeCenter.z);
+  scene.add(succGreen);
+
+  // 5 Soft Color Floor Poufs / Beanbags arranged in a circle
+  const beanbagColors = [0x65a30d, 0x06b6d4, 0xfef08a, 0xf97316, 0xec4899];
+  const beanbagNames = ['Sage Beanbag', 'Cyan Beanbag', 'Cream Beanbag', 'Orange Beanbag', 'Rose Beanbag'];
+
+  for (let b = 0; b < 5; b++) {
+    const angle = (b / 5) * Math.PI * 2 + 0.3;
+    const bx = loungeCenter.x + Math.cos(angle) * 2.15;
+    const bz = loungeCenter.z + Math.sin(angle) * 2.15;
+
+    const beanbagMat = new THREE.MeshStandardMaterial({
+      color: beanbagColors[b],
+      roughness: 0.88,
+      metalness: 0.05
+    });
+
+    const beanbag = new THREE.Mesh(new THREE.SphereGeometry(0.55, 18, 14), beanbagMat);
+    beanbag.scale.set(1.0, 0.68, 1.0);
+    beanbag.position.set(bx, 0.36, bz);
+    beanbag.castShadow = true;
+    beanbag.receiveShadow = true;
+    beanbag.name = 'clickable_chair';
+    scene.add(beanbag);
+
+    chairsRef.current.push({
+      name: beanbagNames[b],
+      pos: new THREE.Vector3(bx, 0, bz),
+      rot: -angle - Math.PI / 2
+    });
+  }
 
   return {
     theaterScreen,
