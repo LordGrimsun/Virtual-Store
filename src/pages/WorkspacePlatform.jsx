@@ -7,7 +7,7 @@ import {
   Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
   Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
   TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag,
-  Grid, Mail, Clock, Hammer, Search
+  Grid, Mail, Clock, Hammer, Search, Home
 } from 'lucide-react';
 
 import { createOfficeScreenTextures } from '../components/workspace/OfficeScreens';
