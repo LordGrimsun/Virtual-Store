@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /**
  * Builds all high-fidelity office furniture, workstations, chairs, tables,
@@ -17,6 +18,129 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const darkTableMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.5 });
   const screenBezelMat = new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.6 });
   const screenGlowMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+
+  const roundedBox = (width, height, depth, radius = 0.045) => {
+    const safeRadius = Math.max(
+      0.005,
+      Math.min(radius, width * 0.45, height * 0.45, depth * 0.45)
+    );
+    return new RoundedBoxGeometry(width, height, depth, 3, safeRadius);
+  };
+
+  const sofaCushionMat = new THREE.MeshStandardMaterial({
+    color: 0x252a31,
+    roughness: 0.92
+  });
+  const paleCushionMat = new THREE.MeshStandardMaterial({
+    color: 0xf1ece4,
+    roughness: 0.92
+  });
+  const sofaBaseMat = new THREE.MeshStandardMaterial({
+    color: 0x14171c,
+    roughness: 0.86
+  });
+
+  const createUpholsteredSofa = (cx, cz, width, depth, rotation, upholsteryMat, name, objectName) => {
+    const sofa = new THREE.Group();
+
+    const base = new THREE.Mesh(roundedBox(width - 0.06, 0.24, depth - 0.04, 0.07), sofaBaseMat);
+    base.position.y = 0.25;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    sofa.add(base);
+
+    const seatWidth = (width - 0.24) / 2;
+    [-1, 1].forEach((side) => {
+      const cushion = new THREE.Mesh(
+        roundedBox(seatWidth, 0.15, depth - 0.30, 0.055),
+        upholsteryMat
+      );
+      cushion.position.set(side * (width * 0.25), 0.43, 0.08);
+      cushion.castShadow = true;
+      cushion.receiveShadow = true;
+      sofa.add(cushion);
+    });
+
+    const back = new THREE.Mesh(
+      roundedBox(width - 0.12, 0.56, 0.22, 0.06),
+      upholsteryMat
+    );
+    back.position.set(0, 0.65, -depth / 2 + 0.14);
+    back.castShadow = true;
+    back.receiveShadow = true;
+    sofa.add(back);
+
+    [-1, 1].forEach((side) => {
+      const arm = new THREE.Mesh(roundedBox(0.22, 0.38, depth - 0.04, 0.055), upholsteryMat);
+      arm.position.set(side * (width / 2 - 0.12), 0.47, 0);
+      arm.castShadow = true;
+      sofa.add(arm);
+    });
+
+    [-1, 1].forEach((sx) => {
+      [-1, 1].forEach((sz) => {
+        const foot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10),
+          blackMetalMat
+        );
+        foot.position.set(sx * (width / 2 - 0.22), 0.06, sz * (depth / 2 - 0.15));
+        sofa.add(foot);
+      });
+    });
+
+    sofa.position.set(cx, 0, cz);
+    sofa.rotation.y = rotation;
+    sofa.name = objectName;
+    scene.add(sofa);
+    chairsRef.current.push({
+      name,
+      pos: new THREE.Vector3(cx, 0, cz),
+      rot: rotation
+    });
+    return sofa;
+  };
+
+  const createLoungeChair = (cx, cz, rotation, name) => {
+    const chair = new THREE.Group();
+    const base = new THREE.Mesh(roundedBox(0.92, 0.24, 0.84, 0.075), paleCushionMat);
+    base.position.y = 0.27;
+    base.castShadow = true;
+    chair.add(base);
+
+    const seat = new THREE.Mesh(roundedBox(0.74, 0.14, 0.62, 0.055), chairBeigeMat);
+    seat.position.set(0, 0.45, 0.06);
+    seat.castShadow = true;
+    seat.name = 'clickable_chair';
+    chair.add(seat);
+
+    const back = new THREE.Mesh(roundedBox(0.78, 0.62, 0.19, 0.06), paleCushionMat);
+    back.position.set(0, 0.74, -0.31);
+    back.rotation.x = -0.05;
+    back.castShadow = true;
+    back.name = 'clickable_chair';
+    chair.add(back);
+
+    [-0.38, 0.38].forEach((x) => {
+      const arm = new THREE.Mesh(roundedBox(0.18, 0.34, 0.68, 0.05), paleCushionMat);
+      arm.position.set(x, 0.52, -0.01);
+      arm.castShadow = true;
+      chair.add(arm);
+    });
+
+    [-1, 1].forEach((sx) => {
+      [-1, 1].forEach((sz) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.028, 0.19, 8), brassMat);
+        leg.position.set(sx * 0.34, 0.095, sz * 0.29);
+        chair.add(leg);
+      });
+    });
+
+    chair.position.set(cx, 0, cz);
+    chair.rotation.y = rotation;
+    scene.add(chair);
+    chairsRef.current.push({ name, pos: new THREE.Vector3(cx, 0, cz), rot: rotation });
+    return chair;
+  };
 
   const glassDomeMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
@@ -52,7 +176,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     cGrp.add(riserR);
 
     // Upholstered Seat Cushion
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.09, 0.62), chairFabricMat);
+    const seat = new THREE.Mesh(roundedBox(0.68, 0.09, 0.62, 0.03), chairFabricMat);
     seat.position.set(0, 0.7, 0);
     seat.castShadow = true;
     seat.receiveShadow = true;
@@ -60,7 +184,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     cGrp.add(seat);
 
     // Contoured Backrest
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.62, 0.07), chairFabricMat);
+    const back = new THREE.Mesh(roundedBox(0.68, 0.62, 0.07, 0.025), chairFabricMat);
     back.position.set(0, 1.02, 0.28);
     back.rotation.x = -0.06;
     back.castShadow = true;
@@ -155,14 +279,14 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     group.add(cylinder);
 
     // Ergonomic Contoured Seat
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.08, 0.58), darkWallMat);
+    const seat = new THREE.Mesh(roundedBox(0.62, 0.08, 0.58, 0.025), darkWallMat);
     seat.position.y = 0.68;
     seat.castShadow = true;
     seat.name = 'clickable_chair';
     group.add(seat);
 
     // Mesh Backrest with Lumbar Curve
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.65, 0.06), darkWallMat);
+    const back = new THREE.Mesh(roundedBox(0.58, 0.65, 0.06, 0.02), darkWallMat);
     back.position.set(0, 1.04, 0.26);
     back.rotation.x = -0.08;
     back.castShadow = true;
@@ -258,43 +382,19 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   });
 
   // 3. Zone 3: Middle Nook Sofa & Gold Drink Table
-  const nookSofa = new THREE.Mesh(
-    new THREE.BoxGeometry(2.5, 0.58, 0.98),
-    new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 })
-  );
-  nookSofa.position.set(-4.5, 0.36, 4.2);
-  nookSofa.rotation.y = Math.PI / 2;
-  nookSofa.castShadow = true;
-  nookSofa.name = 'chair_nook';
-  scene.add(nookSofa);
-  chairsRef.current.push({ name: 'Nook Sofa', pos: new THREE.Vector3(-4.5, 0, 4.2), rot: Math.PI / 2 });
+  const paleSofaMat = new THREE.MeshStandardMaterial({ color: 0xf6f3ed, roughness: 0.88 });
+  createUpholsteredSofa(-4.5, 4.2, 2.5, 0.98, Math.PI / 2, paleSofaMat, 'Nook Sofa', 'chair_nook');
 
   const goldTable = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.52, 20), brassMat);
   goldTable.position.set(-4.5, 0.26, 1.8);
   goldTable.castShadow = true;
   scene.add(goldTable);
 
-  // 4. Zone 4: Foreground Lounge (Black Sofa + Beige Club Chairs + Drum Table)
-  const bSofa = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.58, 1.15), darkWallMat);
-  bSofa.position.set(-2.0, 0.36, 9.8);
-  bSofa.castShadow = true;
-  bSofa.name = 'chair_lounge';
-  scene.add(bSofa);
-  chairsRef.current.push({ name: 'Lounge Sofa', pos: new THREE.Vector3(-2.0, 0, 9.8), rot: 0 });
+  // 4. Zone 4: Foreground Lounge — padded black sofa and proper club chairs.
+  createUpholsteredSofa(-2.0, 9.8, 3.6, 1.15, 0, darkWallMat, 'Lounge Sofa', 'chair_lounge');
 
-  // Two Beige Club Chairs
   [-4.8, 1.2].forEach((cx, idx) => {
-    const club = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.62, 1.05), chairBeigeMat);
-    club.position.set(cx, 0.38, 11.8);
-    club.rotation.y = idx === 0 ? Math.PI / 4 : -Math.PI / 4;
-    club.castShadow = true;
-    club.name = 'clickable_chair';
-    scene.add(club);
-    chairsRef.current.push({
-      name: `Club Chair ${idx + 1}`,
-      pos: new THREE.Vector3(cx, 0, 11.8),
-      rot: idx === 0 ? Math.PI / 4 : -Math.PI / 4
-    });
+    createLoungeChair(cx, 11.8, idx === 0 ? Math.PI / 4 : -Math.PI / 4, `Club Chair ${idx + 1}`);
   });
 
   // Round Drum Coffee Table with Small Plant
@@ -319,39 +419,38 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const createAllHandsTable = () => {
     const group = new THREE.Group();
 
-    // Long white table top
-    const table = new THREE.Mesh(new THREE.BoxGeometry(9.0, 0.12, 2.1), whiteMat);
+    // The reference layout has a long dark table running up the center of the plan.
+    const table = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.12, 9.0), darkTableMat);
     table.position.y = 1.15;
     table.castShadow = true;
     table.receiveShadow = true;
     group.add(table);
 
-    // 3 Column Pylons
-    [-3.0, 0, 3.0].forEach((px) => {
-      const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.36, 1.1, 16), whiteMat);
-      pylon.position.set(px, 0.55, 0);
+    // Three understated supports along the table's long axis.
+    [-3.0, 0, 3.0].forEach((pz) => {
+      const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.32, 1.1, 16), darkWallMat);
+      pylon.position.set(0, 0.55, pz);
       pylon.castShadow = true;
       group.add(pylon);
     });
 
-    // Bowl of crisp red apples (Clickable)
-    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.28, 0.2, 18), whiteMat);
-    bowl.position.set(-2.0, 1.3, 0.1);
+    // Small refreshments stay on the tabletop and remain clickable.
+    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.25, 0.16, 18), whiteMat);
+    bowl.position.set(-0.12, 1.3, -2.15);
     bowl.name = 'appleBowl';
     bowl.castShadow = true;
     group.add(bowl);
 
     for (let a = 0; a < 6; a++) {
-      const apple = new THREE.Mesh(new THREE.SphereGeometry(0.1, 12, 12), redMat);
-      apple.position.set(-2.0 + (a % 3) * 0.12 - 0.1, 1.42, 0.1 + Math.floor(a / 3) * 0.12 - 0.05);
+      const apple = new THREE.Mesh(new THREE.SphereGeometry(0.085, 12, 12), redMat);
+      apple.position.set(-0.12 + (a % 3) * 0.12 - 0.1, 1.42, -2.25 + Math.floor(a / 3) * 0.12);
       apple.castShadow = true;
       apple.name = 'appleBowl';
       group.add(apple);
     }
 
-    // Doughnuts Plate (Clickable)
-    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.36, 0.05, 20), redMat);
-    plate.position.set(0.2, 1.23, 0.1);
+    const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.28, 0.05, 20), redMat);
+    plate.position.set(0.12, 1.23, 0.15);
     plate.name = 'doughnutPlate';
     plate.castShadow = true;
     group.add(plate);
@@ -362,43 +461,41 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
         new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.5 })
       );
       donut.rotation.x = Math.PI / 2;
-      donut.position.set(0.15 + (i % 2) * 0.13, 1.28, 0.05 + Math.floor(i / 2) * 0.13);
+      donut.position.set(0.08 + (i % 2) * 0.13, 1.28, 0.1 + Math.floor(i / 2) * 0.13);
       donut.castShadow = true;
       donut.name = 'doughnutPlate';
       group.add(donut);
     }
 
-    // Pastry Cloche / Glass Dome Cover
-    const domeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.36, 0.06, 18), whiteMat);
-    domeBase.position.set(2.6, 1.23, 0.1);
+    const domeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.30, 0.06, 18), whiteMat);
+    domeBase.position.set(0.0, 1.23, 2.55);
     domeBase.castShadow = true;
     group.add(domeBase);
 
     const glassDome = new THREE.Mesh(
-      new THREE.SphereGeometry(0.34, 18, 18, 0, Math.PI * 2, 0, Math.PI / 2),
+      new THREE.SphereGeometry(0.29, 18, 18, 0, Math.PI * 2, 0, Math.PI / 2),
       glassDomeMat
     );
-    glassDome.position.set(2.6, 1.26, 0.1);
+    glassDome.position.set(0.0, 1.26, 2.55);
     group.add(glassDome);
 
     const domeKnob = new THREE.Mesh(new THREE.SphereGeometry(0.04, 12, 12), brassMat);
-    domeKnob.position.set(2.6, 1.62, 0.1);
+    domeKnob.position.set(0.0, 1.58, 2.55);
     group.add(domeKnob);
 
-    // Black Ceramic Coffee Mugs
-    [-0.8, 1.2].forEach((mx) => {
+    // Coffee cups sit inboard so they do not overlap the edge or nearby chairs.
+    [-0.8, 1.2].forEach((pz) => {
       const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.14, 12), blackMetalMat);
-      mug.position.set(mx, 1.28, -0.4);
+      mug.position.set(0.48, 1.28, pz);
       mug.castShadow = true;
       group.add(mug);
     });
 
-    // 12 Cantilever Chairs around the long table
-    [-3.3, -2.0, -0.7, 0.7, 2.0, 3.3].forEach((xOff, idx) => {
-      // Facing Table (from north side)
-      createCantileverChair(4.5 + xOff, 3.8 - 1.45, 0, `All-Hands Chair N${idx + 1}`);
-      // Facing Table (from south side)
-      createCantileverChair(4.5 + xOff, 3.8 + 1.45, Math.PI, `All-Hands Chair S${idx + 1}`);
+    // 12 cantilever chairs distributed along both long sides.
+    [-3.3, -2.0, -0.7, 0.7, 2.0, 3.3].forEach((zOff, idx) => {
+      // West side faces east into the table; east side faces west.
+      createCantileverChair(4.5 - 1.45, 3.8 + zOff, -Math.PI / 2, `All-Hands Chair W${idx + 1}`);
+      createCantileverChair(4.5 + 1.45, 3.8 + zOff, Math.PI / 2, `All-Hands Chair E${idx + 1}`);
     });
 
     group.position.set(4.5, 0, 3.8);
