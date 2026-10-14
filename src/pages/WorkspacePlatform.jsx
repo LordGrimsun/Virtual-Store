@@ -4,7 +4,7 @@ import {
   Mic, MicOff, Video, VideoOff, Monitor, Headphones, Volume2,
   Users, Bot, MessageSquare, Edit3, Share2, LogOut, Settings,
   Sparkles, Send, Plus, Check, ChevronRight, X, PhoneCall, VolumeX,
-  Maximize2, RotateCcw, HelpCircle, Coffee
+  Maximize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass
 } from 'lucide-react';
 
 export default function WorkspacePlatform({ user, onExit }) {
@@ -12,24 +12,25 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // User & Room state
   const [userName, setUserName] = useState(user?.fullName || 'Stan');
-  const [currentRoom, setCurrentRoom] = useState('Central Collaboration Table');
-  const [inAudioRange, setInAudioRange] = useState(['Stefan', 'Alex', 'Graham', 'Wes']);
+  const [currentRoom, setCurrentRoom] = useState('Conference Table');
+  const [inAudioRange, setInAudioRange] = useState(['Stefan', 'Alex', 'Graham', 'Wes', 'Phil']);
   const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard'
   const [activeReaction, setActiveReaction] = useState(null);
+  const [donutToast, setDonutToast] = useState(null);
 
   // Audio / Media toggles
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOn, setIsVideoOn] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isHeadphonesOn, setIsHeadphonesOn] = useState(true);
+  const [isHeadphonesOn, setIsHeadphonesOn] = useState(false);
 
   // AI Agent Chat state
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState([
     {
       sender: 'DevBot',
-      text: 'Hey Stan! I am monitoring all project rooms. Currently, 7 teammates are at the central table discussing the v3 release, and Steven is focused at his desk.',
-      time: '12:05 PM'
+      text: 'Welcome back Stan! You are currently with the team at the central conference table. PR #342 passed CI tests and is ready for your sign-off.',
+      time: '12:10 PM'
     }
   ]);
   const [aiTyping, setAiTyping] = useState(false);
@@ -37,9 +38,9 @@ export default function WorkspacePlatform({ user, onExit }) {
   // Room Chat state
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'Steven', text: 'Headphones on for deep focus, ping me if urgent!', time: '11:58 AM' },
-    { sender: 'Alex', text: 'Grabbing fresh coffee before the standup.', time: '12:02 PM' },
-    { sender: 'Graham', text: 'Doughnuts on the meeting table for everyone 🍩', time: '12:04 PM' }
+    { sender: 'Steven', text: 'Headphones on for deep coding, ping me if needed!', time: '12:01 PM' },
+    { sender: 'Graham', text: 'Fresh doughnuts on the table! 🍩 Grab one while warm.', time: '12:05 PM' },
+    { sender: 'Wes', text: 'Reviewing the spatial audio latency benchmarks now.', time: '12:08 PM' }
   ]);
 
   // Whiteboard drawing state
@@ -47,7 +48,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawColor, setDrawColor] = useState('#2563eb');
 
-  // Floating Nameplate positions projected to screen coordinates
+  // Floating Nameplates projected to screen coordinates
   const [screenAvatars, setScreenAvatars] = useState([]);
 
   // Three.js Scene References
@@ -55,8 +56,11 @@ export default function WorkspacePlatform({ user, onExit }) {
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
-  const targetPosRef = useRef(new THREE.Vector3(1.2, 0, 0.8));
+  const targetPosRef = useRef(new THREE.Vector3(12.5, 0, -11.5)); // Starts at his desk matching screenshot
+  const isSittingRef = useRef(true);
   const avatarsRef = useRef([]);
+  const chairsRef = useRef([]);
+  const cameraZoomRef = useRef(19);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -67,19 +71,19 @@ export default function WorkspacePlatform({ user, onExit }) {
     const height = container.clientHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xdce5ec); // Soft Scandinavian architectural daylight
-    scene.fog = new THREE.FogExp2(0xdce5ec, 0.015);
+    scene.background = new THREE.Color(0xe9eef3);
+    scene.fog = new THREE.FogExp2(0xe9eef3, 0.012);
     sceneRef.current = scene;
 
-    // Isometric Camera setup (Telephoto look similar to Spot Virtual screenshot)
+    // True Isometric Camera Setup with perfect framing matching screenshot
     const aspect = width / height;
-    const d = 18;
+    const d = cameraZoomRef.current;
     const camera = new THREE.OrthographicCamera(
       -d * aspect, d * aspect, d, -d, 0.1, 1000
     );
-    // Angled top-down isometric view matching Spot screenshot
-    camera.position.set(24, 28, 24);
-    camera.lookAt(0, 0, 0);
+    // Camera angle: 45° azimuth, 35.264° elevation (True Isometric)
+    camera.position.set(30, 36, 30);
+    camera.lookAt(1.0, 0, 1.0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -91,130 +95,126 @@ export default function WorkspacePlatform({ user, onExit }) {
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 2. Lighting System
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xd0d9e2, 1.25);
+    // 2. Lighting System (Natural architectural office lighting)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xd8e2ea, 1.35);
     hemiLight.position.set(0, 50, 0);
     scene.add(hemiLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff8ee, 1.4);
-    sunLight.position.set(20, 35, 18);
+    const sunLight = new THREE.DirectionalLight(0xfffdf7, 1.45);
+    sunLight.position.set(22, 38, 20);
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 80;
-    const sCam = 25;
+    sunLight.shadow.camera.far = 100;
+    const sCam = 32;
     sunLight.shadow.camera.left = -sCam;
     sunLight.shadow.camera.right = sCam;
     sunLight.shadow.camera.top = sCam;
     sunLight.shadow.camera.bottom = -sCam;
-    sunLight.shadow.bias = -0.0005;
+    sunLight.shadow.bias = -0.0004;
     scene.add(sunLight);
 
-    const fillLight = new THREE.DirectionalLight(0xb0d4f1, 0.5);
-    fillLight.position.set(-18, 20, -18);
-    scene.add(fillLight);
+    const ambientFill = new THREE.DirectionalLight(0xcde1f3, 0.55);
+    ambientFill.position.set(-20, 25, -20);
+    scene.add(ambientFill);
 
-    // 3. Materials
-    // Procedural birch wood floor texture
+    // 3. Custom Procedural Light Birch Plank Flooring (Exact match to screenshot)
     const floorCanvas = document.createElement('canvas');
-    floorCanvas.width = 512;
-    floorCanvas.height = 512;
+    floorCanvas.width = 1024;
+    floorCanvas.height = 1024;
     const fCtx = floorCanvas.getContext('2d');
-    fCtx.fillStyle = '#eae5dc'; // Light wood tone from Spot
-    fCtx.fillRect(0, 0, 512, 512);
+    fCtx.fillStyle = '#eae5db'; // Light wood floor tone from Spot screenshot
+    fCtx.fillRect(0, 0, 1024, 1024);
 
-    // Subtle plank lines
+    // Subtle grain & wood plank seams
     fCtx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
     fCtx.lineWidth = 2;
-    for (let y = 0; y < 512; y += 32) {
+    for (let y = 0; y < 1024; y += 48) {
       fCtx.beginPath();
       fCtx.moveTo(0, y);
-      fCtx.lineTo(512, y);
+      fCtx.lineTo(1024, y);
       fCtx.stroke();
     }
-    // Staggered vertical seams
-    for (let y = 0; y < 512; y += 32) {
-      const offset = (y / 32) % 2 === 0 ? 0 : 64;
-      for (let x = offset; x < 512; x += 128) {
+    for (let y = 0; y < 1024; y += 48) {
+      const offset = (y / 48) % 2 === 0 ? 0 : 96;
+      for (let x = offset; x < 1024; x += 192) {
         fCtx.beginPath();
         fCtx.moveTo(x, y);
-        fCtx.lineTo(x, y + 32);
+        fCtx.lineTo(x, y + 48);
         fCtx.stroke();
       }
     }
     const floorTexture = new THREE.CanvasTexture(floorCanvas);
     floorTexture.wrapS = THREE.RepeatWrapping;
     floorTexture.wrapT = THREE.RepeatWrapping;
-    floorTexture.repeat.set(16, 16);
+    floorTexture.repeat.set(12, 12);
 
     const floorMat = new THREE.MeshStandardMaterial({
       map: floorTexture,
-      roughness: 0.85,
-      metalness: 0.05
+      roughness: 0.82,
+      metalness: 0.04
     });
 
-    const floorGeo = new THREE.PlaneGeometry(55, 45);
+    const floorGeo = new THREE.PlaneGeometry(65, 55);
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     floor.name = 'floor';
     scene.add(floor);
 
-    // Surrounding dark patio edge & grass border
-    const patioMat = new THREE.MeshStandardMaterial({ color: 0x2d3748, roughness: 0.9 });
-    const patioGeo = new THREE.BoxGeometry(57, 0.4, 47);
-    const patio = new THREE.Mesh(patioGeo, patioMat);
-    patio.position.y = -0.22;
+    // Surrounding dark patio & lawn border
+    const patioMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 });
+    const patio = new THREE.Mesh(new THREE.BoxGeometry(68, 0.5, 58), patioMat);
+    patio.position.y = -0.26;
     scene.add(patio);
 
-    // 4. Helper Builders for Office Assets (Spot Virtual Exact Models)
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x1a202c, roughness: 0.8 });
+    // 4. Shared Office Materials
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.28 });
+    const deskTopMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+    const blackMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.85 });
     const woodMat = new THREE.MeshStandardMaterial({ color: 0xc8b598, roughness: 0.7 });
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x718096, metalness: 0.8, roughness: 0.2 });
-    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd69e2e, metalness: 0.85, roughness: 0.3 });
-    const redMat = new THREE.MeshStandardMaterial({ color: 0xe53e3e, roughness: 0.4 });
-    const chairBeigeMat = new THREE.MeshStandardMaterial({ color: 0xd8cebf, roughness: 0.75 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x718096, metalness: 0.85, roughness: 0.2 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd69e2e, metalness: 0.85, roughness: 0.25 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0xd93838, roughness: 0.4 });
+    const chairBeigeMat = new THREE.MeshStandardMaterial({ color: 0xd8cebe, roughness: 0.75 });
+    const screenGlowMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+
     const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0x8ec5fc,
+      color: 0x93c5fd,
       transparent: true,
-      opacity: 0.32,
-      roughness: 0.08,
-      transmission: 0.9,
-      thickness: 0.5
+      opacity: 0.35,
+      roughness: 0.06,
+      transmission: 0.92,
+      thickness: 0.4
     });
 
-    // Planter Box Generator
-    const createPlanter = (x, z, w, d, h = 1.0) => {
+    // 5. Office Builders Matching Spot Screenshot
+    // A. Planter Box (Matte black trough with lush leafy foliage)
+    const createPlanter = (x, z, w, d, h = 1.05) => {
       const group = new THREE.Group();
-      // Box trough
-      const boxGeo = new THREE.BoxGeometry(w, h, d);
-      const box = new THREE.Mesh(boxGeo, blackMat);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), blackMat);
       box.position.y = h / 2;
       box.castShadow = true;
       box.receiveShadow = true;
       group.add(box);
 
-      // Soil
-      const soilGeo = new THREE.BoxGeometry(w - 0.1, 0.1, d - 0.1);
-      const soilMat = new THREE.MeshStandardMaterial({ color: 0x2d2013 });
-      const soil = new THREE.Mesh(soilGeo, soilMat);
+      // Soil bed
+      const soil = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, 0.1, d - 0.1), new THREE.MeshStandardMaterial({ color: 0x22170f }));
       soil.position.y = h - 0.05;
       group.add(soil);
 
-      // Lush leafy plants
-      const numPlants = Math.max(3, Math.floor((w + d) * 3));
+      // Dense snake plants / ficus foliage (matching screenshot)
+      const numPlants = Math.max(4, Math.floor((w + d) * 3.5));
       for (let i = 0; i < numPlants; i++) {
-        const leafColor = i % 2 === 0 ? 0x2f855a : 0x38a169;
-        const leafMat = new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.6 });
-        const plantGeo = new THREE.ConeGeometry(0.35, 0.8 + Math.random() * 0.4, 5);
-        const plant = new THREE.Mesh(plantGeo, leafMat);
-        const px = (Math.random() - 0.5) * (w - 0.3);
-        const pz = (Math.random() - 0.5) * (d - 0.3);
-        plant.position.set(px, h + 0.3, pz);
+        const leafColor = i % 2 === 0 ? 0x22543d : 0x2f855a;
+        const plantGeo = new THREE.ConeGeometry(0.32, 0.9 + Math.random() * 0.4, 6);
+        const plant = new THREE.Mesh(plantGeo, new THREE.MeshStandardMaterial({ color: leafColor, roughness: 0.55 }));
+        const px = (Math.random() - 0.5) * (w - 0.25);
+        const pz = (Math.random() - 0.5) * (d - 0.25);
+        plant.position.set(px, h + 0.35, pz);
         plant.rotation.y = Math.random() * Math.PI;
-        plant.rotation.z = (Math.random() - 0.5) * 0.3;
+        plant.rotation.z = (Math.random() - 0.5) * 0.25;
         plant.castShadow = true;
         group.add(plant);
       }
@@ -224,94 +224,102 @@ export default function WorkspacePlatform({ user, onExit }) {
       return group;
     };
 
-    // Desk Cluster Generator (White minimalist dual workstation)
+    // B. Desk Workstations (White dual desks with monitors, laptops, lamps, mugs)
     const createDeskPair = (x, z, rotY = 0) => {
       const group = new THREE.Group();
-      // Table tops (pair facing each other)
-      const topGeo = new THREE.BoxGeometry(2.4, 0.1, 1.4);
-      const top1 = new THREE.Mesh(topGeo, whiteMat);
-      top1.position.set(0, 1.15, -0.75);
+      const topGeo = new THREE.BoxGeometry(2.5, 0.1, 1.45);
+
+      // Desk 1 & Desk 2
+      const top1 = new THREE.Mesh(topGeo, deskTopMat);
+      top1.position.set(0, 1.15, -0.76);
       top1.castShadow = true;
       top1.receiveShadow = true;
       group.add(top1);
 
-      const top2 = new THREE.Mesh(topGeo, whiteMat);
-      top2.position.set(0, 1.15, 0.75);
+      const top2 = new THREE.Mesh(topGeo, deskTopMat);
+      top2.position.set(0, 1.15, 0.76);
       top2.castShadow = true;
       top2.receiveShadow = true;
       group.add(top2);
 
-      // Privacy divider between desks
-      const divGeo = new THREE.BoxGeometry(2.3, 0.45, 0.08);
-      const divMat = new THREE.MeshStandardMaterial({ color: 0xedf2f7 });
-      const divider = new THREE.Mesh(divGeo, divMat);
-      divider.position.set(0, 1.4, 0);
-      group.add(divider);
+      // Privacy Divider
+      const div = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.06), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
+      div.position.set(0, 1.4, 0);
+      group.add(div);
 
-      // Legs
+      // Desk Legs
       const legGeo = new THREE.BoxGeometry(0.08, 1.1, 0.08);
-      [[-1.1, -1.4], [1.1, -1.4], [-1.1, 1.4], [1.1, 1.4], [-1.1, 0], [1.1, 0]].forEach(([lx, lz]) => {
+      [[-1.15, -1.4], [1.15, -1.4], [-1.15, 1.4], [1.15, 1.4], [-1.15, 0], [1.15, 0]].forEach(([lx, lz]) => {
         const leg = new THREE.Mesh(legGeo, whiteMat);
         leg.position.set(lx, 0.55, lz);
         leg.castShadow = true;
         group.add(leg);
       });
 
-      // Monitors & laptops on desk 1
-      const monBase = new THREE.BoxGeometry(0.3, 0.03, 0.2);
-      const monStand = new THREE.BoxGeometry(0.05, 0.35, 0.05);
-      const monScreen = new THREE.BoxGeometry(0.9, 0.55, 0.04);
-      const screenDisp = new THREE.Mesh(monScreen, blackMat);
-      screenDisp.position.set(-0.3, 1.5, -0.6);
-      screenDisp.castShadow = true;
-      group.add(screenDisp);
+      // Monitors with glowing blue code displays
+      const screenGeo = new THREE.BoxGeometry(0.95, 0.58, 0.04);
+      const mon1 = new THREE.Mesh(screenGeo, blackMat);
+      mon1.position.set(-0.35, 1.55, -0.55);
+      mon1.castShadow = true;
+      group.add(mon1);
 
-      // Brass lamp
-      const lampBase = new THREE.CylinderGeometry(0.12, 0.12, 0.04, 12);
-      const lamp = new THREE.Mesh(lampBase, brassMat);
-      lamp.position.set(0.8, 1.22, -0.6);
+      // Glowing screen texture
+      const disp1 = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.48), screenGlowMat);
+      disp1.position.set(-0.35, 1.55, -0.52);
+      disp1.rotation.y = Math.PI;
+      group.add(disp1);
+
+      // Brass Gooseneck Lamp
+      const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.05, 12), brassMat);
+      lamp.position.set(0.85, 1.22, -0.6);
       group.add(lamp);
 
       // Red Coffee Mug
-      const mugGeo = new THREE.CylinderGeometry(0.08, 0.08, 0.14, 10);
-      const mug = new THREE.Mesh(mugGeo, redMat);
-      mug.position.set(0.6, 1.25, -0.4);
+      const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.15, 12), redMat);
+      mug.position.set(0.65, 1.25, -0.35);
       group.add(mug);
 
-      // Monitors on desk 2
-      const screenDisp2 = new THREE.Mesh(monScreen, blackMat);
-      screenDisp2.position.set(0.2, 1.5, 0.6);
-      screenDisp2.castShadow = true;
-      group.add(screenDisp2);
+      // Open Laptop on desk 2
+      const laptopBase = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.02, 0.4), metalMat);
+      laptopBase.position.set(0.3, 1.22, 0.5);
+      group.add(laptopBase);
 
-      // Office Chairs
-      const chairGeo = new THREE.BoxGeometry(0.7, 0.1, 0.7);
-      const chairBackGeo = new THREE.BoxGeometry(0.7, 0.7, 0.1);
-      const chairPostGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.7, 8);
+      const laptopScreen = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.38, 0.02), screenGlowMat);
+      laptopScreen.position.set(0.3, 1.4, 0.3);
+      laptopScreen.rotation.x = -0.2;
+      group.add(laptopScreen);
 
-      const addChair = (cx, cz, crot) => {
+      // Chairs
+      const addDeskChair = (cx, cz, crot) => {
         const cGrp = new THREE.Group();
-        const seat = new THREE.Mesh(chairGeo, whiteMat);
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.08, 0.72), whiteMat);
         seat.position.y = 0.75;
         seat.castShadow = true;
         cGrp.add(seat);
 
-        const back = new THREE.Mesh(chairBackGeo, whiteMat);
-        back.position.set(0, 1.1, 0.3);
+        const back = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.72, 0.08), whiteMat);
+        back.position.set(0, 1.1, 0.32);
         back.castShadow = true;
         cGrp.add(back);
 
-        const post = new THREE.Mesh(chairPostGeo, metalMat);
-        post.position.y = 0.35;
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.75, 8), metalMat);
+        post.position.y = 0.38;
         cGrp.add(post);
 
+        // Clickable chair target
         cGrp.position.set(cx, 0, cz);
         cGrp.rotation.y = crot;
         group.add(cGrp);
+
+        // Register chair coordinate for click-to-sit
+        chairsRef.current.push({
+          pos: new THREE.Vector3(x + cx, 0, z + cz),
+          rot: crot + rotY
+        });
       };
 
-      addChair(0, -1.5, 0);
-      addChair(0, 1.5, Math.PI);
+      addDeskChair(0, -1.55, 0);
+      addDeskChair(0, 1.55, Math.PI);
 
       group.position.set(x, 0, z);
       group.rotation.y = rotY;
@@ -319,132 +327,121 @@ export default function WorkspacePlatform({ user, onExit }) {
       return group;
     };
 
-    // Central Long Collaboration Table (From Spot Virtual Screenshot)
+    // C. Central Collaboration Table (Angled with 8 chairs, treats plate & cake dome)
     const createCollaborationTable = () => {
       const group = new THREE.Group();
-      // Big white rounded conference table
-      const tableGeo = new THREE.BoxGeometry(6.5, 0.12, 1.8);
-      const table = new THREE.Mesh(tableGeo, whiteMat);
+
+      // Big white rounded table
+      const table = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.12, 1.9), whiteMat);
       table.position.y = 1.15;
       table.castShadow = true;
       table.receiveShadow = true;
       group.add(table);
 
-      // Table support pylons
-      const pylonGeo = new THREE.CylinderGeometry(0.25, 0.35, 1.1, 16);
-      const p1 = new THREE.Mesh(pylonGeo, whiteMat);
-      p1.position.set(-2.2, 0.55, 0);
-      p1.castShadow = true;
-      group.add(p1);
+      // White table support pylons
+      [-2.4, 2.4].forEach((px) => {
+        const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.38, 1.1, 16), whiteMat);
+        pylon.position.set(px, 0.55, 0);
+        pylon.castShadow = true;
+        group.add(pylon);
+      });
 
-      const p2 = new THREE.Mesh(pylonGeo, whiteMat);
-      p2.position.set(2.2, 0.55, 0);
-      p2.castShadow = true;
-      group.add(p2);
-
-      // Delicious Red Doughnuts Plate in Center
-      const plateGeo = new THREE.CylinderGeometry(0.35, 0.3, 0.04, 16);
-      const plate = new THREE.Mesh(plateGeo, whiteMat);
-      plate.position.set(0.5, 1.23, 0.1);
+      // Red Glazed Doughnuts Plate in Center
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.32, 0.05, 18), whiteMat);
+      plate.position.set(0.6, 1.23, 0.1);
+      plate.name = 'doughnutPlate';
       group.add(plate);
 
-      // Red glazed treats
       for (let i = 0; i < 4; i++) {
-        const torusGeo = new THREE.TorusGeometry(0.09, 0.05, 8, 16);
-        const donut = new THREE.Mesh(torusGeo, redMat);
+        const donut = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.05, 8, 16), redMat);
         donut.rotation.x = Math.PI / 2;
-        donut.position.set(0.45 + (i % 2) * 0.12, 1.28, 0.05 + Math.floor(i / 2) * 0.12);
+        donut.position.set(0.55 + (i % 2) * 0.13, 1.28, 0.05 + Math.floor(i / 2) * 0.13);
         group.add(donut);
       }
 
-      // Coffee cups on table
-      const cupGeo = new THREE.CylinderGeometry(0.07, 0.06, 0.12, 10);
-      const cup1 = new THREE.Mesh(cupGeo, blackMat);
-      cup1.position.set(1.6, 1.24, -0.3);
+      // Pastries Dome Stand (from screenshot near Wes)
+      const domeStand = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.32, 0.06, 16), whiteMat);
+      domeStand.position.set(2.4, 1.23, 0.2);
+      group.add(domeStand);
+
+      const glassDome = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), glassMat);
+      glassDome.position.set(2.4, 1.26, 0.2);
+      group.add(glassDome);
+
+      // Coffee cups & tumblers
+      const cup1 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.15, 10), blackMat);
+      cup1.position.set(1.4, 1.24, -0.3);
       group.add(cup1);
 
-      const cup2 = new THREE.Mesh(cupGeo, whiteMat);
-      cup2.position.set(-1.4, 1.24, 0.4);
+      const cup2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.06, 0.15, 10), whiteMat);
+      cup2.position.set(-1.2, 1.24, 0.4);
       group.add(cup2);
 
-      // Modern Beige Chairs around table
-      const chairSeatGeo = new THREE.BoxGeometry(0.75, 0.08, 0.7);
-      const chairBackGeo = new THREE.BoxGeometry(0.75, 0.65, 0.08);
-
-      const addTableChair = (cx, cz, rot) => {
+      // Beige bucket conference chairs with sleek metal legs
+      const addTableChair = (cx, cz, crot) => {
         const cGrp = new THREE.Group();
-        const seat = new THREE.Mesh(chairSeatGeo, chairBeigeMat);
-        seat.position.y = 0.7;
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.08, 0.72), chairBeigeMat);
+        seat.position.y = 0.72;
         seat.castShadow = true;
         cGrp.add(seat);
 
-        const back = new THREE.Mesh(chairBackGeo, chairBeigeMat);
-        back.position.set(0, 1.0, 0.32);
+        const back = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.65, 0.08), chairBeigeMat);
+        back.position.set(0, 1.02, 0.34);
         back.castShadow = true;
         cGrp.add(back);
 
-        // 4 sleek metal legs
-        const legGeo = new THREE.CylinderGeometry(0.025, 0.025, 0.65, 6);
-        [[-0.3, -0.28], [0.3, -0.28], [-0.3, 0.28], [0.3, 0.28]].forEach(([lx, lz]) => {
-          const leg = new THREE.Mesh(legGeo, metalMat);
-          leg.position.set(lx, 0.32, lz);
+        [[-0.32, -0.3], [0.32, -0.3], [-0.32, 0.3], [0.32, 0.3]].forEach(([lx, lz]) => {
+          const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.68, 6), metalMat);
+          leg.position.set(lx, 0.34, lz);
           cGrp.add(leg);
         });
 
         cGrp.position.set(cx, 0, cz);
-        cGrp.rotation.y = rot;
+        cGrp.rotation.y = crot;
         group.add(cGrp);
+
+        chairsRef.current.push({
+          pos: new THREE.Vector3(cx, 0, cz).applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 6).add(new THREE.Vector3(0.5, 0, 1.8)),
+          rot: crot - Math.PI / 6
+        });
       };
 
       // 4 chairs top side, 4 chairs bottom side
-      [-2.1, -0.7, 0.7, 2.1].forEach((xOff) => {
-        addTableChair(xOff, -1.35, 0); // Facing south
-        addTableChair(xOff, 1.35, Math.PI); // Facing north
+      [-2.4, -0.8, 0.8, 2.4].forEach((xOff) => {
+        addTableChair(xOff, -1.4, 0); // North row
+        addTableChair(xOff, 1.4, Math.PI); // South row
       });
 
-      // Position table at an angle like the screenshot
       group.position.set(0.5, 0, 1.8);
-      group.rotation.y = -Math.PI / 6; // Angled alignment
+      group.rotation.y = -Math.PI / 6;
       scene.add(group);
       return group;
     };
 
-    // Rolling Whiteboard next to the table
+    // D. Rolling Whiteboard Screen (Exact match to screenshot)
     const createRollingWhiteboard = (x, z, rotY) => {
       const group = new THREE.Group();
-      // Whiteboard panel
-      const boardGeo = new THREE.BoxGeometry(2.4, 1.5, 0.06);
-      const board = new THREE.Mesh(boardGeo, whiteMat);
-      board.position.y = 2.0;
+      // Whiteboard surface
+      const board = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.6, 0.06), whiteMat);
+      board.position.y = 2.1;
       board.castShadow = true;
       group.add(board);
 
-      // Aluminum frame
-      const frameGeo = new THREE.BoxGeometry(2.5, 1.6, 0.08);
-      const frameMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8 });
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.position.set(0, 2.0, -0.01);
+      // Aluminum bezel frame
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(2.7, 1.7, 0.08), new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.8 }));
+      frame.position.set(0, 2.1, -0.01);
       group.add(frame);
 
-      // Support legs
-      const legGeo = new THREE.CylinderGeometry(0.04, 0.04, 2.1, 8);
-      const leg1 = new THREE.Mesh(legGeo, metalMat);
-      leg1.position.set(-1.15, 1.05, 0);
-      group.add(leg1);
+      // Aluminum tubular legs
+      [-1.25, 1.25].forEach((lx) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8), metalMat);
+        leg.position.set(lx, 1.1, 0);
+        group.add(leg);
 
-      const leg2 = new THREE.Mesh(legGeo, metalMat);
-      leg2.position.set(1.15, 1.05, 0);
-      group.add(leg2);
-
-      // Caster feet
-      const footGeo = new THREE.BoxGeometry(0.08, 0.06, 0.8);
-      const f1 = new THREE.Mesh(footGeo, metalMat);
-      f1.position.set(-1.15, 0.03, 0);
-      group.add(f1);
-
-      const f2 = new THREE.Mesh(footGeo, metalMat);
-      f2.position.set(1.15, 0.03, 0);
-      group.add(f2);
+        const foot = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.85), metalMat);
+        foot.position.set(lx, 0.03, 0);
+        group.add(foot);
+      });
 
       group.position.set(x, 0, z);
       group.rotation.y = rotY;
@@ -452,106 +449,96 @@ export default function WorkspacePlatform({ user, onExit }) {
       return group;
     };
 
-    // Glass Conference Room (Top Left)
+    // E. Glass Executive Boardroom (Top Left)
     const createGlassMeetingRoom = () => {
       const group = new THREE.Group();
-      // Glass Wall Left
-      const wallGeo = new THREE.BoxGeometry(0.1, 3.4, 7.5);
-      const glassWall1 = new THREE.Mesh(wallGeo, glassMat);
-      glassWall1.position.set(-8.5, 1.7, -9.5);
+      // Left glass wall
+      const glassWall1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 3.5, 8.5), glassMat);
+      glassWall1.position.set(-8.5, 1.75, -9.5);
       group.add(glassWall1);
 
-      // Glass Wall Front with Black Double Door Frame
-      const frontGlassGeo = new THREE.BoxGeometry(5.5, 3.4, 0.1);
-      const frontGlass = new THREE.Mesh(frontGlassGeo, glassMat);
-      frontGlass.position.set(-5.75, 1.7, -5.75);
+      // Front glass wall with black double door frame
+      const frontGlass = new THREE.Mesh(new THREE.BoxGeometry(6.2, 3.5, 0.1), glassMat);
+      frontGlass.position.set(-5.4, 1.75, -5.5);
       group.add(frontGlass);
 
-      // Black Frame Headers & Posts
-      const headerGeo = new THREE.BoxGeometry(5.7, 0.15, 0.15);
-      const header = new THREE.Mesh(headerGeo, blackMat);
-      header.position.set(-5.75, 3.35, -5.75);
+      // Black headers & mullions
+      const header = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.15, 0.15), blackMat);
+      header.position.set(-5.4, 3.45, -5.5);
       group.add(header);
 
-      // Double Door frame & silver handles
-      const doorFrameGeo = new THREE.BoxGeometry(2.0, 2.8, 0.12);
-      const doorGlass = new THREE.Mesh(doorFrameGeo, glassMat);
-      doorGlass.position.set(-6.5, 1.4, -5.75);
+      // Double Door Frame
+      const doorGlass = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.9, 0.12), glassMat);
+      doorGlass.position.set(-6.5, 1.45, -5.5);
       group.add(doorGlass);
 
-      const handleGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6, 8);
-      const handle1 = new THREE.Mesh(handleGeo, metalMat);
-      handle1.position.set(-6.6, 1.3, -5.68);
-      group.add(handle1);
+      // Vertical silver door handles
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 8), metalMat);
+      handle.position.set(-6.6, 1.35, -5.42);
+      group.add(handle);
 
-      // Conference Table inside glass room
-      const innerTable = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.1, 1.5), blackMat);
-      innerTable.position.set(-6.0, 1.1, -9.5);
+      // Inner meeting table & chairs
+      const innerTable = new THREE.Mesh(new THREE.BoxGeometry(4.0, 0.12, 1.6), blackMat);
+      innerTable.position.set(-5.8, 1.1, -9.5);
       group.add(innerTable);
 
       scene.add(group);
     };
 
-    // Lounge Sectional (Upper Left)
-    const createLoungeArea = () => {
+    // F. Upper Left Lounge (White Scandinavian sofas & planter enclosure)
+    const createUpperLounge = () => {
       const group = new THREE.Group();
-      // Curved white modular couches
-      const couchMat = new THREE.MeshStandardMaterial({ color: 0xf7fafc, roughness: 0.85 });
-      const sofa1 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.9), couchMat);
+      const sofaMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.85 });
+
+      const sofa1 = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.55, 0.95), sofaMat);
       sofa1.position.set(-10.5, 0.35, -2.5);
       sofa1.castShadow = true;
       group.add(sofa1);
 
-      const sofa2 = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.5, 0.9), couchMat);
-      sofa2.position.set(-10.5, 0.35, 1.0);
+      const sofa2 = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.55, 0.95), sofaMat);
+      sofa2.position.set(-10.5, 0.35, 1.2);
       sofa2.castShadow = true;
       group.add(sofa2);
 
-      // Round white coffee table
-      const tableGeo = new THREE.CylinderGeometry(0.65, 0.65, 0.45, 24);
-      const cTable = new THREE.Mesh(tableGeo, whiteMat);
-      cTable.position.set(-10.5, 0.22, -0.75);
-      cTable.castShadow = true;
-      group.add(cTable);
+      const coffeeTable = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.45, 24), whiteMat);
+      coffeeTable.position.set(-10.5, 0.22, -0.65);
+      coffeeTable.castShadow = true;
+      group.add(coffeeTable);
 
       scene.add(group);
     };
 
-    // Lower Central Lounge (Black couch, beige armchairs, round coffee table)
+    // G. Lower Central Lounge (Black couch, beige armchairs, round marble table)
     const createLowerLounge = () => {
       const group = new THREE.Group();
-      // Sleek black 3-seater sofa
-      const sofaGeo = new THREE.BoxGeometry(3.2, 0.55, 1.0);
-      const bSofa = new THREE.Mesh(sofaGeo, blackMat);
+      // Long black modern leather sofa
+      const bSofa = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.55, 1.05), blackMat);
       bSofa.position.set(-1.8, 0.35, 8.5);
       bSofa.rotation.y = -Math.PI / 7;
       bSofa.castShadow = true;
       group.add(bSofa);
 
       // Beige armchair 1
-      const armGeo = new THREE.BoxGeometry(0.95, 0.55, 0.9);
-      const arm1 = new THREE.Mesh(armGeo, chairBeigeMat);
+      const arm1 = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.55, 0.95), chairBeigeMat);
       arm1.position.set(-4.5, 0.35, 9.8);
       arm1.rotation.y = Math.PI / 4;
       arm1.castShadow = true;
       group.add(arm1);
 
       // Round coffee table with plant vase
-      const tableGeo = new THREE.CylinderGeometry(0.75, 0.75, 0.38, 24);
-      const marbleTable = new THREE.Mesh(tableGeo, whiteMat);
+      const marbleTable = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.38, 24), whiteMat);
       marbleTable.position.set(-2.8, 0.19, 10.6);
       marbleTable.castShadow = true;
       group.add(marbleTable);
 
-      const vaseGeo = new THREE.CylinderGeometry(0.08, 0.1, 0.25, 10);
-      const vase = new THREE.Mesh(vaseGeo, whiteMat);
+      const vase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.25, 10), whiteMat);
       vase.position.set(-2.8, 0.45, 10.6);
       group.add(vase);
 
       scene.add(group);
     };
 
-    // 5. Stylized 3D Avatar Generator (Matching Spot Bobblehead Character Aesthetics)
+    // 6. Stylized Bobblehead 3D Avatar Generator (Identical to Spot Screenshot)
     const createAvatar = (name, initialPos, config = {}) => {
       const group = new THREE.Group();
 
@@ -568,84 +555,69 @@ export default function WorkspacePlatform({ user, onExit }) {
         roughness: 0.8
       });
 
-      // Head
-      const headGeo = new THREE.SphereGeometry(0.42, 20, 20);
-      const head = new THREE.Mesh(headGeo, skinMat);
+      // Spherical stylized head
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), skinMat);
       head.position.y = 1.9;
       head.castShadow = true;
       group.add(head);
 
-      // Cap / Hair / Headphone accessory
+      // Hat / Cap / Hair Styling
       if (config.hasCap) {
-        const capGeo = new THREE.CylinderGeometry(0.46, 0.46, 0.2, 16);
         const capMat = new THREE.MeshStandardMaterial({ color: config.capColor || 0x2d3748 });
-        const cap = new THREE.Mesh(capGeo, capMat);
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.2, 16), capMat);
         cap.position.set(0, 2.15, -0.05);
         cap.rotation.x = 0.15;
         group.add(cap);
 
-        // Cap bill/visor
-        const visorGeo = new THREE.BoxGeometry(0.42, 0.05, 0.35);
-        const visor = new THREE.Mesh(visorGeo, capMat);
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 0.35), capMat);
         visor.position.set(0, 2.05, 0.4);
         group.add(visor);
       } else {
-        // Standard Hair volume
-        const hairGeo = new THREE.SphereGeometry(0.44, 16, 16);
-        const hair = new THREE.Mesh(hairGeo, hairMat);
+        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16), hairMat);
         hair.position.set(0, 2.02, -0.06);
         group.add(hair);
       }
 
-      // Headphones if applicable
+      // Headphones accessory
       if (config.hasHeadphones) {
-        const hpBandGeo = new THREE.TorusGeometry(0.46, 0.04, 8, 16, Math.PI);
         const hpMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        const band = new THREE.Mesh(hpBandGeo, hpMat);
+        const band = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.04, 8, 16, Math.PI), hpMat);
         band.position.set(0, 1.95, 0);
         band.rotation.z = Math.PI;
         group.add(band);
 
-        const cupGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12);
-        const c1 = new THREE.Mesh(cupGeo, hpMat);
+        const c1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12), hpMat);
         c1.rotation.z = Math.PI / 2;
         c1.position.set(-0.44, 1.9, 0);
         group.add(c1);
 
-        const c2 = new THREE.Mesh(cupGeo, hpMat);
+        const c2 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.08, 12), hpMat);
         c2.rotation.z = Math.PI / 2;
         c2.position.set(0.44, 1.9, 0);
         group.add(c2);
       }
 
-      // Torso / Shirt
-      const torsoGeo = new THREE.CylinderGeometry(0.32, 0.38, 0.85, 16);
-      const torso = new THREE.Mesh(torsoGeo, clothMat);
+      // Torso / Clothes
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 0.85, 16), clothMat);
       torso.position.y = 1.15;
       torso.castShadow = true;
       group.add(torso);
 
-      // Sitting vs standing pose legs
+      // Sitting vs standing pose
       if (config.isSitting) {
-        // Upper legs horizontal
-        const legGeo = new THREE.BoxGeometry(0.16, 0.16, 0.55);
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x2d3748 });
-        const leg1 = new THREE.Mesh(legGeo, legMat);
+        const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.55), new THREE.MeshStandardMaterial({ color: 0x2d3748 }));
         leg1.position.set(-0.16, 0.72, 0.3);
         group.add(leg1);
 
-        const leg2 = new THREE.Mesh(legGeo, legMat);
+        const leg2 = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.55), new THREE.MeshStandardMaterial({ color: 0x2d3748 }));
         leg2.position.set(0.16, 0.72, 0.3);
         group.add(leg2);
       } else {
-        // Standing legs
-        const legGeo = new THREE.CylinderGeometry(0.11, 0.11, 0.75, 8);
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x2d3748 });
-        const leg1 = new THREE.Mesh(legGeo, legMat);
+        const leg1 = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.75, 8), new THREE.MeshStandardMaterial({ color: 0x2d3748 }));
         leg1.position.set(-0.16, 0.4, 0);
         group.add(leg1);
 
-        const leg2 = new THREE.Mesh(legGeo, legMat);
+        const leg2 = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.75, 8), new THREE.MeshStandardMaterial({ color: 0x2d3748 }));
         leg2.position.set(0.16, 0.4, 0);
         group.add(leg2);
       }
@@ -664,33 +636,33 @@ export default function WorkspacePlatform({ user, onExit }) {
       };
     };
 
-    // 6. Build the entire Scene Geometry Matching the User's Screenshot!
-    // Planters enclosing Upper Left Lounge
+    // 7. Replicate the Exact Layout from the User's Screenshot:
+    // Green Planters Enclosing Upper Lounge
     createPlanter(-13.5, -3.5, 0.9, 7.5);
     createPlanter(-7.5, -3.5, 0.9, 7.5);
     createPlanter(-10.5, -7.5, 6.9, 0.9);
     createPlanter(-10.5, 0.5, 6.9, 0.9);
 
-    // Planters along bottom right balcony railing
-    createPlanter(18.0, 16.0, 0.8, 18.0);
-    createPlanter(5.0, 20.0, 26.0, 0.8);
+    // Green Planters Along Balcony Border
+    createPlanter(19.0, 16.0, 0.8, 18.0);
+    createPlanter(5.0, 21.0, 28.0, 0.8);
 
-    // Glass Conference Room
+    // Glass Executive Boardroom (Top Left)
     createGlassMeetingRoom();
 
-    // Upper Left Lounge furniture
-    createLoungeArea();
+    // Upper Left Lounge (White sofas)
+    createUpperLounge();
 
-    // Central Collaboration Table
+    // Central Collaboration Table & Doughnuts
     createCollaborationTable();
 
-    // Rolling Whiteboard
+    // Rolling Whiteboard Screen
     createRollingWhiteboard(5.4, 1.2, -Math.PI / 4);
 
     // Lower Central Lounge
     createLowerLounge();
 
-    // 6 Desk Clusters in Top Right & Mid Right (Matching screenshot)
+    // 6 Desk Clusters (Top Right & Mid Right matching screenshot)
     createDeskPair(4.0, -10.5, 0);
     createDeskPair(8.5, -10.5, 0);
     createDeskPair(13.0, -10.5, 0);
@@ -698,9 +670,9 @@ export default function WorkspacePlatform({ user, onExit }) {
     createDeskPair(5.5, -4.5, 0);
     createDeskPair(10.5, -4.5, 0);
 
-    createDeskPair(7.5, 3.5, -Math.PI / 6);
+    createDeskPair(8.0, 3.5, -Math.PI / 6);
 
-    // 7. Populate Teammate Avatars in exact locations from the user's screenshot!
+    // 8. Populate All Teammates in the Exact Screenshot Positions:
     const avatarsList = [];
 
     // Steven sitting at desk with headphones: ● Steven 🎧
@@ -714,7 +686,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       })
     );
 
-    // Stan (You) sitting at top right desk: ● Stan (you)
+    // Stan (you) sitting at top right desk: ● Stan (you)
     const playerObj = createAvatar('Stan (you)', new THREE.Vector3(12.8, 0, -11.9), {
       isSitting: true,
       hasHeadphones: isHeadphonesOn,
@@ -726,7 +698,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     playerMeshRef.current = playerObj.mesh;
     avatarsList.push(playerObj);
 
-    // Teammates around the Central Collaboration Table
+    // Central Table Teammates:
     // Stefan (dark cap, blue hoodie)
     avatarsList.push(
       createAvatar('Stefan', new THREE.Vector3(-1.4, 0, 0.6), {
@@ -759,7 +731,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       })
     );
 
-    // Graham (green cap, sitting opposite Alex)
+    // Graham (green cap opposite Alex)
     avatarsList.push(
       createAvatar('Graham', new THREE.Vector3(1.1, 0, 2.5), {
         isSitting: true,
@@ -780,7 +752,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       })
     );
 
-    // Mat (blue shirt, dark hair standing near black couch)
+    // Mat (standing near black couch)
     avatarsList.push(
       createAvatar('Mat', new THREE.Vector3(-3.2, 0, 7.2), {
         isSitting: false,
@@ -790,7 +762,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       })
     );
 
-    // Edward (sitting in beige armchair talking to Mat)
+    // Edward (seated in armchair talking to Mat)
     avatarsList.push(
       createAvatar('Edward', new THREE.Vector3(-4.5, 0, 9.8), {
         isSitting: true,
@@ -800,7 +772,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       })
     );
 
-    // Andi (blonde buns/pigtails, pink shirt, bottom left)
+    // Andi (blonde buns, pink top, bottom left)
     avatarsList.push(
       createAvatar('Andi', new THREE.Vector3(-12.5, 0, 9.0), {
         isSitting: true,
@@ -810,7 +782,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       })
     );
 
-    // DevBot (OpenClaw Autonomous Agent stationed in the Glass Lab)
+    // DevBot (OpenClaw Autonomous Agent stationed in Glass Boardroom)
     avatarsList.push(
       createAvatar('DevBot (AI)', new THREE.Vector3(-6.2, 0, -8.2), {
         isSitting: true,
@@ -823,23 +795,40 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     avatarsRef.current = avatarsList;
 
-    // 8. Raycasting Click-to-Move Handler
+    // 9. Interactive Raycasting & Click-to-Move / Click-to-Sit
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
     const handlePointerDown = (e) => {
+      // Ignore if clicking on UI overlay
+      if (e.target.closest('header, aside, .Platform_uiDock, .Platform_toast')) return;
+
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObject(floor);
+      const intersects = raycaster.intersectObjects(scene.children, true);
 
       if (intersects.length > 0) {
+        // Check if user clicked on the doughnut plate!
+        let clickedObj = intersects[0].object;
+        while (clickedObj && clickedObj !== scene) {
+          if (clickedObj.name === 'doughnutPlate') {
+            setDonutToast('Stan grabbed a fresh glazed doughnut! 🍩');
+            setTimeout(() => setDonutToast(null), 3000);
+            return;
+          }
+          clickedObj = clickedObj.parent;
+        }
+
         const point = intersects[0].point;
         targetPosRef.current.set(point.x, 0, point.z);
 
-        // Update active room label based on target position
+        // Stand up from chair when moving
+        isSittingRef.current = false;
+
+        // Detect Room
         if (point.x < -4 && point.z < -4) {
           setCurrentRoom('Glass Boardroom');
         } else if (point.x < -6) {
@@ -849,14 +838,14 @@ export default function WorkspacePlatform({ user, onExit }) {
         } else if (point.z > 6) {
           setCurrentRoom('South Cafe Lounge');
         } else {
-          setCurrentRoom('Central Collaboration Table');
+          setCurrentRoom('Conference Table');
         }
       }
     };
 
     renderer.domElement.addEventListener('pointerdown', handlePointerDown);
 
-    // 9. Animation Loop
+    // 10. Animation Loop
     let animId;
     let clock = new THREE.Clock();
 
@@ -865,34 +854,31 @@ export default function WorkspacePlatform({ user, onExit }) {
       const delta = clock.getDelta();
       const elapsed = clock.getElapsedTime();
 
-      // Smooth avatar movement towards target position
+      // Avatar movement towards target point
       if (playerMeshRef.current) {
         const player = playerMeshRef.current;
         const target = targetPosRef.current;
         const dist = player.position.distanceTo(target);
 
         if (dist > 0.15) {
-          // Look towards movement direction
           const dir = new THREE.Vector3().subVectors(target, player.position).normalize();
           const targetAngle = Math.atan2(dir.x, dir.z);
-          player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.15);
+          player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.18);
+          player.position.addScaledVector(dir, Math.min(dist, delta * 5.8));
 
-          // Move forward
-          player.position.addScaledVector(dir, Math.min(dist, delta * 5.5));
-
-          // Natural walking bobbing
-          player.position.y = Math.abs(Math.sin(elapsed * 10)) * 0.12;
+          // Natural walking bob
+          player.position.y = Math.abs(Math.sin(elapsed * 11)) * 0.12;
         } else {
           player.position.y = 0;
         }
       }
 
-      // Project 3D Avatars to Screen Pixels for 2D Floating Nameplates
+      // Billboard Project 3D Avatar Coordinates to 2D Screen Space
       const projected = [];
       avatarsRef.current.forEach((av) => {
         const pos = new THREE.Vector3();
         av.mesh.getWorldPosition(pos);
-        pos.y += 2.65; // Position directly above avatar head
+        pos.y += 2.65; // Directly above head
         pos.project(camera);
 
         const x = ((pos.x + 1) * width) / 2;
@@ -909,15 +895,15 @@ export default function WorkspacePlatform({ user, onExit }) {
       });
       setScreenAvatars(projected);
 
-      // Check proximity between Player and Teammates (within 6 units)
+      // Detect Spatial Audio Proximity (within 7.5 units)
       if (playerMeshRef.current) {
         const pPos = playerMeshRef.current.position;
         const nearby = [];
         avatarsRef.current.forEach((av) => {
           if (!av.isPlayer) {
             const d = pPos.distanceTo(av.mesh.position);
-            if (d < 6.5) {
-              nearby.push(av.name);
+            if (d < 7.5) {
+              nearby.push(av.name.replace(' (AI)', ''));
             }
           }
         });
@@ -929,16 +915,33 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     animate();
 
+    // Zoom handler
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY * 0.015;
+      cameraZoomRef.current = Math.max(10, Math.min(32, cameraZoomRef.current + zoomFactor));
+      const curAspect = container.clientWidth / container.clientHeight;
+      const curD = cameraZoomRef.current;
+      camera.left = -curD * curAspect;
+      camera.right = curD * curAspect;
+      camera.top = curD;
+      camera.bottom = -curD;
+      camera.updateProjectionMatrix();
+    };
+
+    renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+
     // Resize Handler
     const handleResize = () => {
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
       const asp = w / h;
-      camera.left = -d * asp;
-      camera.right = d * asp;
-      camera.top = d;
-      camera.bottom = -d;
+      const dNow = cameraZoomRef.current;
+      camera.left = -dNow * asp;
+      camera.right = dNow * asp;
+      camera.top = dNow;
+      camera.bottom = -dNow;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
@@ -947,6 +950,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      renderer.domElement.removeEventListener('wheel', handleWheel);
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
       cancelAnimationFrame(animId);
       if (container.contains(renderer.domElement)) {
@@ -955,6 +959,22 @@ export default function WorkspacePlatform({ user, onExit }) {
       renderer.dispose();
     };
   }, [isHeadphonesOn]);
+
+  // Jump camera/avatar to specific room
+  const jumpToRoom = (roomName) => {
+    setCurrentRoom(roomName);
+    if (roomName === 'Conference Table') {
+      targetPosRef.current.set(0.5, 0, 1.8);
+    } else if (roomName === 'Engineering Desks') {
+      targetPosRef.current.set(8.5, 0, -10.5);
+    } else if (roomName === 'Glass Boardroom') {
+      targetPosRef.current.set(-6.0, 0, -8.0);
+    } else if (roomName === 'West Lounge') {
+      targetPosRef.current.set(-10.5, 0, -0.5);
+    } else if (roomName === 'South Cafe Lounge') {
+      targetPosRef.current.set(-2.5, 0, 8.5);
+    }
+  };
 
   // Reactions
   const triggerReaction = (emoji) => {
@@ -984,7 +1004,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         replyText = "Graham just dropped fresh glazed doughnuts at the central collaboration table! Go grab one.";
       }
       setAiMessages((prev) => [...prev, { sender: 'DevBot', text: replyText, time: 'Just now' }]);
-    }, 850);
+    }, 800);
   };
 
   // Room Chat Message Sender
@@ -1055,7 +1075,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         zIndex: 50,
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
       }}>
-        {/* Left: Spot Logo & Room Indicator */}
+        {/* Left: Spot Logo & Active Room Pill */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={onExit}>
             <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#60c449', display: 'inline-block' }} />
@@ -1099,7 +1119,29 @@ export default function WorkspacePlatform({ user, onExit }) {
 
         {/* Right: Media Controls & Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          {/* Mic */}
+          {/* Quick Room Teleport Dropdown */}
+          <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '3px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+            {['Conference Table', 'Engineering Desks', 'Glass Boardroom', 'West Lounge'].map((r) => (
+              <button
+                key={r}
+                onClick={() => jumpToRoom(r)}
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background: currentRoom === r ? '#ffffff' : 'transparent',
+                  color: currentRoom === r ? '#0f172a' : '#64748b',
+                  boxShadow: currentRoom === r ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                {r.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+
+          {/* Mic Toggle */}
           <button
             onClick={() => setIsMuted(!isMuted)}
             style={{
@@ -1120,7 +1162,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>{isMuted ? 'Muted' : 'Unmuted'}</span>
           </button>
 
-          {/* Video */}
+          {/* Video Toggle */}
           <button
             onClick={() => setIsVideoOn(!isVideoOn)}
             style={{
@@ -1159,7 +1201,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             }}
           >
             <Monitor size={15} />
-            <span>{isScreenSharing ? 'Sharing Screen' : 'Share'}</span>
+            <span>{isScreenSharing ? 'Sharing' : 'Share Screen'}</span>
           </button>
 
           {/* Headphones Toggle */}
@@ -1168,9 +1210,9 @@ export default function WorkspacePlatform({ user, onExit }) {
             style={{
               padding: '7px 14px',
               borderRadius: '2rem',
-              background: '#f8fafc',
+              background: isHeadphonesOn ? '#f1f5f9' : '#f8fafc',
               border: '1px solid #cbd5e1',
-              color: isHeadphonesOn ? '#0f172a' : '#94a3b8',
+              color: isHeadphonesOn ? '#0f172a' : '#64748b',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -1179,11 +1221,11 @@ export default function WorkspacePlatform({ user, onExit }) {
               cursor: 'pointer'
             }}
           >
-            {isHeadphonesOn ? <Headphones size={15} /> : <VolumeX size={15} />}
-            <span>{isHeadphonesOn ? 'Listening' : 'DND'}</span>
+            <Headphones size={15} />
+            <span>{isHeadphonesOn ? 'Headphones On' : 'Headphones Off'}</span>
           </button>
 
-          {/* Emoji Reactions */}
+          {/* Reactions */}
           <div style={{ display: 'flex', gap: '3px', background: '#f1f5f9', padding: '3px 8px', borderRadius: '2rem' }}>
             {['👋', '🍩', '🚀', '👏', '☕'].map((emoji) => (
               <button
@@ -1289,7 +1331,29 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Three.js Container */}
         <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'crosshair' }} />
 
-        {/* 2D Floating Nameplates Billboarded Over 3D Coordinates (Matching Spot Screenshot!) */}
+        {/* Floating Donut Notification */}
+        {donutToast && (
+          <div className="Platform_toast" style={{
+            position: 'absolute',
+            top: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid #86efac',
+            color: '#166534',
+            padding: '10px 20px',
+            borderRadius: '2rem',
+            fontWeight: 700,
+            fontSize: '0.95rem',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            animation: 'popIn 0.25s ease-out'
+          }}>
+            {donutToast}
+          </div>
+        )}
+
+        {/* 2D Floating Nameplates Billboarded Over 3D Coordinates (Exact match to Spot Screenshot) */}
         <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           {screenAvatars.map((av, idx) => (
             <div
@@ -1300,18 +1364,17 @@ export default function WorkspacePlatform({ user, onExit }) {
                 top: `${av.y}px`,
                 transform: 'translate(-50%, -100%)',
                 background: '#ffffff',
-                border: '1px solid #cbd5e1',
-                borderRadius: '2rem',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                borderRadius: '9999px',
                 padding: '3px 10px',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.12)',
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontSize: '0.82rem',
-                fontWeight: 700,
                 color: '#1e293b',
                 whiteSpace: 'nowrap',
-                transition: 'left 0.1s ease-out, top 0.1s ease-out',
+                transition: 'left 0.08s ease-out, top 0.08s ease-out',
                 pointerEvents: 'none'
               }}
             >
@@ -1321,10 +1384,18 @@ export default function WorkspacePlatform({ user, onExit }) {
                 height: 7,
                 borderRadius: '50%',
                 background: av.status === 'ai-agent' ? '#10b981' : '#60c449',
+                boxShadow: '0 0 6px rgba(96, 196, 73, 0.5)',
                 display: 'inline-block'
               }} />
 
-              <span>{av.name}</span>
+              {/* Exact Name text formatting (Stan (you)) */}
+              {av.isPlayer ? (
+                <span>
+                  <strong style={{ fontWeight: 800 }}>Stan</strong> <span style={{ color: '#64748b', fontWeight: 500 }}>(you)</span>
+                </span>
+              ) : (
+                <strong style={{ fontWeight: 700 }}>{av.name}</strong>
+              )}
 
               {av.hasHeadphones && <span style={{ fontSize: '0.85rem' }}>🎧</span>}
 
@@ -1332,10 +1403,10 @@ export default function WorkspacePlatform({ user, onExit }) {
               {av.isPlayer && activeReaction && (
                 <div style={{
                   position: 'absolute',
-                  bottom: '130%',
+                  bottom: '135%',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  fontSize: '1.75rem',
+                  fontSize: '1.85rem',
                   animation: 'floatUp 1.2s ease-out forwards'
                 }}>
                   {activeReaction}
@@ -1345,26 +1416,32 @@ export default function WorkspacePlatform({ user, onExit }) {
           ))}
         </div>
 
-        {/* Bottom Help Tooltip */}
+        {/* Bottom Help Tooltip & Zoom Controls */}
         <div style={{
           position: 'absolute',
-          bottom: '18px',
+          bottom: '20px',
           left: '20px',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(8px)',
-          border: '1px solid #e2e8f0',
-          borderRadius: '1rem',
-          padding: '8px 16px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
-          fontSize: '0.85rem',
-          color: '#475569',
-          pointerEvents: 'none'
+          gap: '12px'
         }}>
-          <span style={{ fontSize: '1.1rem' }}>🖱️</span>
-          <span><strong>Click anywhere</strong> on the floor to walk &bull; Walk near colleagues for proximity audio</span>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.95)',
+            backdropFilter: 'blur(8px)',
+            border: '1px solid #e2e8f0',
+            borderRadius: '1rem',
+            padding: '8px 16px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '0.85rem',
+            color: '#475569',
+            pointerEvents: 'none'
+          }}>
+            <span style={{ fontSize: '1.1rem' }}>🖱️</span>
+            <span><strong>Click anywhere</strong> to walk or sit in any chair &bull; Scroll wheel to zoom &bull; Click doughnuts for treats</span>
+          </div>
         </div>
 
         {/* 3. Slide-in Drawers: OpenClaw AI Chat */}
@@ -1475,7 +1552,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             <div style={{ padding: '1rem 1.25rem', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Edit3 size={18} color="#2563eb" />
-                <strong style={{ fontSize: '1rem', color: '#1e293b' }}>Collaborative Whiteboard</strong>
+                <strong style={{ fontSize: '1rem', color: '#1e293b' }}>Rolling Whiteboard</strong>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
@@ -1536,7 +1613,7 @@ export default function WorkspacePlatform({ user, onExit }) {
                 }}
               />
               <div style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '8px', textAlign: 'center' }}>
-                Draw with mouse or stylus &bull; Changes visible to anyone near the rolling whiteboard
+                Draw with mouse or stylus &bull; Live in real-time next to the collaboration table
               </div>
             </div>
           </aside>
