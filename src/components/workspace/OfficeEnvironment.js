@@ -15,19 +15,19 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   const fCtx = floorCanvas.getContext('2d');
   
   // Base warm light oak / bleached birch tone
-  fCtx.fillStyle = '#eddcc8';
+  fCtx.fillStyle = '#f1efeb';
   fCtx.fillRect(0, 0, 1024, 1024);
 
   // Alternating subtle plank lightness
   for (let y = 0; y < 1024; y += 32) {
     const toneVariation = (Math.sin(y * 0.1) * 8);
-    fCtx.fillStyle = `rgba(255, 255, 255, ${0.06 + (toneVariation > 0 ? 0.06 : 0)})`;
+    fCtx.fillStyle = `rgba(255, 255, 255, ${0.025 + (toneVariation > 0 ? 0.025 : 0)})`;
     fCtx.fillRect(0, y, 1024, 32);
   }
 
   // Darker defined plank joint seams
-  fCtx.strokeStyle = '#9c8c76';
-  fCtx.lineWidth = 2.5;
+  fCtx.strokeStyle = '#c9c4bd';
+  fCtx.lineWidth = 1.25;
   for (let y = 0; y < 1024; y += 32) {
     fCtx.beginPath();
     fCtx.moveTo(0, y);
@@ -47,7 +47,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   }
 
   // Fine wood fiber streaks
-  fCtx.fillStyle = 'rgba(120, 100, 80, 0.08)';
+  fCtx.fillStyle = 'rgba(120, 100, 80, 0.045)';
   for (let i = 0; i < 700; i++) {
     const rx = Math.random() * 1024;
     const ry = Math.random() * 1024;
@@ -59,13 +59,49 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   floorTexture.colorSpace = THREE.SRGBColorSpace;
   floorTexture.wrapS = THREE.RepeatWrapping;
   floorTexture.wrapT = THREE.RepeatWrapping;
-  floorTexture.repeat.set(8, 6);
+  floorTexture.repeat.set(9, 7);
 
   // Common Materials
   materials.floorMat = new THREE.MeshStandardMaterial({
     map: floorTexture,
     roughness: 0.72,
     metalness: 0.04
+  });
+
+  // Light brushed acoustic panel used on the architectural wall sections.
+  // Fine vertical grain and shallow seams match Spot's pale feature-wall finish.
+  const wallCanvas = document.createElement('canvas');
+  wallCanvas.width = 512;
+  wallCanvas.height = 512;
+  const wallCtx = wallCanvas.getContext('2d');
+  wallCtx.fillStyle = '#d4d3d0';
+  wallCtx.fillRect(0, 0, 512, 512);
+  for (let x = 0; x < 512; x += 24) {
+    const shade = 196 + ((x * 17) % 22);
+    wallCtx.fillStyle = `rgb(${shade}, ${shade}, ${shade - 1})`;
+    wallCtx.fillRect(x, 0, 21, 512);
+    wallCtx.fillStyle = 'rgba(255,255,255,0.38)';
+    wallCtx.fillRect(x, 0, 1.2, 512);
+    wallCtx.fillStyle = 'rgba(65,65,65,0.13)';
+    wallCtx.fillRect(x + 21, 0, 2, 512);
+  }
+  wallCtx.fillStyle = 'rgba(80,75,70,0.045)';
+  for (let i = 0; i < 700; i++) {
+    const x = (i * 73) % 512;
+    const y = (i * 137) % 512;
+    wallCtx.fillRect(x, y, 1, 8 + (i % 18));
+  }
+  const wallTexture = new THREE.CanvasTexture(wallCanvas);
+  wallTexture.colorSpace = THREE.SRGBColorSpace;
+  wallTexture.wrapS = THREE.RepeatWrapping;
+  wallTexture.wrapT = THREE.RepeatWrapping;
+  wallTexture.repeat.set(3, 2);
+
+  materials.panelWallMat = new THREE.MeshStandardMaterial({
+    map: wallTexture,
+    color: 0xffffff,
+    roughness: 0.8,
+    metalness: 0.015
   });
 
   materials.blackWallMat = new THREE.MeshStandardMaterial({
@@ -128,7 +164,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
 
   // 4. Exterior Landscape (Rolling Green Hills & 3D Trees)
   const outdoorGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 88),
+    new THREE.PlaneGeometry(200, 160),
     materials.outdoorGrassMat
   );
   outdoorGround.rotation.x = -Math.PI / 2;
@@ -181,8 +217,158 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   };
 
   [-46, -30, -10, 8, 26, 42, 56].forEach((tx, idx) => {
-    createTree(tx, -54 - (idx % 3) * 4, 0.85 + (idx % 2) * 0.18);
+    createTree(tx, -72 - (idx % 3) * 2, 0.62 + (idx % 2) * 0.1);
   });
+
+
+  // 4b. Stylized city context outside the office plot. These low-detail blocks
+  // provide the urban street-view seen through Spot's glazing without competing
+  // with furniture inside the office.
+  const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x41464a, roughness: 0.96 });
+  const curbMat = new THREE.MeshStandardMaterial({ color: 0xb9b9b4, roughness: 0.9 });
+  const roadMarkMat = new THREE.MeshBasicMaterial({ color: 0xf2f0e8 });
+  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xc9c7c0, roughness: 0.93 });
+
+  const addRoad = (width, depth, x, z) => {
+    const road = new THREE.Mesh(new THREE.BoxGeometry(width, 0.07, depth), asphaltMat);
+    road.position.set(x, -0.025, z);
+    scene.add(road);
+    return road;
+  };
+
+  // Four streets around a rectangular green forecourt.
+  addRoad(132, 7.4, 0, -36);
+  addRoad(132, 7.4, 0, 28);
+  addRoad(7.4, 88, -44.5, -4);
+  addRoad(7.4, 88, 44.5, -4);
+
+  // Pale sidewalks between the office lawn and the street edges.
+  addRoad(84, 1.15, 0, -30.1).material = sidewalkMat;
+  addRoad(84, 1.15, 0, 22.1).material = sidewalkMat;
+  addRoad(1.15, 56, -38.2, -4).material = sidewalkMat;
+  addRoad(1.15, 56, 38.2, -4).material = sidewalkMat;
+
+  // Broken lane markings.
+  for (let x = -64; x <= 64; x += 5.5) {
+    [-36, 28].forEach((z) => {
+      const dash = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.018, 0.12), roadMarkMat);
+      dash.position.set(x, 0.018, z);
+      scene.add(dash);
+    });
+  }
+  for (let z = -44; z <= 36; z += 5.5) {
+    [-44.5, 44.5].forEach((x) => {
+      const dash = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.018, 2.6), roadMarkMat);
+      dash.position.set(x, 0.018, z);
+      scene.add(dash);
+    });
+  }
+
+  // Zebra crossings at the four corners of the plot.
+  [-44.5, 44.5].forEach((x) => {
+    [-36, 28].forEach((z) => {
+      for (let i = -4; i <= 4; i++) {
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 2.35), roadMarkMat);
+        stripe.position.set(x + i * 0.55, 0.02, z);
+        scene.add(stripe);
+      }
+    });
+  });
+  [-36, 28].forEach((z) => {
+    [-44.5, 44.5].forEach((x) => {
+      for (let i = -4; i <= 4; i++) {
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.02, 0.34), roadMarkMat);
+        stripe.position.set(x, 0.022, z + i * 0.55);
+        scene.add(stripe);
+      }
+    });
+  });
+
+  // Repeating facade texture: understated dark glazing divided by light mullions.
+  const facadeCanvas = document.createElement('canvas');
+  facadeCanvas.width = 256;
+  facadeCanvas.height = 512;
+  const facadeCtx = facadeCanvas.getContext('2d');
+  facadeCtx.fillStyle = '#555b61';
+  facadeCtx.fillRect(0, 0, 256, 512);
+  for (let y = 8; y < 512; y += 34) {
+    facadeCtx.fillStyle = 'rgba(220,220,215,0.42)';
+    facadeCtx.fillRect(0, y, 256, 3);
+    for (let x = 9; x < 256; x += 31) {
+      const tone = 24 + ((x * 3 + y * 7) % 26);
+      facadeCtx.fillStyle = `rgb(${tone}, ${tone + 7}, ${tone + 12})`;
+      facadeCtx.fillRect(x, y + 5, 22, 23);
+      facadeCtx.fillStyle = 'rgba(210,220,225,0.28)';
+      facadeCtx.fillRect(x, y + 5, 2, 23);
+    }
+  }
+  const facadeTexture = new THREE.CanvasTexture(facadeCanvas);
+  facadeTexture.colorSpace = THREE.SRGBColorSpace;
+  facadeTexture.wrapS = THREE.RepeatWrapping;
+  facadeTexture.wrapT = THREE.RepeatWrapping;
+
+  const cityBlocks = [
+    { x: -63, z: -56, w: 19, d: 17, h: 31, color: 0xc6c4bd },
+    { x: -31, z: -57, w: 17, d: 16, h: 23, color: 0xd1c2a7 },
+    { x: 8, z: -58, w: 22, d: 17, h: 19, color: 0xbfc4c5 },
+    { x: 57, z: -57, w: 21, d: 18, h: 29, color: 0xc3c5c4 },
+    { x: -64, z: -3, w: 19, d: 20, h: 20, color: 0xc5c4bd },
+    { x: 63, z: -4, w: 21, d: 24, h: 34, color: 0xc1c3c2 },
+    { x: -63, z: 45, w: 23, d: 17, h: 28, color: 0xc5b9a2 },
+    { x: -25, z: 47, w: 19, d: 18, h: 22, color: 0xc6c6c2 },
+    { x: 19, z: 47, w: 22, d: 18, h: 35, color: 0xc5c8ca },
+    { x: 62, z: 46, w: 20, d: 18, h: 26, color: 0xc1c1bf }
+  ];
+
+  cityBlocks.forEach((b, index) => {
+    const facade = new THREE.MeshStandardMaterial({
+      map: facadeTexture,
+      color: b.color,
+      roughness: 0.86,
+      metalness: 0.06
+    });
+    const building = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), facade);
+    building.position.set(b.x, b.h / 2 - 0.04, b.z);
+    building.receiveShadow = true;
+    scene.add(building);
+
+    // Simple roof cap and setback parapet for readable architectural silhouettes.
+    const roof = new THREE.Mesh(
+      new THREE.BoxGeometry(b.w + 0.25, 0.28, b.d + 0.25),
+      new THREE.MeshStandardMaterial({ color: 0x454a4e, roughness: 0.82 })
+    );
+    roof.position.set(b.x, b.h - 0.02, b.z);
+    scene.add(roof);
+  });
+
+  // Small roadside trees soften the hard city blocks.
+  const addStreetTree = (x, z, scale = 1) => {
+    const tree = new THREE.Group();
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12 * scale, 0.16 * scale, 1.7 * scale, 7),
+      new THREE.MeshStandardMaterial({ color: 0x675343, roughness: 0.9 })
+    );
+    trunk.position.y = 0.85 * scale;
+    tree.add(trunk);
+    const crownMat = new THREE.MeshStandardMaterial({ color: 0x47783d, roughness: 0.92 });
+    [
+      [-0.34, 1.9, 0.1, 0.95],
+      [0.28, 2.2, -0.12, 0.82],
+      [0, 2.65, 0, 0.9]
+    ].forEach(([dx, y, dz, r]) => {
+      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(r * scale, 1), crownMat);
+      crown.position.set(dx * scale, y * scale, dz * scale);
+      crown.castShadow = true;
+      tree.add(crown);
+    });
+    tree.position.set(x, -0.035, z);
+    scene.add(tree);
+  };
+
+  [-29, -12, 7, 27].forEach((x, i) => addStreetTree(x, -31.35, 0.8 + (i % 2) * 0.12));
+  [-28, -8, 14, 29].forEach((x, i) => addStreetTree(x, 23.3, 0.85 + (i % 2) * 0.12));
+  [-20, 1, 22].forEach((z) => addStreetTree(-39.6, z, 0.82));
+  [-18, 4, 23].forEach((z) => addStreetTree(39.6, z, 0.82));
 
   // Right brick wall accent
   const brickWall = new THREE.Mesh(
@@ -195,8 +381,8 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   scene.add(brickWall);
 
   // 5. Architectural Walls (High Black Acoustic Feature Walls)
-  const createWall = (x, z, w, d, h = 5.0) => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials.blackWallMat);
+  const createWall = (x, z, w, d, h = 5.0, material = materials.blackWallMat) => {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
     wall.position.set(x, h / 2, z);
     wall.castShadow = true;
     wall.receiveShadow = true;
@@ -205,10 +391,10 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   };
 
   // Solid Back Wall Framing the Triple Screens
-  createWall(18, -22, 28, 0.45, 5.0);
+  createWall(18, -22, 28, 0.45, 5.0, materials.panelWallMat);
 
   // Theater Left Enclosure Walls
-  createWall(-20, -22, 24, 0.45, 5.0);
+  createWall(-20, -22, 24, 0.45, 5.0, materials.panelWallMat);
   createWall(-33.5, -14, 0.45, 17, 5.0);
   createWall(-20, -6, 25, 0.45, 4.5);
   createWall(-8.5, -14, 0.45, 16, 4.5);
@@ -250,6 +436,26 @@ export function buildOfficeEnvironment(scene, screenTextures) {
     const bottomBeam = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.08, 0.16), materials.frameMat);
     bottomBeam.position.set(0, 0.04, -12.5);
     group.add(bottomBeam);
+
+    // Slim black aluminum mullions make the glass meeting room read as a
+    // framed architectural enclosure instead of floating transparent sheets.
+    [-4.78, -1.2, 1.8, 4.78].forEach((x) => {
+      const mullion = new THREE.Mesh(
+        new THREE.BoxGeometry(0.075, 4.72, 0.14),
+        materials.frameMat
+      );
+      mullion.position.set(x, 2.4, -12.46);
+      mullion.castShadow = true;
+      group.add(mullion);
+    });
+    [-4.78, -1.6, 1.6, 4.78].forEach((x) => {
+      const mullion = new THREE.Mesh(
+        new THREE.BoxGeometry(0.065, 4.72, 0.12),
+        materials.frameMat
+      );
+      mullion.position.set(x, 2.4, -21.72);
+      group.add(mullion);
+    });
 
     scene.add(group);
   };
