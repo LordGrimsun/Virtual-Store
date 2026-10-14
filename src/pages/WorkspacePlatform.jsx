@@ -4,8 +4,9 @@ import {
   Mic, MicOff, Video, VideoOff, Monitor, Headphones, Volume2,
   Users, Bot, MessageSquare, Edit3, Share2, LogOut, Settings,
   Sparkles, Send, Plus, Check, ChevronRight, X, PhoneCall, VolumeX,
-  Maximize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
-  Terminal, Sliders, Camera, Layers, Radio, Play, Smile
+  Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
+  Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
+  TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye
 } from 'lucide-react';
 
 export default function WorkspacePlatform({ user, onExit }) {
@@ -27,11 +28,19 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isHeadphonesOn, setIsHeadphonesOn] = useState(false);
   const [pushToTalkActive, setPushToTalkActive] = useState(false);
 
+  // Real Screen Sharing (getDisplayMedia)
+  const screenShareVideoRef = useRef(null);
+  const [screenStream, setScreenStream] = useState(null);
+  const [isScreenModalOpen, setIsScreenModalOpen] = useState(false);
+
+  // Interactive Object Modals
+  const [activeModal, setActiveModal] = useState(null); // 'features', 'schedule', 'analytics', 'kpi', 'blueprint', 'theater', 'teammate'
+  const [selectedTeammate, setSelectedTeammate] = useState(null);
+
   // Spot Virtual Background state (from spotxyz/virtual-background)
   const [bgMode, setBgMode] = useState('blur'); // 'none', 'blur', 'spot-office', 'cyber'
   const videoRef = useRef(null);
   const videoCanvasRef = useRef(null);
-  const [hasCameraStream, setHasCameraStream] = useState(false);
 
   // Spot Audio Devices configuration (from spotxyz/macos-audio-devices)
   const [audioDevices, setAudioDevices] = useState({ inputs: [], outputs: [] });
@@ -42,7 +51,6 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Spot OpenClaw Agent Gateway state (from spotxyz/spot-openclaw)
   const [openClawSubTab, setOpenClawSubTab] = useState('chat'); // 'chat' or 'console'
-  const [agentLeaseActive, setAgentLeaseActive] = useState(true);
   const [toolLogs, setToolLogs] = useState([
     {
       time: '12:00:01',
@@ -50,14 +58,13 @@ export default function WorkspacePlatform({ user, onExit }) {
       result: { ok: true, worldId: 'spot-world-hq', avatarsCount: 11, roomsCount: 6, agentConnected: true }
     }
   ]);
-  const [consoleCommand, setConsoleCommand] = useState('spot_observe');
 
   // AI Agent Chat state
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState([
     {
       sender: 'DevBot',
-      text: 'Welcome back Stan! I am running on the Spot OpenClaw channel plugin (v0.2.0). All spatial tools (spot_move, spot_emotes, spot_rooms) are live.',
+      text: 'Welcome back Stan! OpenClaw Gateway v0.2.0 is active. You can walk with WASD/Arrows, click to sit, share your screen, or execute spatial tools.',
       time: '12:10 PM'
     }
   ]);
@@ -78,20 +85,76 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Floating Nameplates projected to screen coordinates
   const [screenAvatars, setScreenAvatars] = useState([]);
+  const [playerCoord, setPlayerCoord] = useState({ x: 0.5, z: 11.2 });
 
   // Three.js Scene References
   const sceneRef = useRef(null);
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
-  const targetPosRef = useRef(new THREE.Vector3(0.5, 0, 11.2)); // Starts in the foreground lounge
+  const targetPosRef = useRef(new THREE.Vector3(0.5, 0, 11.2));
   const isSittingRef = useRef(false);
   const avatarsRef = useRef([]);
   const chairsRef = useRef([]);
   const wavingHandMeshRef = useRef(null);
   const playerAnimStateRef = useRef({ emote: null, emoteTime: 0 });
+  const keysPressedRef = useRef({});
 
-  // 1. Enumerate Media Devices (Microphones & Speakers)
+  // 1. Procedural Web Audio Sound Synthesizer (Zero External Dependencies)
+  const audioCtxRef = useRef(null);
+  const playSound = (type) => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') ctx.resume();
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      const now = ctx.currentTime;
+      if (type === 'crunch') {
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.15);
+        gain.gain.setValueAtTime(0.35, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      } else if (type === 'highfive') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(580, now);
+        osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'chime') {
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(523.25, now); // C5
+        osc.frequency.setValueAtTime(659.25, now + 0.1); // E5
+        osc.frequency.setValueAtTime(783.99, now + 0.2); // G5
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } else if (type === 'click') {
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(800, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.05);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      }
+    } catch (e) {
+      // Audio autoplay policy fallback
+    }
+  };
+
+  // 2. Enumerate Media Devices (Microphones & Speakers)
   useEffect(() => {
     async function loadDevices() {
       try {
@@ -110,7 +173,84 @@ export default function WorkspacePlatform({ user, onExit }) {
     loadDevices();
   }, []);
 
-  // 2. Virtual Background Webcam Stream Pipeline (spotxyz/virtual-background)
+  // 3. Real Screen Sharing Handler (getDisplayMedia)
+  const startScreenShare = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      setScreenStream(stream);
+      setIsScreenSharing(true);
+      setIsScreenModalOpen(true);
+      if (screenShareVideoRef.current) {
+        screenShareVideoRef.current.srcObject = stream;
+        screenShareVideoRef.current.play();
+      }
+      playSound('chime');
+      setChatMessages((prev) => [
+        ...prev,
+        { sender: userName, text: '🖥️ *started sharing screen in the workspace!*', time: 'Just now' }
+      ]);
+      stream.getVideoTracks()[0].onended = () => {
+        stopScreenShare();
+      };
+    } catch (err) {
+      console.warn('Screen share canceled or denied:', err);
+    }
+  };
+
+  const stopScreenShare = () => {
+    if (screenStream) {
+      screenStream.getTracks().forEach((t) => t.stop());
+    }
+    setScreenStream(null);
+    setIsScreenSharing(false);
+    setIsScreenModalOpen(false);
+    playSound('click');
+  };
+
+  // 4. Keyboard WASD & Push-to-Talk Listeners
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+      // WASD / Arrows
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        keysPressedRef.current[e.code] = true;
+        isSittingRef.current = false; // Stand up
+      }
+
+      // Spacebar Push-To-Talk
+      if (e.code === 'Space' && !e.repeat) {
+        e.preventDefault();
+        setPushToTalkActive(true);
+        setIsMuted(false);
+        playSound('click');
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        keysPressedRef.current[e.code] = false;
+      }
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setPushToTalkActive(false);
+        setIsMuted(true);
+        playSound('click');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // 5. Virtual Background Webcam Stream Pipeline (spotxyz/virtual-background)
   useEffect(() => {
     let stream = null;
     let animFrame = null;
@@ -122,15 +262,12 @@ export default function WorkspacePlatform({ user, onExit }) {
           if (videoRef.current) {
             videoRef.current.srcObject = s;
             videoRef.current.play();
-            setHasCameraStream(true);
           }
         })
         .catch((err) => {
           console.warn('Webcam permission not granted; using fallback simulator:', err);
-          setHasCameraStream(false);
         });
 
-      // Canvas background segmentation & rendering loop
       const renderVideoCanvas = () => {
         const canvas = videoCanvasRef.current;
         const video = videoRef.current;
@@ -138,17 +275,13 @@ export default function WorkspacePlatform({ user, onExit }) {
           const ctx = canvas.getContext('2d');
           const w = canvas.width;
           const h = canvas.height;
-
           ctx.clearRect(0, 0, w, h);
 
           if (video && video.readyState >= 2) {
             if (bgMode === 'blur') {
-              // Google Meet / Spot Canvas Bokeh Blur effect
               ctx.filter = 'blur(10px)';
               ctx.drawImage(video, 0, 0, w, h);
               ctx.filter = 'none';
-
-              // Composite sharp user foreground in center oval
               ctx.save();
               ctx.beginPath();
               ctx.ellipse(w / 2, h / 2 + 10, w * 0.32, h * 0.44, 0, 0, Math.PI * 2);
@@ -156,14 +289,11 @@ export default function WorkspacePlatform({ user, onExit }) {
               ctx.drawImage(video, 0, 0, w, h);
               ctx.restore();
             } else if (bgMode === 'spot-office') {
-              // Composite Spot Office virtual background
               const bgGrad = ctx.createLinearGradient(0, 0, w, h);
               bgGrad.addColorStop(0, '#eedfce');
               bgGrad.addColorStop(1, '#94a3b8');
               ctx.fillStyle = bgGrad;
               ctx.fillRect(0, 0, w, h);
-
-              // Draw subtle Spot logo in corner
               ctx.fillStyle = '#22c55e';
               ctx.beginPath();
               ctx.arc(30, 30, 8, 0, Math.PI * 2);
@@ -171,8 +301,6 @@ export default function WorkspacePlatform({ user, onExit }) {
               ctx.fillStyle = '#1e293b';
               ctx.font = 'bold 12px sans-serif';
               ctx.fillText('spot HQ', 45, 34);
-
-              // Composite user
               ctx.save();
               ctx.beginPath();
               ctx.ellipse(w / 2, h / 2 + 10, w * 0.34, h * 0.45, 0, 0, Math.PI * 2);
@@ -180,7 +308,6 @@ export default function WorkspacePlatform({ user, onExit }) {
               ctx.drawImage(video, 0, 0, w, h);
               ctx.restore();
             } else if (bgMode === 'cyber') {
-              // Cyber grid background
               ctx.fillStyle = '#0f172a';
               ctx.fillRect(0, 0, w, h);
               ctx.strokeStyle = '#06b6d4';
@@ -204,12 +331,10 @@ export default function WorkspacePlatform({ user, onExit }) {
               ctx.drawImage(video, 0, 0, w, h);
               ctx.restore();
             } else {
-              // None / Normal camera
               ctx.filter = 'none';
               ctx.drawImage(video, 0, 0, w, h);
             }
           } else {
-            // Simulated feed with animated avatar silhouette
             ctx.fillStyle = '#1e293b';
             ctx.fillRect(0, 0, w, h);
             ctx.fillStyle = '#38bdf8';
@@ -236,31 +361,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     };
   }, [isVideoOn, bgMode, userName]);
 
-  // 3. Push-To-Talk Keyboard Hotkey (Spacebar)
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.code === 'Space' && !e.repeat && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
-        e.preventDefault();
-        setPushToTalkActive(true);
-        setIsMuted(false);
-      }
-    };
-    const handleKeyUp = (e) => {
-      if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
-        e.preventDefault();
-        setPushToTalkActive(false);
-        setIsMuted(true);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
-  // 4. Three.js Main Office Environment
+  // 6. Three.js Main Office Environment
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
@@ -298,11 +399,6 @@ export default function WorkspacePlatform({ user, onExit }) {
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 2048;
     sunLight.shadow.mapSize.height = 2048;
-    const sCam = 36;
-    sunLight.shadow.camera.left = -sCam;
-    sunLight.shadow.camera.right = sCam;
-    sunLight.shadow.camera.top = sCam;
-    sunLight.shadow.camera.bottom = -sCam;
     sunLight.shadow.bias = -0.0003;
     scene.add(sunLight);
 
@@ -310,7 +406,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     ambientFill.position.set(-25, 28, -25);
     scene.add(ambientFill);
 
-    // Procedural Floor Texture
+    // Procedural Textures Generation
     const floorCanvas = document.createElement('canvas');
     floorCanvas.width = 1024;
     floorCanvas.height = 1024;
@@ -379,7 +475,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     cCtx.stroke();
     const chartTexture = new THREE.CanvasTexture(chartCanvas);
 
-    // Digital KPI Canvas (168 161 47 34 34 / 83 85 6 52 25)
+    // KPI Scoreboard Canvas
     const kpiCanvas = document.createElement('canvas');
     kpiCanvas.width = 1024;
     kpiCanvas.height = 512;
@@ -441,7 +537,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     aCtx.stroke();
     const archTexture = new THREE.CanvasTexture(archCanvas);
 
-    // Front-Left New Features Canvas
+    // Features Canvas
     const featCanvas = document.createElement('canvas');
     featCanvas.width = 512;
     featCanvas.height = 512;
@@ -471,7 +567,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     featCtx.fillText('0%', 420, 313);
     const featTexture = new THREE.CanvasTexture(featCanvas);
 
-    // Mobile Schedule Canvas (10:42 1 on 1 with Stan)
+    // Mobile Schedule Canvas
     const schedCanvas = document.createElement('canvas');
     schedCanvas.width = 512;
     schedCanvas.height = 768;
@@ -543,7 +639,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       thickness: 0.3
     });
 
-    // Exterior Landscape (Rolling Green Hills & 3D Trees Outside)
+    // Exterior Landscape
     const outdoorGround = new THREE.Mesh(
       new THREE.PlaneGeometry(160, 160),
       new THREE.MeshStandardMaterial({ color: 0x82a56a, roughness: 0.95 })
@@ -584,7 +680,6 @@ export default function WorkspacePlatform({ user, onExit }) {
       createTree(tx, -42 - (idx % 3) * 6, 1.2 + (idx % 2) * 0.4);
     });
 
-    // Brick Wall Section in upper right background
     const brickWall = new THREE.Mesh(new THREE.BoxGeometry(28, 3.2, 0.6), new THREE.MeshStandardMaterial({ color: 0xba9b84, roughness: 0.85 }));
     brickWall.position.set(32, 1.6, -34);
     scene.add(brickWall);
@@ -648,6 +743,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       new THREE.MeshStandardMaterial({ map: createNoMeetTexture('09:38'), roughness: 0.3 })
     );
     theaterScreen.position.set(-20, 2.2, -21.7);
+    theaterScreen.name = 'theaterScreen';
     scene.add(theaterScreen);
 
     // Zone 2: Round Table Huddle & Interactive Board
@@ -656,6 +752,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       new THREE.MeshStandardMaterial({ map: featTexture, roughness: 0.25 })
     );
     featBoard.position.set(-20.5, 2.3, -5.6);
+    featBoard.name = 'featBoard';
     scene.add(featBoard);
 
     const roundTable = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 0.12, 32), whiteMat);
@@ -670,7 +767,9 @@ export default function WorkspacePlatform({ user, onExit }) {
     const nookSofa = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.55, 0.95), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 }));
     nookSofa.position.set(-4.5, 0.35, 4.2);
     nookSofa.rotation.y = Math.PI / 2;
+    nookSofa.name = 'chair_nook';
     scene.add(nookSofa);
+    chairsRef.current.push({ name: 'Nook Sofa', pos: new THREE.Vector3(-4.5, 0, 4.2), rot: Math.PI / 2 });
 
     const goldTable = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.5, 16), brassMat);
     goldTable.position.set(-4.5, 0.25, 1.8);
@@ -679,7 +778,9 @@ export default function WorkspacePlatform({ user, onExit }) {
     // Zone 4: Foreground Lounge & Sofa
     const bSofa = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 1.1), blackMat);
     bSofa.position.set(-2.0, 0.35, 9.8);
+    bSofa.name = 'chair_lounge';
     scene.add(bSofa);
+    chairsRef.current.push({ name: 'Lounge Sofa', pos: new THREE.Vector3(-2.0, 0, 9.8), rot: 0 });
 
     const drumTable = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.42, 24), whiteMat);
     drumTable.position.set(-1.8, 0.21, 11.8);
@@ -701,6 +802,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       // Bowl of red apples
       const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.26, 0.2, 16), whiteMat);
       bowl.position.set(-2.0, 1.3, 0.1);
+      bowl.name = 'appleBowl';
       group.add(bowl);
       for (let a = 0; a < 5; a++) {
         const apple = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), redMat);
@@ -728,11 +830,12 @@ export default function WorkspacePlatform({ user, onExit }) {
       glassDome.position.set(2.6, 1.26, 0.1);
       group.add(glassDome);
 
-      // Chairs
+      // Chairs with click-to-sit registration
       const addTableChair = (cx, cz, crot) => {
         const cGrp = new THREE.Group();
         const seat = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.08, 0.7), chairBeigeMat);
         seat.position.y = 0.72;
+        seat.name = 'clickable_chair';
         cGrp.add(seat);
         const back = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.65, 0.08), chairBeigeMat);
         back.position.set(0, 1.02, 0.32);
@@ -740,6 +843,12 @@ export default function WorkspacePlatform({ user, onExit }) {
         cGrp.position.set(cx, 0, cz);
         cGrp.rotation.y = crot;
         group.add(cGrp);
+
+        chairsRef.current.push({
+          name: 'Conference Chair',
+          pos: new THREE.Vector3(cx + 4.5, 0, cz + 3.8),
+          rot: crot
+        });
       };
       [-3.3, -2.0, -0.7, 0.7, 2.0, 3.3].forEach((xOff) => {
         addTableChair(xOff, -1.35, 0);
@@ -769,6 +878,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     );
     mobileScreen.position.set(12.5, 2.4, 3.8);
     mobileScreen.rotation.y = -Math.PI / 10;
+    mobileScreen.name = 'mobileSchedule';
     scene.add(mobileScreen);
 
     // Zone 8: Desk Pairs
@@ -790,6 +900,16 @@ export default function WorkspacePlatform({ user, onExit }) {
       disp1.position.set(-0.4, 1.58, -0.57);
       disp1.rotation.y = Math.PI;
       group.add(disp1);
+
+      // Desk Chairs
+      [-1.6, 1.6].forEach((cz, i) => {
+        chairsRef.current.push({
+          name: 'Desk Chair',
+          pos: new THREE.Vector3(x, 0, z + cz),
+          rot: i === 0 ? 0 : Math.PI
+        });
+      });
+
       group.position.set(x, 0, z);
       scene.add(group);
     };
@@ -803,22 +923,27 @@ export default function WorkspacePlatform({ user, onExit }) {
     // Zone 9: Triple Back Wall Dashboards
     const screen1 = new THREE.Mesh(new THREE.BoxGeometry(5.0, 2.7, 0.08), new THREE.MeshStandardMaterial({ map: chartTexture, roughness: 0.2 }));
     screen1.position.set(10.8, 2.3, -21.7);
+    screen1.name = 'screen1';
     scene.add(screen1);
 
     const screen2 = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.7, 0.08), new THREE.MeshStandardMaterial({ map: kpiTexture, roughness: 0.2 }));
     screen2.position.set(16.5, 2.3, -21.7);
+    screen2.name = 'screen2';
     scene.add(screen2);
 
     const screen3 = new THREE.Mesh(new THREE.BoxGeometry(5.0, 2.7, 0.08), new THREE.MeshStandardMaterial({ map: archTexture, roughness: 0.2 }));
     screen3.position.set(22.2, 2.3, -21.7);
+    screen3.name = 'screen3';
     scene.add(screen3);
 
     // Avatar Generator
     const createAvatar = (name, initialPos, config = {}) => {
       const group = new THREE.Group();
+      group.name = `avatar_${name}`;
       const skinMat = new THREE.MeshStandardMaterial({ color: config.skinColor || 0xf6d8c3, roughness: 0.55 });
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), skinMat);
       head.position.y = 1.9;
+      head.name = `avatar_head_${name}`;
       group.add(head);
 
       if (config.hatType === 'spot_cap') {
@@ -853,35 +978,39 @@ export default function WorkspacePlatform({ user, onExit }) {
 
       group.position.copy(initialPos);
       scene.add(group);
-      return { name, mesh: group, isPlayer: config.isPlayer || false, status: config.status || 'online' };
+      return {
+        name,
+        role: config.role || 'Teammate',
+        mesh: group,
+        isPlayer: config.isPlayer || false,
+        status: config.status || 'online'
+      };
     };
 
     const avatarsList = [];
-    // Player: Stan (you) in foreground lounge
-    const playerObj = createAvatar('Stan (you)', new THREE.Vector3(0.3, 0, 11.2), { isPlayer: true, hatType: 'spot_cap', shirtColor: 0x0284c7 });
+    const playerObj = createAvatar('Stan (you)', new THREE.Vector3(0.3, 0, 11.2), { isPlayer: true, hatType: 'spot_cap', shirtColor: 0x0284c7, role: 'Fullstack Lead' });
     playerMeshRef.current = playerObj.mesh;
     avatarsList.push(playerObj);
 
-    // Other Teammates matching screenshot
-    avatarsList.push(createAvatar('Wes', new THREE.Vector3(2.4, 0, 11.2), { shirtColor: 0x991b1b }));
-    avatarsList.push(createAvatar('Stefan', new THREE.Vector3(1.2, 0, 2.5), { shirtColor: 0x7c3aed }));
-    avatarsList.push(createAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), { shirtColor: 0xdc2626 }));
-    avatarsList.push(createAvatar('Sarah', new THREE.Vector3(-17.2, 0, 4.8), { shirtColor: 0x0284c7, hasWavingHand: true }));
-    avatarsList.push(createAvatar('Andi', new THREE.Vector3(-21.5, 0, 5.8), { shirtColor: 0xf472b6 }));
-    avatarsList.push(createAvatar('Chloe', new THREE.Vector3(-4.5, 0, 4.2), { shirtColor: 0xf1f5f9 }));
-    avatarsList.push(createAvatar('Steven', new THREE.Vector3(17.5, 0, -14.1), { shirtColor: 0xffffff }));
-    avatarsList.push(createAvatar('Alex', new THREE.Vector3(22.5, 0, -14.1), { shirtColor: 0x334155 }));
-    avatarsList.push(createAvatar('Graham', new THREE.Vector3(15.2, 0, -5.2), { shirtColor: 0x16a34a }));
-    avatarsList.push(createAvatar('DevBot (AI)', new THREE.Vector3(0, 0, -17.0), { shirtColor: 0x10b981, status: 'ai-agent' }));
+    avatarsList.push(createAvatar('Wes', new THREE.Vector3(2.4, 0, 11.2), { shirtColor: 0x991b1b, role: 'Platform Architect' }));
+    avatarsList.push(createAvatar('Stefan', new THREE.Vector3(1.2, 0, 2.5), { shirtColor: 0x7c3aed, role: 'Audio Engineer' }));
+    avatarsList.push(createAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), { shirtColor: 0xdc2626, role: 'Infrastructure' }));
+    avatarsList.push(createAvatar('Sarah', new THREE.Vector3(-17.2, 0, 4.8), { shirtColor: 0x0284c7, hasWavingHand: true, role: 'Product Designer' }));
+    avatarsList.push(createAvatar('Andi', new THREE.Vector3(-21.5, 0, 5.8), { shirtColor: 0xf472b6, role: 'Operations' }));
+    avatarsList.push(createAvatar('Chloe', new THREE.Vector3(-4.5, 0, 4.2), { shirtColor: 0xf1f5f9, role: 'Growth & Events' }));
+    avatarsList.push(createAvatar('Steven', new THREE.Vector3(17.5, 0, -14.1), { shirtColor: 0xffffff, role: 'Frontend Engineer' }));
+    avatarsList.push(createAvatar('Alex', new THREE.Vector3(22.5, 0, -14.1), { shirtColor: 0x334155, role: 'WebRTC Specialist' }));
+    avatarsList.push(createAvatar('Graham', new THREE.Vector3(15.2, 0, -5.2), { shirtColor: 0x16a34a, role: 'Security & DevOps' }));
+    avatarsList.push(createAvatar('DevBot (AI)', new THREE.Vector3(0, 0, -17.0), { shirtColor: 0x10b981, status: 'ai-agent', role: 'Autonomous Agent' }));
 
     avatarsRef.current = avatarsList;
 
-    // Raycast Pointer Down
+    // Raycast Pointer Down (Click to move, sit, inspect, or chat)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
     const handlePointerDown = (e) => {
-      if (e.target.closest('header, aside, .Platform_uiDock, .Platform_toast, .Platform_modal')) return;
+      if (e.target.closest('header, aside, .Platform_uiDock, .Platform_toast, .Platform_modal, .Platform_minimap')) return;
 
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -892,18 +1021,87 @@ export default function WorkspacePlatform({ user, onExit }) {
 
       if (intersects.length > 0) {
         let clickedObj = intersects[0].object;
+
+        // Check if user clicked an interactive display or object
         while (clickedObj && clickedObj !== scene) {
           if (clickedObj.name === 'doughnutPlate') {
+            playSound('crunch');
             setDonutToast('Stan grabbed a fresh glazed doughnut! 🍩');
             setTimeout(() => setDonutToast(null), 3000);
             return;
           }
+          if (clickedObj.name === 'appleBowl') {
+            playSound('crunch');
+            setDonutToast('Stan grabbed a crisp red apple! 🍎');
+            setTimeout(() => setDonutToast(null), 3000);
+            return;
+          }
+          if (clickedObj.name === 'featBoard') {
+            playSound('chime');
+            setActiveModal('features');
+            return;
+          }
+          if (clickedObj.name === 'mobileSchedule') {
+            playSound('chime');
+            setActiveModal('schedule');
+            return;
+          }
+          if (clickedObj.name === 'screen1') {
+            playSound('chime');
+            setActiveModal('analytics');
+            return;
+          }
+          if (clickedObj.name === 'screen2') {
+            playSound('chime');
+            setActiveModal('kpi');
+            return;
+          }
+          if (clickedObj.name === 'screen3') {
+            playSound('chime');
+            setActiveModal('blueprint');
+            return;
+          }
+          if (clickedObj.name === 'theaterScreen') {
+            playSound('chime');
+            setActiveModal('theater');
+            return;
+          }
+
+          // Check if clicked another teammate avatar
+          if (clickedObj.name?.startsWith('avatar_')) {
+            const rawName = clickedObj.name.replace('avatar_head_', '').replace('avatar_', '');
+            const av = avatarsList.find((a) => a.name === rawName && !a.isPlayer);
+            if (av) {
+              playSound('click');
+              setSelectedTeammate(av);
+              setActiveModal('teammate');
+              return;
+            }
+          }
+
+          // Check if clicked a chair to sit down
+          if (clickedObj.name === 'clickable_chair' || clickedObj.name?.startsWith('chair_')) {
+            const nearestChair = chairsRef.current.reduce((closest, chair) => {
+              const d = chair.pos.distanceTo(intersects[0].point);
+              return !closest || d < closest.dist ? { chair, dist: d } : closest;
+            }, null);
+
+            if (nearestChair && nearestChair.dist < 3.5) {
+              playSound('click');
+              targetPosRef.current.copy(nearestChair.chair.pos);
+              isSittingRef.current = true;
+              return;
+            }
+          }
+
           clickedObj = clickedObj.parent;
         }
 
+        // Default: walk to clicked ground point
         const point = intersects[0].point;
         targetPosRef.current.set(point.x, 0, point.z);
         isSittingRef.current = false;
+        playSound('click');
 
         // Detect Zone
         if (point.x < -10 && point.z < -8) {
@@ -943,30 +1141,50 @@ export default function WorkspacePlatform({ user, onExit }) {
         wavingHandMeshRef.current.rotation.z = Math.sin(elapsed * 5) * 0.22;
       }
 
-      // Player Movement & Emote animations
+      // Process Keyboard WASD Movement
+      const keys = keysPressedRef.current;
+      const moveVec = new THREE.Vector3(0, 0, 0);
+      if (keys['KeyW'] || keys['ArrowUp']) moveVec.z -= 1;
+      if (keys['KeyS'] || keys['ArrowDown']) moveVec.z += 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) moveVec.x -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) moveVec.x += 1;
+
       if (playerMeshRef.current) {
         const player = playerMeshRef.current;
-        const target = targetPosRef.current;
-        const dist = player.position.distanceTo(target);
 
-        // Check if emote is playing
-        const animState = playerAnimStateRef.current;
-        if (animState.emote) {
-          if (animState.emote === 'wave' || animState.emote === 'cheer') {
-            player.position.y = Math.abs(Math.sin(elapsed * 10)) * 0.35;
-          } else if (animState.emote === 'dance') {
-            player.rotation.y += delta * 6;
-            player.position.y = Math.abs(Math.sin(elapsed * 8)) * 0.2;
-          }
-        } else if (dist > 0.15) {
-          const dir = new THREE.Vector3().subVectors(target, player.position).normalize();
-          const targetAngle = Math.atan2(dir.x, dir.z);
-          player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.2);
-          player.position.addScaledVector(dir, Math.min(dist, delta * 6.2));
+        if (moveVec.lengthSq() > 0) {
+          moveVec.normalize();
+          player.position.addScaledVector(moveVec, delta * 6.5);
+          targetPosRef.current.copy(player.position);
+          const angle = Math.atan2(moveVec.x, moveVec.z);
+          player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, angle, 0.25);
           player.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.12;
+          isSittingRef.current = false;
         } else {
-          player.position.y = 0;
+          // Walk to target pointer position
+          const target = targetPosRef.current;
+          const dist = player.position.distanceTo(target);
+
+          const animState = playerAnimStateRef.current;
+          if (animState.emote) {
+            if (animState.emote === 'wave' || animState.emote === 'cheer') {
+              player.position.y = Math.abs(Math.sin(elapsed * 10)) * 0.35;
+            } else if (animState.emote === 'dance') {
+              player.rotation.y += delta * 6;
+              player.position.y = Math.abs(Math.sin(elapsed * 8)) * 0.2;
+            }
+          } else if (dist > 0.15) {
+            const dir = new THREE.Vector3().subVectors(target, player.position).normalize();
+            const targetAngle = Math.atan2(dir.x, dir.z);
+            player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.2);
+            player.position.addScaledVector(dir, Math.min(dist, delta * 6.2));
+            player.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.12;
+          } else {
+            player.position.y = isSittingRef.current ? -0.25 : 0;
+          }
         }
+
+        setPlayerCoord({ x: player.position.x, z: player.position.z });
       }
 
       // Project Avatar Names
@@ -1044,6 +1262,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Jump camera/avatar to specific room
   const jumpToRoom = (roomName) => {
+    playSound('chime');
     setCurrentRoom(roomName);
     if (roomName === 'All-Hands Table') {
       targetPosRef.current.set(4.5, 0, 5.5);
@@ -1068,10 +1287,10 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Trigger Canonical Spot Emote (from spot-openclaw)
   const triggerEmote = (emoteId, emoji) => {
+    playSound('highfive');
     setActiveReaction(emoji);
     playerAnimStateRef.current = { emote: emoteId, emoteTime: Date.now() };
 
-    // Broadcast in room chat
     setChatMessages((prev) => [
       ...prev,
       { sender: userName, text: `*used emote ${emoji} (${emoteId})*`, time: 'Just now' }
@@ -1085,6 +1304,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Trigger Canonical Spot Social Gesture (from spot-openclaw)
   const triggerGesture = (gestureId, label, emoji) => {
+    playSound('highfive');
     setActiveReaction(emoji);
     setChatMessages((prev) => [
       ...prev,
@@ -1095,6 +1315,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Spot OpenClaw Tools Execution (from spotxyz/spot-openclaw)
   const executeOpenClawTool = (toolName, params = {}) => {
+    playSound('click');
     let result = {};
     const now = new Date().toLocaleTimeString();
 
@@ -1313,6 +1534,27 @@ export default function WorkspacePlatform({ user, onExit }) {
             ))}
           </div>
 
+          {/* Real Screen Share Button (getDisplayMedia) */}
+          <button
+            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '2rem',
+              background: isScreenSharing ? '#dcfce7' : '#f8fafc',
+              border: isScreenSharing ? '1px solid #86efac' : '1px solid #cbd5e1',
+              color: isScreenSharing ? '#15803d' : '#334155',
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer'
+            }}
+          >
+            <Monitor size={15} />
+            <span>{isScreenSharing ? 'Sharing Screen' : 'Share Screen'}</span>
+          </button>
+
           {/* Mic Toggle (supports Push-to-Talk) */}
           <button
             onClick={() => setIsMuted(!isMuted)}
@@ -1372,7 +1614,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             <Sliders size={16} />
           </button>
 
-          {/* Exit / Leave Button */}
+          {/* Leave Button */}
           <button
             onClick={onExit}
             style={{
@@ -1435,7 +1677,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         ))}
 
-        {/* Live Camera Feed with Spot Virtual Background Engine (from spotxyz/virtual-background) */}
+        {/* Live Camera Feed with Spot Virtual Background Engine */}
         {isVideoOn && (
           <div style={{
             position: 'absolute',
@@ -1488,6 +1730,382 @@ export default function WorkspacePlatform({ user, onExit }) {
             </div>
           </div>
         )}
+
+        {/* Live Screen Share Presentation Floating Window */}
+        {isScreenModalOpen && (
+          <div style={{
+            position: 'absolute',
+            top: '80px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '680px',
+            maxWidth: '92vw',
+            background: 'rgba(15, 23, 42, 0.98)',
+            border: '2px solid #22c55e',
+            borderRadius: '16px',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            overflow: 'hidden',
+            zIndex: 45
+          }}>
+            <div style={{ padding: '10px 16px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />
+                <Monitor size={16} color="#4ade80" />
+                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
+                  {userName}'s Live Screen Share (Broadcasting to All Rooms)
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  onClick={stopScreenShare}
+                  style={{ padding: '4px 10px', borderRadius: '6px', background: '#ef4444', color: '#fff', border: 'none', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Stop Sharing
+                </button>
+                <button onClick={() => setIsScreenModalOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+            <div style={{ background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '420px' }}>
+              <video ref={screenShareVideoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', maxHeight: '420px', objectFit: 'contain' }} />
+            </div>
+          </div>
+        )}
+
+        {/* Interactive Object Modals */}
+        {activeModal && (
+          <div className="Platform_modal" style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '560px',
+            maxWidth: '90vw',
+            background: '#ffffff',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            border: '1px solid #e2e8f0',
+            overflow: 'hidden',
+            zIndex: 150
+          }}>
+            {/* Modal Header */}
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {activeModal === 'features' && <Sparkles size={20} color="#2563eb" />}
+                {activeModal === 'schedule' && <Calendar size={20} color="#16a34a" />}
+                {activeModal === 'analytics' && <TrendingUp size={20} color="#0284c7" />}
+                {activeModal === 'kpi' && <Activity size={20} color="#f43f5e" />}
+                {activeModal === 'blueprint' && <Layers size={20} color="#6366f1" />}
+                {activeModal === 'theater' && <Tv size={20} color="#8b5cf6" />}
+                {activeModal === 'teammate' && <UserCheck size={20} color="#059669" />}
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>
+                  {activeModal === 'features' && 'Spot Prints & Release Roadmap'}
+                  {activeModal === 'schedule' && 'Schedule 1 on 1 with Stan'}
+                  {activeModal === 'analytics' && 'Real-Time Telemetry & Systems'}
+                  {activeModal === 'kpi' && 'Production KPI Matrix'}
+                  {activeModal === 'blueprint' && 'Spot Virtual Architecture Blueprint'}
+                  {activeModal === 'theater' && 'All-Hands Presentation Stage'}
+                  {activeModal === 'teammate' && selectedTeammate?.name}
+                </h3>
+              </div>
+              <button onClick={() => setActiveModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '1.5rem', maxHeight: '65vh', overflowY: 'auto' }}>
+              {activeModal === 'features' && (
+                <div>
+                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.9rem' }}>
+                    Active sprint features tracked on the interactive office board:
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#1d4ed8', marginBottom: '4px' }}>
+                        <span>Spot Prints (3D Virtual Whiteboard Exports)</span>
+                        <span>100% COMPLETE</span>
+                      </div>
+                      <div style={{ width: '100%', height: 8, background: '#dbeafe', borderRadius: 4 }}>
+                        <div style={{ width: '100%', height: 8, background: '#2563eb', borderRadius: 4 }} />
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        <span>Calendar Sync & Teleport Invitations</span>
+                        <span>75% IN PROGRESS</span>
+                      </div>
+                      <div style={{ width: '100%', height: 8, background: '#e2e8f0', borderRadius: 4 }}>
+                        <div style={{ width: '75%', height: 8, background: '#0284c7', borderRadius: 4 }} />
+                      </div>
+                    </div>
+                    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                        <span>Spatial Documents & PDF Collaborative Markup</span>
+                        <span>40% IN DEVELOPMENT</span>
+                      </div>
+                      <div style={{ width: '100%', height: 8, background: '#e2e8f0', borderRadius: 4 }}>
+                        <div style={{ width: '40%', height: 8, background: '#10b981', borderRadius: 4 }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'schedule' && (
+                <div>
+                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.9rem' }}>
+                    Book a direct 1-on-1 session with Stan at the mobile schedule stand:
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '1.25rem' }}>
+                    {['Today, 2:00 PM', 'Today, 3:30 PM', 'Tomorrow, 10:00 AM', 'Tomorrow, 1:15 PM'].map((slot) => (
+                      <button
+                        key={slot}
+                        onClick={() => {
+                          playSound('chime');
+                          setActiveModal(null);
+                          setDonutToast(`1-on-1 scheduled for ${slot}! 📅`);
+                          setTimeout(() => setDonutToast(null), 3000);
+                        }}
+                        style={{
+                          padding: '12px',
+                          borderRadius: '8px',
+                          background: '#f8fafc',
+                          border: '1px solid #cbd5e1',
+                          fontWeight: 600,
+                          color: '#0f172a',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'analytics' && (
+                <div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '1rem' }}>
+                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>WebRTC Latency</span>
+                      <strong style={{ fontSize: '1.25rem', color: '#0284c7', display: 'block' }}>18 ms</strong>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Spatial Audio</span>
+                      <strong style={{ fontSize: '1.25rem', color: '#16a34a', display: 'block' }}>48 kHz Opus</strong>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Frame Rate</span>
+                      <strong style={{ fontSize: '1.25rem', color: '#7c3aed', display: 'block' }}>60 FPS</strong>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: '#475569' }}>
+                    All audio streams are mixed peer-to-peer with zero server storage. WebGL shaders are operating at native resolution.
+                  </p>
+                </div>
+              )}
+
+              {activeModal === 'kpi' && (
+                <div style={{ background: '#0f172a', color: '#fff', padding: '1.25rem', borderRadius: '10px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', textAlign: 'center', marginBottom: '1rem' }}>
+                    <div><span style={{ color: '#f43f5e', fontSize: '1.5rem', fontWeight: 900 }}>168</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>DEPLOYS</span></div>
+                    <div><span style={{ color: '#06b6d4', fontSize: '1.5rem', fontWeight: 900 }}>161</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>ACTIVE</span></div>
+                    <div><span style={{ color: '#22c55e', fontSize: '1.5rem', fontWeight: 900 }}>47</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>NODES</span></div>
+                    <div><span style={{ color: '#22c55e', fontSize: '1.5rem', fontWeight: 900 }}>34</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>ROOMS</span></div>
+                    <div><span style={{ color: '#22c55e', fontSize: '1.5rem', fontWeight: 900 }}>34</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>CHANNELS</span></div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px', textAlign: 'center' }}>
+                    <div><span style={{ color: '#38bdf8', fontSize: '1.5rem', fontWeight: 900 }}>83</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>GATEWAY</span></div>
+                    <div><span style={{ color: '#38bdf8', fontSize: '1.5rem', fontWeight: 900 }}>85</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>PINGS</span></div>
+                    <div><span style={{ color: '#f8fafc', fontSize: '1.5rem', fontWeight: 900 }}>6</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>ZONES</span></div>
+                    <div><span style={{ color: '#38bdf8', fontSize: '1.5rem', fontWeight: 900 }}>52</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>MSGS/SEC</span></div>
+                    <div><span style={{ color: '#22c55e', fontSize: '1.5rem', fontWeight: 900 }}>25</span><br/><span style={{ fontSize: '10px', color: '#64748b' }}>AGENTS</span></div>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'blueprint' && (
+                <div>
+                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.85rem' }}>
+                    Spot Virtual Engine Architecture (Three.js WebGL + Mediasoup SFU + OpenClaw Gateway):
+                  </p>
+                  <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '12px', background: '#f8fafc', fontFamily: 'monospace', fontSize: '0.78rem' }}>
+                    <div style={{ color: '#2563eb' }}>[Client Browser] ──WebSocket──&gt; [Agent Gateway v0.2.0]</div>
+                    <div style={{ color: '#16a34a', margin: '4px 0' }}>[WebRTC Mediasoup] ──SRTP──&gt; [Spatial Audio & Screen Mixer]</div>
+                    <div style={{ color: '#d97706' }}>[OpenClaw Runtime] ──Tools──&gt; [spot_move, spot_emotes, spot_rooms]</div>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'theater' && (
+                <div>
+                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.85rem' }}>
+                    All-Hands Presentation Hall Stage is currently idle (09:38 No meetings).
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        setActiveModal(null);
+                        startScreenShare();
+                      }}
+                      style={{ flex: 1, padding: '10px', borderRadius: '8px', background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Broadcast Screen to Stage
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveModal(null);
+                        jumpToRoom('Presentation Hall');
+                      }}
+                      style={{ padding: '10px 16px', borderRadius: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      Take Seat in Audience
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {activeModal === 'teammate' && selectedTeammate && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '1.25rem' }}>
+                    <div style={{ width: 50, height: 50, borderRadius: '50%', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '1.25rem', fontWeight: 700 }}>
+                      {selectedTeammate.name[0]}
+                    </div>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>{selectedTeammate.name}</h4>
+                      <span style={{ fontSize: '0.82rem', color: '#64748b' }}>{selectedTeammate.role}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                    <button
+                      onClick={() => {
+                        playSound('highfive');
+                        triggerGesture('highfive', 'High Five', '✋');
+                        setActiveModal(null);
+                      }}
+                      style={{ padding: '9px', borderRadius: '6px', background: '#f8fafc', border: '1px solid #cbd5e1', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      ✋ High Five
+                    </button>
+                    <button
+                      onClick={() => {
+                        playSound('highfive');
+                        triggerGesture('fistbump', 'Fist Bump', '👊');
+                        setActiveModal(null);
+                      }}
+                      style={{ padding: '9px', borderRadius: '6px', background: '#f8fafc', border: '1px solid #cbd5e1', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      👊 Fist Bump
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveModal(null);
+                        setActiveTab('chat');
+                      }}
+                      style={{ padding: '9px', borderRadius: '6px', background: '#f8fafc', border: '1px solid #cbd5e1', fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      💬 Direct Message
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveModal(null);
+                        targetPosRef.current.copy(selectedTeammate.mesh.position);
+                        playSound('click');
+                      }}
+                      style={{ padding: '9px', borderRadius: '6px', background: '#0284c7', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      🚶 Walk To Teammate
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 7. Interactive Radar Minimap HUD (Bottom-Right) */}
+        <div className="Platform_minimap" style={{
+          position: 'absolute',
+          bottom: '24px',
+          right: '24px',
+          width: '160px',
+          height: '110px',
+          background: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid #334155',
+          borderRadius: '12px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          padding: '6px',
+          zIndex: 35
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+            <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.5px' }}>OFFICE RADAR</span>
+            <span style={{ fontSize: '9px', fontWeight: 700, color: '#22c55e' }}>● 11 ONLINE</span>
+          </div>
+          <div
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const mx = (e.clientX - rect.left) / rect.width;
+              const my = (e.clientY - rect.top) / rect.height;
+              // Map minimap click to world coordinates
+              const wx = (mx - 0.5) * 55;
+              const wz = (my - 0.5) * 35;
+              targetPosRef.current.set(wx, 0, wz);
+              isSittingRef.current = false;
+              playSound('click');
+            }}
+            style={{
+              width: '100%',
+              height: '82px',
+              background: '#1e293b',
+              borderRadius: '6px',
+              position: 'relative',
+              cursor: 'crosshair',
+              overflow: 'hidden'
+            }}
+          >
+            {/* Zone outlines */}
+            <div style={{ position: 'absolute', left: '10%', top: '15%', width: '30%', height: '35%', border: '1px dashed #475569', borderRadius: 2 }} />
+            <div style={{ position: 'absolute', right: '10%', top: '15%', width: '40%', height: '70%', border: '1px dashed #475569', borderRadius: 2 }} />
+
+            {/* Other Teammates Dots */}
+            {avatarsRef.current.filter((a) => !a.isPlayer).map((av, idx) => {
+              const mx = ((av.mesh.position.x / 55) + 0.5) * 100;
+              const my = ((av.mesh.position.z / 35) + 0.5) * 100;
+              return (
+                <div
+                  key={idx}
+                  style={{
+                    position: 'absolute',
+                    left: `${Math.max(5, Math.min(95, mx))}%`,
+                    top: `${Math.max(5, Math.min(95, my))}%`,
+                    width: 5,
+                    height: 5,
+                    borderRadius: '50%',
+                    background: av.status === 'ai-agent' ? '#10b981' : '#22c55e',
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                />
+              );
+            })}
+
+            {/* Player Indicator (Blue Glowing Dot) */}
+            <div style={{
+              position: 'absolute',
+              left: `${Math.max(5, Math.min(95, ((playerCoord.x / 55) + 0.5) * 100))}%`,
+              top: `${Math.max(5, Math.min(95, ((playerCoord.z / 35) + 0.5) * 100))}%`,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: '#38bdf8',
+              boxShadow: '0 0 8px #38bdf8',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 5
+            }} />
+          </div>
+        </div>
 
         {/* Click Feedback Toast */}
         {donutToast && (
@@ -1543,13 +2161,13 @@ export default function WorkspacePlatform({ user, onExit }) {
           zIndex: 20,
           pointerEvents: 'none'
         }}>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>SPOT VIRTUAL PLATFORM &bull; OPENCLAW v0.2.0</p>
+          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>SPOT VIRTUAL PLATFORM &bull; FULL USABILITY</p>
           <p style={{ margin: '3px 0 0', fontSize: '0.85rem', color: '#0f172a', fontWeight: 700 }}>
-            Click floor to walk &bull; Scroll wheel to zoom &bull; Hold Space for Push-to-Talk
+            WASD / Arrows to walk &bull; Click chairs to sit &bull; Click boards to inspect &bull; Spacebar PTT
           </p>
         </div>
 
-        {/* 3. Floating Bottom Dock */}
+        {/* 8. Floating Bottom Dock */}
         <div style={{
           position: 'absolute',
           bottom: '24px',
@@ -1566,7 +2184,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           gap: '8px',
           zIndex: 40
         }}>
-          {/* Canonical Spot Emotes (spotxyz/spot-openclaw) */}
+          {/* Canonical Spot Emotes */}
           <div style={{ display: 'flex', gap: '3px', borderRight: '1px solid #e2e8f0', paddingRight: '8px' }}>
             {[
               { id: 'wave', emoji: '👋' },
@@ -1596,7 +2214,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             ))}
           </div>
 
-          {/* Social Gestures Dropdown Button */}
+          {/* Social Gestures */}
           <div style={{ display: 'flex', gap: '4px', borderRight: '1px solid #e2e8f0', paddingRight: '8px' }}>
             <button
               onClick={() => triggerGesture('highfive', 'High Five', '✋')}
@@ -1676,7 +2294,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           </button>
         </div>
 
-        {/* 4. Side Drawer: OpenClaw Agent & Tools Console (spotxyz/spot-openclaw) */}
+        {/* 9. Side Drawer: OpenClaw Agent & Tools Console */}
         {activeTab === 'ai' && (
           <aside style={{
             position: 'absolute',
@@ -1711,7 +2329,6 @@ export default function WorkspacePlatform({ user, onExit }) {
               </button>
             </div>
 
-            {/* Sub-tab navigation */}
             <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>
               <button
                 onClick={() => setOpenClawSubTab('chat')}
@@ -1802,13 +2419,11 @@ export default function WorkspacePlatform({ user, onExit }) {
                 </form>
               </>
             ) : (
-              /* Spot Tools Interactive Console */
               <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
                   Execute official Spot OpenClaw Agent tools directly against the live world:
                 </p>
 
-                {/* Tool Trigger Buttons */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
                   {[
                     { id: 'spot_observe', label: 'spot_observe' },
@@ -1866,7 +2481,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           </aside>
         )}
 
-        {/* 5. Side Drawer: Audio Devices & Settings (spotxyz/macos-audio-devices) */}
+        {/* 10. Side Drawer: Audio Devices & Settings */}
         {activeTab === 'settings' && (
           <aside style={{
             position: 'absolute',
@@ -1976,7 +2591,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           </aside>
         )}
 
-        {/* 6. Side Drawer: Interactive Whiteboard */}
+        {/* 11. Side Drawer: Interactive Whiteboard */}
         {activeTab === 'whiteboard' && (
           <aside style={{
             position: 'absolute',
@@ -2049,7 +2664,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           </aside>
         )}
 
-        {/* 7. Side Drawer: Room Chat */}
+        {/* 12. Side Drawer: Room Chat */}
         {activeTab === 'chat' && (
           <aside style={{
             position: 'absolute',
