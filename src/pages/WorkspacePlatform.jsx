@@ -379,14 +379,15 @@ export default function WorkspacePlatform({ user, onExit }) {
     const height = container.clientHeight;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0xbdd4bc);
-    scene.fog = new THREE.FogExp2(0xbdd4bc, 0.0065);
+    scene.background = new THREE.Color(0xc9e0e8);
+    scene.fog = new THREE.FogExp2(0xc9e0e8, 0.0042);
     sceneRef.current = scene;
 
-    // Calibrated FOV (33°) and elevated perspective camera for comprehensive 1:1 office framing
+    // Elevated three-quarter view: keep the same working distance, but tilt down
+    // more so the office fills the viewport and the distant landscape stays secondary.
     const aspect = width / height;
     const camera = new THREE.PerspectiveCamera(33, aspect, 0.5, 600);
-    camera.position.set(-2.0, 24.5, 48.5);
+    camera.position.set(-2.0, 31.0, 45.0);
     camera.lookAt(-2.0, 1.8, -4.0);
     cameraRef.current = camera;
 
@@ -1139,14 +1140,14 @@ export default function WorkspacePlatform({ user, onExit }) {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: av.isPlayer ? 'rgba(22, 101, 52, 0.94)' : 'rgba(15, 23, 42, 0.88)',
-              color: '#ffffff',
-              padding: '3px 9px',
+              background: av.isPlayer ? 'rgba(22, 163, 74, 0.96)' : 'rgba(255, 255, 255, 0.97)',
+              color: av.isPlayer ? '#ffffff' : '#334155',
+              padding: '4px 10px',
               borderRadius: '14px',
-              boxShadow: '0 3px 10px rgba(0, 0, 0, 0.2)',
-              border: av.isPlayer ? '1.5px solid #4ade80' : '1px solid rgba(255, 255, 255, 0.2)',
-              fontSize: '11px',
-              fontWeight: 700,
+              boxShadow: '0 2px 7px rgba(15, 23, 42, 0.16)',
+              border: av.isPlayer ? '1px solid #4ade80' : '1px solid rgba(148, 163, 184, 0.28)',
+              fontSize: '12px',
+              fontWeight: 600,
               whiteSpace: 'nowrap',
               zIndex: 10
             }}

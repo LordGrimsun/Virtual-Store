@@ -56,9 +56,10 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   }
 
   const floorTexture = new THREE.CanvasTexture(floorCanvas);
+  floorTexture.colorSpace = THREE.SRGBColorSpace;
   floorTexture.wrapS = THREE.RepeatWrapping;
   floorTexture.wrapT = THREE.RepeatWrapping;
-  floorTexture.repeat.set(12, 9);
+  floorTexture.repeat.set(8, 6);
 
   // Common Materials
   materials.floorMat = new THREE.MeshStandardMaterial({
@@ -127,7 +128,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
 
   // 4. Exterior Landscape (Rolling Green Hills & 3D Trees)
   const outdoorGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
+    new THREE.PlaneGeometry(200, 88),
     materials.outdoorGrassMat
   );
   outdoorGround.rotation.x = -Math.PI / 2;
@@ -135,18 +136,22 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   outdoorGround.receiveShadow = true;
   scene.add(outdoorGround);
 
+  // Use broad, low ellipsoids instead of oversized cones. The old cones
+  // dominated the skyline and pushed the office down in the viewport.
   const createHill = (x, z, r, h, color) => {
     const hill = new THREE.Mesh(
-      new THREE.ConeGeometry(r, h, 20),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.92 })
+      new THREE.SphereGeometry(1, 32, 20),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.98 })
     );
-    hill.position.set(x, h / 2 - 2, z);
+    hill.scale.set(r, h * 0.42, r * 0.55);
+    hill.position.set(x, -h * 0.22, z);
+    hill.receiveShadow = true;
     scene.add(hill);
   };
-  createHill(-50, -58, 42, 25, 0x5b8a45);
-  createHill(-15, -70, 52, 32, 0x4d7c3b);
-  createHill(25, -64, 46, 28, 0x5b8a45);
-  createHill(64, -54, 40, 24, 0x4d7c3b);
+  createHill(-50, -84, 36, 22, 0x638c50);
+  createHill(-17, -88, 44, 27, 0x527f43);
+  createHill(23, -86, 40, 24, 0x638c50);
+  createHill(64, -80, 34, 20, 0x527f43);
 
   const createTree = (x, z, scale = 1) => {
     const treeGrp = new THREE.Group();
@@ -176,7 +181,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   };
 
   [-46, -30, -10, 8, 26, 42, 56].forEach((tx, idx) => {
-    createTree(tx, -44 - (idx % 3) * 6, 1.2 + (idx % 2) * 0.4);
+    createTree(tx, -54 - (idx % 3) * 4, 0.85 + (idx % 2) * 0.18);
   });
 
   // Right brick wall accent
@@ -251,7 +256,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   createGlassEnclosure();
 
   // 7. Planters with Multi-Blade Snake Plants (Sansevieria)
-  const createPlanter = (x, z, w, d, h = 1.05) => {
+  const createPlanter = (x, z, w, d, h = 0.82) => {
     const group = new THREE.Group();
     const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials.blackWallMat);
     box.position.y = h / 2;
@@ -267,13 +272,13 @@ export function buildOfficeEnvironment(scene, screenTextures) {
     group.add(soil);
 
     // Realistic upright sword blades (Sansevieria)
-    const numPlants = Math.max(6, Math.floor((w + d) * 3.6));
+    const numPlants = Math.max(6, Math.floor((w + d) * 2.9));
     for (let i = 0; i < numPlants; i++) {
-      const plantHeight = 1.1 + Math.random() * 0.45;
+      const plantHeight = 0.62 + Math.random() * 0.42;
       const blade = new THREE.Mesh(
-        new THREE.ConeGeometry(0.22, plantHeight, 5),
+        new THREE.ConeGeometry(0.095, plantHeight, 6),
         new THREE.MeshStandardMaterial({
-          color: i % 2 === 0 ? 0x1e4620 : 0x276749,
+          color: i % 3 === 0 ? 0x1e4620 : i % 3 === 1 ? 0x276749 : 0x3b7650,
           roughness: 0.6
         })
       );
