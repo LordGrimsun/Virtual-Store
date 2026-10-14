@@ -372,21 +372,20 @@ export function createAvatarSystem() {
   const createRoster = (scene) => {
     const list = [];
 
-    // 1. Stan (Active Player) - Foreground center-left
-    const stan = buildAvatar('Stan (you)', new THREE.Vector3(0.3, 0, 11.2), {
+    // 1. Ayush (Active Player) - Boardroom (matching media_1791969444037.png & media_1791969444163.png)
+    const ayush = buildAvatar('Ayush (you)', new THREE.Vector3(-9.0, 0, 16.0), {
       isPlayer: true,
-      hatType: 'spot_cap',
-      hasGlasses: true,
-      hasBeard: true,
-      clothing: 'cyan_puffer',
-      pantsColor: 'blue',
-      role: 'Fullstack Lead'
+      hairType: 'brown_neat',
+      hairColor: 0x452211,
+      shirtColor: 0xb91c1c, // Burgundy / Red top matching screenshot
+      pantsColor: 'dark',
+      role: 'Digital Lead'
     });
-    scene.add(stan.mesh);
-    list.push(stan);
+    scene.add(ayush.mesh);
+    list.push(ayush);
 
-    // 2. Wes - Foreground center-right
-    const wes = buildAvatar('Wes', new THREE.Vector3(2.4, 0, 11.2), {
+    // 2. Wes - Workspace A
+    const wes = buildAvatar('Wes', new THREE.Vector3(6.0, 0, -19.0), {
       hairType: 'blond_styled',
       clothing: 'plaid_flannel',
       pantsColor: 'dark',
@@ -395,8 +394,8 @@ export function createAvatarSystem() {
     scene.add(wes.mesh);
     list.push(wes);
 
-    // 3. Stefan - Long table south side (seated)
-    const stefan = buildAvatar('Stefan', new THREE.Vector3(1.2, 0, 2.5), {
+    // 3. Stefan - Lounge B
+    const stefan = buildAvatar('Stefan', new THREE.Vector3(-1.0, 0, 2.0), {
       hairColor: 0x3d2714,
       clothing: 'purple_striped',
       pantsColor: 'dark',

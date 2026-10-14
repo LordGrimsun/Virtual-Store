@@ -6,7 +6,8 @@ import {
   Sparkles, Send, Plus, Check, ChevronRight, ChevronDown, X, PhoneCall, VolumeX,
   Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
   Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
-  TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag
+  TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag,
+  Grid, Mail, Clock, Hammer, Search
 } from 'lucide-react';
 
 import { createOfficeScreenTextures } from '../components/workspace/OfficeScreens';
@@ -24,18 +25,26 @@ import SpotLinkModal from '../components/workspace/SpotLinkModal';
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
 
-  // User & Room state (defaults to Conference Room B / Sunn Kesh HQ)
-  const [userName, setUserName] = useState(user?.fullName || 'Ayush');
-  const [currentRoom, setCurrentRoom] = useState(user?.targetRoom || 'Conference Room B');
-  const [currentRoomId, setCurrentRoomId] = useState(
-    user?.targetRoom === 'All-Hands Table' ? 'all-hands-table' : 'conference-b'
-  );
+  // User & Room state (defaults to Boardroom / Sunn Kesh HQ matching media_1791969444037.png)
+  const [userName, setUserName] = useState(user?.fullName || 'Ayush Kesharwani');
+  const [currentRoom, setCurrentRoom] = useState(user?.targetRoom || 'Boardroom');
+  const [currentRoomId, setCurrentRoomId] = useState('boardroom');
   const [workspaceSlug, setWorkspaceSlug] = useState(user?.workspaceSlug || '@sunnkesh-4c24f4f3d747fffc');
   const [inAudioRange, setInAudioRange] = useState(['Alex', 'Wes', 'Stefan', 'Steven', 'Phil']);
   const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings'
   const [activeReaction, setActiveReaction] = useState(null);
   const [donutToast, setDonutToast] = useState(null);
   const [showNameplates, setShowNameplates] = useState(true);
+
+  // Spot UI & Build Mode state (media_1791969443822.png & media_1791969444094.png)
+  const [isBuildModeOpen, setIsBuildModeOpen] = useState(false);
+  const [buildModeTab, setBuildModeTab] = useState('Floorplan'); // 'Add', 'Floorplan', 'Environment', 'Brand'
+  const [currentEnvTheme, setCurrentEnvTheme] = useState('Seattle');
+  const [isTopDownBlueprint, setIsTopDownBlueprint] = useState(false);
+  const [isTrialBannerOpen, setIsTrialBannerOpen] = useState(true);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isMailOpen, setIsMailOpen] = useState(false);
+  const envHandlerRef = useRef(null);
 
   // Audio / Media toggles
   const [isMuted, setIsMuted] = useState(false);
@@ -52,7 +61,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   // Spot Dynamic Screen Displays & Sidebars
   const [activeScreenTarget, setActiveScreenTarget] = useState(null);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
-  const [isSpacesSidebarOpen, setIsSpacesSidebarOpen] = useState(false);
+  const [isSpacesSidebarOpen, setIsSpacesSidebarOpen] = useState(true); // Open by default matching reference
   const screensRef = useRef({});
   const screenTexturesRef = useRef(null);
 
@@ -122,11 +131,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
   const playerPartsRef = useRef(null);
-  const targetPosRef = useRef(
-    user?.targetRoom === 'All-Hands Table'
-      ? new THREE.Vector3(4.5, 0, 5.5)
-      : new THREE.Vector3(0, 0, -16.5)
-  );
+  const targetPosRef = useRef(new THREE.Vector3(-9, 0, 16));
   const isSittingRef = useRef(false);
   const avatarsRef = useRef([]);
   const chairsRef = useRef([]);
@@ -413,19 +418,18 @@ export default function WorkspacePlatform({ user, onExit }) {
     // Elevated three-quarter view: keep the same working distance, but tilt down
     // more so the office fills the viewport and the distant landscape stays secondary.
     const aspect = width / height;
-    const camera = new THREE.PerspectiveCamera(33, aspect, 0.5, 600);
-    camera.position.set(-2.0, 31.0, 45.0);
-    camera.lookAt(-2.0, 1.8, -4.0);
+    const camera = new THREE.PerspectiveCamera(34, aspect, 0.5, 600);
+    // Perspective view focusing on Boardroom (-9, 0, 16)
+    camera.position.set(-9.0, 15.0, 31.0);
+    camera.lookAt(-9.0, 1.8, 16.0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    // Soft PCF filtering removes harsh, pixelated edges from the office shadows.
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // ACES Filmic Tone Mapping for authentic photographic fidelity
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
     container.appendChild(renderer.domElement);
@@ -438,7 +442,8 @@ export default function WorkspacePlatform({ user, onExit }) {
     screenTexturesRef.current = screenTextures;
 
     // Build Architecture Environment & Lighting
-    buildOfficeEnvironment(scene, screenTextures);
+    const envHandler = buildOfficeEnvironment(scene, screenTextures, currentEnvTheme);
+    envHandlerRef.current = envHandler;
 
     // Build Office Furniture, Desks, Cantilever Chairs, Props
     screensRef.current = buildOfficeFurniture(scene, screenTextures, chairsRef);
@@ -726,6 +731,18 @@ export default function WorkspacePlatform({ user, onExit }) {
         setInAudioRange(nearby);
       }
 
+      // Smooth Camera Follow or Top-Down Blueprint View (media_1791969443822.png vs media_1791969444163.png)
+      if (playerMeshRef.current && camera) {
+        if (isTopDownBlueprint) {
+          camera.position.lerp(new THREE.Vector3(0, 68, 0), 0.08);
+          camera.lookAt(0, 0, 0);
+        } else {
+          const p = playerMeshRef.current.position;
+          camera.position.lerp(new THREE.Vector3(p.x, 15.0, p.z + 16.0), 0.06);
+          camera.lookAt(p.x, 1.8, p.z);
+        }
+      }
+
       renderer.render(scene, camera);
     };
 
@@ -763,39 +780,80 @@ export default function WorkspacePlatform({ user, onExit }) {
     };
   }, [spatialFalloff]);
 
-  // Jump camera/avatar to specific room
+  // Jump camera/avatar to specific room across the 12 canonical Spot rooms
   const jumpToRoom = (roomName) => {
     playSound('chime');
-    setCurrentRoom(roomName);
-    if (roomName === 'All-Hands Table') {
-      targetPosRef.current.set(4.5, 0, 5.5);
-      setCurrentRoomId('all-hands-table');
-    } else if (roomName === 'Engineering Desks') {
-      targetPosRef.current.set(18.5, 0, -6.0);
-      setCurrentRoomId('engineering-desks');
-    } else if (roomName === 'Glass Boardroom' || roomName.includes('Conference')) {
-      targetPosRef.current.set(0, 0, -16.5);
-      setCurrentRoomId('conference-b');
-      setCurrentRoom('Conference Room B');
-      try {
-        window.history.pushState({}, '', `/${workspaceSlug}/@office/@conference-b`);
-      } catch (e) {}
-    } else if (roomName === 'Round Table Huddle') {
-      targetPosRef.current.set(-17.0, 0, 5.0);
-      setCurrentRoomId('round-table-huddle');
-    } else if (roomName === 'Presentation Hall') {
-      targetPosRef.current.set(-20.0, 0, -12.0);
-      setCurrentRoomId('presentation-hall');
-    } else if (roomName === 'Foreground Lounge') {
-      targetPosRef.current.set(0.5, 0, 11.2);
-      setCurrentRoomId('foreground-lounge');
-    } else if (roomName.includes('Cafe') || roomName.includes('Bar')) {
-      targetPosRef.current.set(-11.5, 0, 11.0);
-      setCurrentRoomId('cafe-bar');
-    } else if (roomName.includes('Beanbag')) {
-      targetPosRef.current.set(-9.5, 0, 3.5);
-      setCurrentRoomId('beanbag-lounge');
+    const clean = (roomName || '').toLowerCase();
+    let target = new THREE.Vector3(-9, 0, 16);
+    let slug = 'boardroom';
+    let formattedName = 'Boardroom';
+
+    if (clean.includes('auditorium')) {
+      target.set(-24, 0, 14);
+      slug = 'auditorium';
+      formattedName = 'Auditorium';
+    } else if (clean.includes('boardroom')) {
+      target.set(-9, 0, 16);
+      slug = 'boardroom';
+      formattedName = 'Boardroom';
+    } else if (clean.includes('chat a')) {
+      target.set(12, 0, -4);
+      slug = 'chat-a';
+      formattedName = 'Chat A';
+    } else if (clean.includes('chat b')) {
+      target.set(12, 0, 4);
+      slug = 'chat-b';
+      formattedName = 'Chat B';
+    } else if (clean.includes('conference a')) {
+      target.set(19, 0, 16);
+      slug = 'conference-a';
+      formattedName = 'Conference A';
+    } else if (clean.includes('conference b') || clean.includes('conference')) {
+      target.set(5, 0, 16);
+      slug = 'conference-b';
+      formattedName = 'Conference B';
+    } else if (clean.includes('lobby')) {
+      target.set(22, 0, -16);
+      slug = 'lobby';
+      formattedName = 'Lobby';
+    } else if (clean.includes('lounge a')) {
+      target.set(23, 0, 0);
+      slug = 'lounge-a';
+      formattedName = 'Lounge A';
+    } else if (clean.includes('lounge b')) {
+      target.set(-1, 0, 2);
+      slug = 'lounge-b';
+      formattedName = 'Lounge B';
+    } else if (clean.includes('lounge c')) {
+      target.set(-21, 0, 0);
+      slug = 'lounge-c';
+      formattedName = 'Lounge C';
+    } else if (clean.includes('patio')) {
+      target.set(-23, 0, -16);
+      slug = 'patio';
+      formattedName = 'Patio';
+    } else if (clean.includes('workspace')) {
+      target.set(0, 0, -16);
+      slug = 'workspace-a';
+      formattedName = 'Workspace A';
     }
+
+    targetPosRef.current.copy(target);
+    setCurrentRoom(formattedName);
+    setCurrentRoomId(slug);
+
+    if (playerMeshRef.current) {
+      playerMeshRef.current.position.copy(target);
+    }
+
+    if (cameraRef.current && !isTopDownBlueprint) {
+      cameraRef.current.position.set(target.x, 15.0, target.z + 16.0);
+      cameraRef.current.lookAt(target.x, 1.8, target.z);
+    }
+
+    try {
+      window.history.pushState({}, '', `/${workspaceSlug}/@office/@${slug}`);
+    } catch (e) {}
   };
 
   // Spot 3D Screen Content Switcher (media_1791967521142.png)
@@ -1135,335 +1193,465 @@ export default function WorkspacePlatform({ user, onExit }) {
     }}>
       <video ref={videoRef} playsInline muted style={{ display: 'none' }} />
 
-      {/* 1. Spot Virtual Top Bar */}
-      <header style={{
-        height: '62px',
-        background: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 1.5rem',
-        zIndex: 50,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-      }}>
-        {/* Left: Spot Logo, Team Selector & Active Room Pill */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={onExit}>
-            <span style={{ width: 14, height: 14, borderRadius: '50%', background: '#60c449', display: 'inline-block' }} />
-            <strong style={{ fontSize: '1.25rem', letterSpacing: '-0.5px', color: '#1e293b' }}>Spot</strong>
-            <span style={{ color: '#94a3b8', fontSize: '0.9rem' }}>/ Virtual Office</span>
-          </div>
-
-          {/* Spaces & Teams Dropdown Button (media_1791967544265.webp) */}
+      {/* 1. Purple Trial Notice Banner (media_1791969444037.png & media_1791969444163.png) */}
+      {isTrialBannerOpen && (
+        <div style={{
+          height: '36px',
+          background: '#5c45b8',
+          color: '#ffffff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          fontSize: '13px',
+          fontWeight: 500,
+          zIndex: 60,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        }}>
+          <span>You have 30 days left in your trial.</span>
           <button
-            onClick={() => setIsSpacesSidebarOpen(!isSpacesSidebarOpen)}
+            onClick={() => alert('Spot Enterprise Free Forever Activated!')}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: isSpacesSidebarOpen ? '#e0f2fe' : '#f1f5f9',
-              border: isSpacesSidebarOpen ? '1px solid #7dd3fc' : '1px solid #e2e8f0',
-              padding: '5px 11px',
-              borderRadius: '8px',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              color: '#1e293b',
-              cursor: 'pointer'
-            }}
-            title="Toggle Spaces & Team Presence Sidebar"
-          >
-            <span style={{
-              width: 20,
-              height: 20,
-              borderRadius: '4px',
-              background: '#0284c7',
+              marginLeft: '12px',
+              background: '#493796',
               color: '#ffffff',
-              fontSize: '11px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 800
-            }}>SK</span>
-            <span>{user?.companyName || 'Sunn Kesh HQ'}</span>
-            <ChevronDown size={14} color="#64748b" />
-          </button>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            background: '#f1f5f9',
-            padding: '5px 12px',
-            borderRadius: '2rem',
-            border: '1px solid #e2e8f0'
-          }}>
-            <MapPin size={14} color="#0284c7" />
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>{currentRoom}</span>
-          </div>
-
-          {/* Spot Room Deep Link Trigger (spotvirtual.com/@sunnkesh-4c24f4f3d747fffc/@office/@conference-b) */}
-          <button
-            onClick={() => setIsSpotLinkModalOpen(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: '#f0fdf4',
-              border: '1px solid #86efac',
-              padding: '5px 12px',
-              borderRadius: '2rem',
-              color: '#15803d',
-              fontSize: '0.8rem',
-              fontWeight: 700,
+              border: '1px solid rgba(255,255,255,0.25)',
+              borderRadius: '4px',
+              padding: '2px 10px',
+              fontSize: '12px',
+              fontWeight: 500,
               cursor: 'pointer'
             }}
-            title="Open or Copy Spot Room URL"
           >
-            <span>🔗</span>
-            <span>@conference-b</span>
+            Manage Billing
           </button>
+          <button
+            onClick={() => setIsTrialBannerOpen(false)}
+            title="Dismiss"
+            style={{
+              position: 'absolute',
+              right: '12px',
+              background: 'transparent',
+              border: 'none',
+              color: 'rgba(255,255,255,0.7)',
+              cursor: 'pointer',
+              fontSize: '16px',
+              lineHeight: 1
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
-          {/* Spatial Audio Range Counter */}
-          <div style={{
+      {/* 2. Top-Center Floating Build Mode Tool Pill (media_1791969443822.png & media_1791969444037.png) */}
+      {isBuildModeOpen && (
+        <div style={{
+          position: 'absolute',
+          top: isTrialBannerOpen ? '48px' : '16px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#ffffff',
+          borderRadius: '24px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+          border: '1px solid #e5e7eb',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '4px 8px',
+          gap: '6px',
+          zIndex: 70
+        }}>
+          <button
+            style={{ width: '36px', height: '36px', borderRadius: '8px', border: 'none', background: '#f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Grid Snapping"
+          >
+            <Grid size={16} color="#4b5563" />
+          </button>
+          <button
+            style={{ width: '36px', height: '36px', borderRadius: '8px', border: 'none', background: '#f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Boundary Mode"
+          >
+            <Maximize2 size={16} color="#4b5563" />
+          </button>
+          <button
+            style={{ width: '36px', height: '36px', borderRadius: '8px', border: 'none', background: '#f3f4f6', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Partition Walls"
+          >
+            <Edit3 size={16} color="#4b5563" />
+          </button>
+          <button
+            onClick={() => setIsBuildModeOpen(false)}
+            style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Save Blueprint"
+          >
+            <Check size={18} />
+          </button>
+          <button
+            onClick={() => setIsBuildModeOpen(false)}
+            style={{ width: '36px', height: '36px', borderRadius: '50%', border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Cancel"
+          >
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* 3. Top-Right Floating Viewport Action Buttons (media_1791969444163.png) */}
+      <div style={{
+        position: 'absolute',
+        top: isTrialBannerOpen ? '48px' : '16px',
+        right: isBuildModeOpen ? '336px' : '16px',
+        display: 'flex',
+        gap: '8px',
+        zIndex: 60,
+        transition: 'right 0.2s ease'
+      }}>
+        {/* Blue Avatar / First Person View Toggle */}
+        <button
+          onClick={() => {
+            if (playerMeshRef.current && cameraRef.current) {
+              const p = playerMeshRef.current.position;
+              cameraRef.current.position.set(p.x, 3.5, p.z + 4.5);
+              cameraRef.current.lookAt(p.x, 2.0, p.z - 6.0);
+            }
+          }}
+          title="Avatar First-Person / Close Camera"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: '#ffffff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            background: inAudioRange.length > 0 ? '#f0fdf4' : '#f8fafc',
-            border: inAudioRange.length > 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
-            padding: '5px 10px',
-            borderRadius: '2rem',
-            fontSize: '0.8rem',
-            color: inAudioRange.length > 0 ? '#16a34a' : '#64748b',
-            fontWeight: 600
-          }}>
-            <Headphones size={13} />
-            <span>{inAudioRange.length} in voice range</span>
-          </div>
-        </div>
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#0091ff'
+          }}
+        >
+          <UserCheck size={18} />
+        </button>
 
-        {/* Center: Quick Room Switcher Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {[
-            'Conference Room B',
-            'All-Hands Table',
-            'Round Table Huddle',
-            'Engineering Desks',
-            'Foreground Lounge',
-            'Presentation Hall'
-          ].map((r) => (
+        {/* Recenter Camera on Avatar */}
+        <button
+          onClick={() => {
+            if (playerMeshRef.current && cameraRef.current) {
+              const p = playerMeshRef.current.position;
+              cameraRef.current.position.set(p.x, 15.0, p.z + 16.0);
+              cameraRef.current.lookAt(p.x, 1.8, p.z);
+            }
+          }}
+          title="Recenter Camera on Avatar"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: '#ffffff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#4b5563'
+          }}
+        >
+          <Compass size={18} />
+        </button>
+
+        {/* 3x3 Grid Icon: Toggle Top-Down Floorplan Blueprint View */}
+        <button
+          onClick={() => setIsTopDownBlueprint(!isTopDownBlueprint)}
+          title={isTopDownBlueprint ? 'Switch to 3D Perspective View' : 'Switch to Floorplan Blueprint View (media_1791969443822.png)'}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: isTopDownBlueprint ? '#0091ff' : '#ffffff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: isTopDownBlueprint ? '#ffffff' : '#4b5563',
+            transition: 'all 0.15s ease'
+          }}
+        >
+          <Grid size={18} />
+        </button>
+      </div>
+
+      {/* 4. Right Build Mode Drawer (media_1791969443822.png, media_1791969444037.png, media_1791969444094.png) */}
+      {isBuildModeOpen && (
+        <aside style={{
+          position: 'fixed',
+          top: isTrialBannerOpen ? '36px' : 0,
+          right: 0,
+          bottom: '52px',
+          width: '320px',
+          background: '#ffffff',
+          borderLeft: '1px solid #e5e7eb',
+          boxShadow: '-4px 0 16px rgba(0,0,0,0.08)',
+          zIndex: 65,
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        }}>
+          {/* Header */}
+          <div style={{
+            height: '52px',
+            padding: '0 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f1f3f5'
+          }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#111827' }}>Build Mode</h3>
             <button
-              key={r}
-              onClick={() => jumpToRoom(r)}
-              style={{
-                background: currentRoom === r ? '#0284c7' : 'transparent',
-                color: currentRoom === r ? '#ffffff' : '#64748b',
-                border: 'none',
-                padding: '6px 11px',
-                borderRadius: '8px',
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease'
-              }}
+              onClick={() => setIsBuildModeOpen(false)}
+              style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: '4px' }}
             >
-              {r.split(' ')[0]}
+              <X size={18} />
             </button>
-          ))}
-        </div>
+          </div>
 
-        {/* Right: Media Controls, Screen Share, Nameplates Toggle, Leave */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Nameplates Visibility Toggle */}
-          <button
-            onClick={() => setShowNameplates(!showNameplates)}
-            title="Toggle Floating Nameplates (Hotkey: N)"
-            style={{
-              padding: '7px 12px',
-              borderRadius: '2rem',
-              background: showNameplates ? '#e0f2fe' : '#f8fafc',
-              border: showNameplates ? '1px solid #7dd3fc' : '1px solid #cbd5e1',
-              color: showNameplates ? '#0369a1' : '#64748b',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <Tag size={14} />
-            <span>{showNameplates ? 'Tags: On' : 'Tags: Off'}</span>
-          </button>
+          {/* Tabs: Add, Floorplan, Environment, Brand */}
+          <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', padding: '0 14px' }}>
+            {['Add', 'Floorplan', 'Environment', 'Brand'].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setBuildModeTab(tab)}
+                style={{
+                  flex: 1,
+                  padding: '10px 0',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: buildModeTab === tab ? '2px solid #0091ff' : '2px solid transparent',
+                  color: buildModeTab === tab ? '#0091ff' : '#6b7280',
+                  fontWeight: buildModeTab === tab ? 600 : 500,
+                  fontSize: '13px',
+                  cursor: 'pointer'
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
 
-          {/* Real Screen Share Button */}
-          <button
-            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-            style={{
-              padding: '7px 14px',
-              borderRadius: '2rem',
-              background: isScreenSharing ? '#dcfce7' : '#f8fafc',
-              border: isScreenSharing ? '1px solid #86efac' : '1px solid #cbd5e1',
-              color: isScreenSharing ? '#15803d' : '#334155',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <Monitor size={15} />
-            <span>{isScreenSharing ? 'Sharing Screen' : 'Share Screen'}</span>
-          </button>
+          {/* Drawer Body Content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+            {/* FLOORPLAN TAB (media_1791969443822.png) */}
+            {buildModeTab === 'Floorplan' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                      CEILING HEIGHT
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue="6"
+                      readOnly
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                      WALL THICKNESS
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue="0.32"
+                      readOnly
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}
+                    />
+                  </div>
+                </div>
 
-          {/* Mic Toggle (supports Push-to-Talk) */}
-          <button
-            onClick={() => setIsMuted(!isMuted)}
-            title="Press Spacebar anytime to Push-to-Talk"
-            style={{
-              padding: '7px 14px',
-              borderRadius: '2rem',
-              background: isMuted ? '#fee2e2' : '#f0fdf4',
-              border: isMuted ? '1px solid #fca5a5' : '1px solid #bbf7d0',
-              color: isMuted ? '#b91c1c' : '#15803d',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            {isMuted ? <MicOff size={15} /> : <Mic size={15} />}
-            <span>{isMuted ? 'Muted' : pushToTalkActive ? 'PTT Active' : 'Unmuted'}</span>
-          </button>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                    FLOOR MATERIAL
+                  </label>
+                  <select style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}>
+                    <option>Bleached Birch Wood</option>
+                    <option>Light Oak</option>
+                    <option>White Marble</option>
+                    <option>Charcoal Carpet</option>
+                  </select>
+                </div>
 
-          {/* Camera Toggle */}
-          <button
-            onClick={() => setIsVideoOn(!isVideoOn)}
-            style={{
-              padding: '7px 14px',
-              borderRadius: '2rem',
-              background: isVideoOn ? '#dbeafe' : '#f8fafc',
-              border: '1px solid #cbd5e1',
-              color: isVideoOn ? '#1d4ed8' : '#475569',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            {isVideoOn ? <Video size={15} /> : <VideoOff size={15} />}
-            <span>{isVideoOn ? 'Camera Active' : 'Camera Off'}</span>
-          </button>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                    FLOOR ANGLE
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="0°"
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}
+                  />
+                </div>
 
-          {/* Headphones Mode Toggle (media_1791967544187.webp) */}
-          <button
-            onClick={() => setIsHeadphonesOn(!isHeadphonesOn)}
-            title="Headphones Mode (Mutes proximity spatial audio)"
-            style={{
-              padding: '7px 12px',
-              borderRadius: '2rem',
-              background: isHeadphonesOn ? '#fef3c7' : '#f8fafc',
-              border: isHeadphonesOn ? '1px solid #fde68a' : '1px solid #cbd5e1',
-              color: isHeadphonesOn ? '#b45309' : '#64748b',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <Headphones size={15} />
-            <span>{isHeadphonesOn ? 'Headphones On' : 'Headphones'}</span>
-          </button>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                    CEILING MATERIAL
+                  </label>
+                  <select style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}>
+                    <option>Acoustic Plaster</option>
+                    <option>Wood Slat Canopy</option>
+                    <option>Exposed Industrial</option>
+                  </select>
+                </div>
 
-          {/* Audio Devices & Settings Button */}
-          <button
-            onClick={() => setActiveTab(activeTab === 'settings' ? 'none' : 'settings')}
-            style={{
-              padding: '7px 10px',
-              borderRadius: '2rem',
-              background: activeTab === 'settings' ? '#e2e8f0' : '#f8fafc',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              cursor: 'pointer'
-            }}
-            title="Audio Devices & Settings"
-          >
-            <Sliders size={16} />
-          </button>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                    WALL MATERIAL
+                  </label>
+                  <select style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}>
+                    <option>Default</option>
+                    <option>Glass Clerestory</option>
+                    <option>Black Acoustic Slats</option>
+                  </select>
+                </div>
 
-          {/* User Profile & Status Trigger (media_1791967544187.webp) */}
-          <button
-            onClick={() => setIsUserProfileOpen(!isUserProfileOpen)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '4px 12px 4px 6px',
-              borderRadius: '2rem',
-              background: isUserProfileOpen ? '#e0f2fe' : '#f8fafc',
-              border: isUserProfileOpen ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-              cursor: 'pointer'
-            }}
-            title="Open User Profile & Status Menu"
-          >
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
-                color: '#ffffff',
-                fontWeight: 800,
-                fontSize: '13px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {userName.charAt(0).toUpperCase()}
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                    WALL COLOR
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #d1d5db', borderRadius: '4px', padding: '6px 10px' }}>
+                    <div style={{ width: '18px', height: '18px', borderRadius: '3px', background: '#f8f8f8', border: '1px solid #d1d5db' }} />
+                    <span style={{ fontSize: '13px', color: '#111827', fontWeight: 500 }}>#f8f8f8</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '4px' }}>
+                    EXTERIOR MATERIAL
+                  </label>
+                  <select style={{ width: '100%', padding: '7px 10px', borderRadius: '4px', border: '1px solid #d1d5db', fontSize: '13px', color: '#111827' }}>
+                    <option>Seattle Streetscape</option>
+                    <option>Grass Lawn</option>
+                    <option>Granite Sidewalk</option>
+                  </select>
+                </div>
               </div>
-              <span style={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#22c55e',
-                border: '1.5px solid #ffffff'
-              }} />
-            </div>
-            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>{userName}</span>
-          </button>
+            )}
 
-          {/* Leave Button */}
-          <button
-            onClick={onExit}
-            style={{
-              padding: '7px 14px',
-              borderRadius: '2rem',
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              color: '#475569',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <LogOut size={15} />
-            <span>Leave</span>
-          </button>
-        </div>
-      </header>
+            {/* ENVIRONMENT TAB (media_1791969444094.png) */}
+            {buildModeTab === 'Environment' && (
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, color: '#6b7280', display: 'block', marginBottom: '6px' }}>
+                  TYPE
+                </label>
+                <div style={{ border: '1px solid #0091ff', borderRadius: '6px', overflow: 'hidden' }}>
+                  {[
+                    'Seattle',
+                    'Beach',
+                    'Desert',
+                    'Football Field',
+                    'Mars',
+                    'Moon',
+                    'None',
+                    'Park',
+                    'Park Night',
+                    'Simple Desert'
+                  ].map((envOption) => (
+                    <div
+                      key={envOption}
+                      onClick={() => {
+                        setCurrentEnvTheme(envOption);
+                        if (envHandlerRef.current?.setEnvironment) {
+                          envHandlerRef.current.setEnvironment(envOption);
+                        }
+                      }}
+                      style={{
+                        padding: '10px 14px',
+                        background: currentEnvTheme === envOption ? '#f0f9ff' : '#ffffff',
+                        color: currentEnvTheme === envOption ? '#0091ff' : '#374151',
+                        fontWeight: currentEnvTheme === envOption ? 600 : 400,
+                        fontSize: '13.5px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #f1f3f5',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}
+                    >
+                      <span>{envOption}</span>
+                      {currentEnvTheme === envOption && <Check size={16} color="#0091ff" />}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ADD TAB (media_1791969444037.png) */}
+            {buildModeTab === 'Add' && (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #0091ff', borderRadius: '6px', padding: '7px 10px', marginBottom: '14px' }}>
+                  <Search size={14} color="#9ca3af" />
+                  <input
+                    type="text"
+                    placeholder="Search props"
+                    style={{ border: 'none', outline: 'none', width: '100%', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div style={{ fontSize: '12px', fontWeight: 700, color: '#6b7280', marginBottom: '8px' }}>
+                  Displays
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  {[
+                    { name: 'Wall Display', desc: 'Starry Spot screen', badge: '✓' },
+                    { name: 'Monitor Stand', desc: 'Standing display', badge: '' },
+                    { name: 'Whiteboard', desc: 'Hanging whiteboard', badge: '' },
+                    { name: 'Easel Display', desc: 'Podium easel', badge: '' },
+                    { name: 'Floor Speaker', desc: 'Hi-Fi acoustics', badge: '' },
+                    { name: 'Wide Screen', desc: 'Auditorium theater', badge: '✓' }
+                  ].map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => alert(`Selected ${item.name}`)}
+                      style={{
+                        border: item.badge ? '2px solid #a855f7' : '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '12px 8px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        background: '#ffffff',
+                        position: 'relative'
+                      }}
+                    >
+                      {item.badge && (
+                        <div style={{ position: 'absolute', top: '6px', right: '6px', width: '16px', height: '16px', borderRadius: '50%', background: '#a855f7', color: '#fff', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          ✓
+                        </div>
+                      )}
+                      <div style={{ width: '48px', height: '32px', margin: '0 auto 8px', background: '#0f172a', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Tv size={16} color="#22c55e" />
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{item.name}</div>
+                      <div style={{ fontSize: '10.5px', color: '#6b7280', marginTop: '2px' }}>{item.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* BRAND TAB */}
+            {buildModeTab === 'Brand' && (
+              <div style={{ fontSize: '13px', color: '#4b5563' }}>
+                <p>Customize organization banners, wall plaques, and presentation signage.</p>
+                <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                  <strong>Current Brand:</strong> Spot Virtual HQ
+                </div>
+              </div>
+            )}
+          </div>
+        </aside>
+      )}
 
       {/* 2. Main 3D Viewport */}
       <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -1969,126 +2157,365 @@ export default function WorkspacePlatform({ user, onExit }) {
           </p>
         </div>
 
-        {/* 8. Floating Bottom Dock */}
+        {/* 8. Spot Bottom Control Bar (media_1791969444163.png) */}
         <div style={{
-          position: 'absolute',
-          bottom: '24px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(255, 255, 255, 0.95)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-          borderRadius: '3rem',
-          padding: '6px 12px',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: '52px',
+          background: '#181f2a',
+          borderTop: '1px solid #2d3748',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          zIndex: 40
+          justifyContent: 'space-between',
+          padding: '0 16px',
+          zIndex: 80,
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         }}>
-          <div style={{ display: 'flex', gap: '3px', borderRight: '1px solid #e2e8f0', paddingRight: '8px' }}>
-            {[
-              { id: 'wave', emoji: '👋' },
-              { id: 'clap', emoji: '👏' },
-              { id: 'cheer', emoji: '🎉' },
-              { id: 'dance', emoji: '💃' },
-              { id: 'thumbsup', emoji: '👍' },
-              { id: 'heart', emoji: '❤️' },
-              { id: 'doughnut', emoji: '🍩' }
-            ].map((em) => (
-              <button
-                key={em.id}
-                onClick={() => triggerEmote(em.id, em.emoji)}
-                title={`Spot Emote: ${em.id}`}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  fontSize: '1.25rem',
-                  padding: '5px 7px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  transition: 'transform 0.15s ease'
-                }}
-              >
-                {em.emoji}
-              </button>
-            ))}
+          {/* Left Section: Team Emblem, Room Indicator, Tools */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Avatar Circle 'S' */}
+            <div
+              onClick={() => setIsUserProfileOpen(!isUserProfileOpen)}
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: '#334155',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              S
+            </div>
+
+            {/* Room Breadcrumb: Office / 1 [CurrentRoom] */}
+            <div
+              onClick={() => setIsSpacesSidebarOpen(!isSpacesSidebarOpen)}
+              style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', lineHeight: 1.2 }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#94a3b8' }}>
+                <Home size={11} />
+                <span>Office</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600, color: '#f8fafc' }}>
+                <span style={{ color: '#10b981', fontWeight: 700 }}>1</span>
+                <span>{currentRoom}</span>
+              </div>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', background: '#334155', margin: '0 4px' }} />
+
+            {/* Add Teammate / Invite */}
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(window.location.href);
+                alert('Spot workspace link copied to clipboard!');
+              }}
+              title="Invite Members"
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
+            >
+              <Users size={18} />
+            </button>
+
+            {/* Hammer / Build Tool (Toggles Build Mode!) */}
+            <button
+              onClick={() => setIsBuildModeOpen(!isBuildModeOpen)}
+              title="Toggle Build Mode"
+              style={{
+                background: isBuildModeOpen ? '#0091ff' : 'transparent',
+                border: 'none',
+                color: isBuildModeOpen ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px',
+                transition: 'background 0.15s ease'
+              }}
+            >
+              <Hammer size={18} />
+            </button>
+
+            {/* Expand / Fullscreen View */}
+            <button
+              onClick={() => {
+                if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                else document.exitFullscreen();
+              }}
+              title="Toggle Fullscreen"
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
+            >
+              <Maximize2 size={18} />
+            </button>
           </div>
 
-          <div style={{ display: 'flex', gap: '4px', borderRight: '1px solid #e2e8f0', paddingRight: '8px' }}>
+          {/* Center Pill Dock: Media Controls, Reactions, Hand Raise, Views */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            background: '#242c3d',
+            borderRadius: '24px',
+            padding: '4px 8px',
+            gap: '4px'
+          }}>
+            {/* Mic Toggle */}
             <button
-              onClick={() => triggerGesture('highfive', 'High Five', '✋')}
-              style={{ fontSize: '0.75rem', fontWeight: 600, padding: '5px 8px', borderRadius: '6px', background: '#f8fafc', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+              onClick={() => setIsMuted(!isMuted)}
+              title="Toggle Microphone (Spacebar to Push-to-Talk)"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: isMuted ? '#ef4444' : 'transparent',
+                border: 'none',
+                color: isMuted ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
             >
-              ✋ High Five
+              {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
+
+            {/* Camera Toggle */}
             <button
-              onClick={() => triggerGesture('fistbump', 'Fist Bump', '👊')}
-              style={{ fontSize: '0.75rem', fontWeight: 600, padding: '5px 8px', borderRadius: '6px', background: '#f8fafc', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+              onClick={() => setIsVideoOn(!isVideoOn)}
+              title="Toggle Camera"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: isVideoOn ? '#0091ff' : 'transparent',
+                border: 'none',
+                color: isVideoOn ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
             >
-              👊 Fist Bump
+              {isVideoOn ? <Video size={18} /> : <VideoOff size={18} />}
+            </button>
+
+            {/* Screen Share */}
+            <button
+              onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+              title="Share Screen"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: isScreenSharing ? '#10b981' : 'transparent',
+                border: 'none',
+                color: isScreenSharing ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Monitor size={18} />
+            </button>
+
+            {/* Headphones / Audio */}
+            <button
+              onClick={() => setIsHeadphonesOn(!isHeadphonesOn)}
+              title="Headphones Mode (Mute spatial audio)"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: isHeadphonesOn ? '#f59e0b' : 'transparent',
+                border: 'none',
+                color: isHeadphonesOn ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {isHeadphonesOn ? <VolumeX size={18} /> : <Headphones size={18} />}
+            </button>
+
+            {/* Reaction Smiley */}
+            <button
+              onClick={() => triggerEmote('cheer', '🎉')}
+              title="Send Reaction"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Smile size={18} />
+            </button>
+
+            {/* Raise Hand */}
+            <button
+              onClick={() => triggerEmote('wave', '✋')}
+              title="Raise Hand"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'transparent',
+                border: 'none',
+                color: '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>✋</span>
+            </button>
+
+            {/* Layers / Floorplan View Toggle */}
+            <button
+              onClick={() => setIsTopDownBlueprint(!isTopDownBlueprint)}
+              title="Toggle Top-Down Floorplan Blueprint"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: isTopDownBlueprint ? '#0091ff' : 'transparent',
+                border: 'none',
+                color: isTopDownBlueprint ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Layers size={18} />
+            </button>
+
+            {/* 3-Dots More Menu */}
+            <button
+              onClick={() => setActiveTab(activeTab === 'ai' ? 'none' : 'ai')}
+              title="OpenClaw AI Agent & Apps"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: activeTab !== 'none' ? '#0091ff' : 'transparent',
+                border: 'none',
+                color: activeTab !== 'none' ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <Sparkles size={18} />
             </button>
           </div>
 
-          <button
-            onClick={() => setActiveTab(activeTab === 'ai' ? 'none' : 'ai')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '2rem',
-              background: activeTab === 'ai' ? '#10b981' : '#f0fdf4',
-              color: activeTab === 'ai' ? '#ffffff' : '#047857',
-              border: '1px solid #86efac',
-              fontSize: '0.82rem',
-              fontWeight: 700,
+          {/* Right Section: Room badge, Calendar, Mail, Clock, Chat, Avatar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Active Room Badge */}
+            <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <Bot size={16} />
-            <span>OpenClaw Agent</span>
-          </button>
+              padding: '5px 10px',
+              borderRadius: '6px',
+              background: '#242c3d',
+              color: '#f8fafc',
+              fontSize: '13px',
+              fontWeight: 500
+            }}>
+              <MessageSquare size={14} color="#0091ff" />
+              <span>{currentRoom}</span>
+            </div>
 
-          <button
-            onClick={() => setActiveTab(activeTab === 'whiteboard' ? 'none' : 'whiteboard')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '2rem',
-              background: activeTab === 'whiteboard' ? '#2563eb' : '#eff6ff',
-              color: activeTab === 'whiteboard' ? '#ffffff' : '#1d4ed8',
-              border: '1px solid #bfdbfe',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <Edit3 size={16} />
-            <span>Whiteboard</span>
-          </button>
+            {/* Calendar */}
+            <button
+              onClick={() => alert('Calendar: Next standup in Conference B at 2:00 PM')}
+              title="Calendar"
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px' }}
+            >
+              <Calendar size={18} />
+            </button>
 
-          <button
-            onClick={() => setActiveTab(activeTab === 'chat' ? 'none' : 'chat')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '2rem',
-              background: activeTab === 'chat' ? '#0f172a' : '#f8fafc',
-              color: activeTab === 'chat' ? '#ffffff' : '#334155',
-              border: '1px solid #cbd5e1',
-              fontSize: '0.82rem',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}
-          >
-            <MessageSquare size={16} />
-            <span>Room Chat</span>
-          </button>
+            {/* Mail */}
+            <button
+              onClick={() => alert('Mail: 2 unread team invites')}
+              title="Mail / Messages"
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px' }}
+            >
+              <Mail size={18} />
+            </button>
+
+            {/* Clock */}
+            <button
+              onClick={() => alert(`Local Office Time: ${new Date().toLocaleTimeString()}`)}
+              title="Schedule / Time"
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px' }}
+            >
+              <Clock size={18} />
+            </button>
+
+            {/* Room Chat Bubble */}
+            <button
+              onClick={() => setActiveTab(activeTab === 'chat' ? 'none' : 'chat')}
+              title="Room Chat"
+              style={{
+                background: activeTab === 'chat' ? '#0091ff' : 'transparent',
+                border: 'none',
+                color: activeTab === 'chat' ? '#ffffff' : '#94a3b8',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px'
+              }}
+            >
+              <MessageSquare size={18} />
+            </button>
+
+            {/* User Avatar Circle with Online Dot */}
+            <div
+              onClick={() => setIsUserProfileOpen(!isUserProfileOpen)}
+              style={{ position: 'relative', cursor: 'pointer' }}
+              title="Open User Profile"
+            >
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '2px solid #0091ff'
+              }}>
+                <img
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80"
+                  alt="Ayush"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
+              <div style={{
+                position: 'absolute',
+                bottom: '-1px',
+                right: '-1px',
+                width: '9px',
+                height: '9px',
+                borderRadius: '50%',
+                background: '#10b981',
+                border: '1.5px solid #181f2a'
+              }} />
+            </div>
+          </div>
         </div>
 
         {/* 8. Spot 12-Icon Screen Display Manager Toolbar (media_1791967521142.png) */}

@@ -35,16 +35,32 @@ export default function App() {
         let spaceSlug = '@office';
         let targetRoom = 'Conference Room B';
 
-        if (fullUri.includes('conference-b') || fullUri.includes('conference')) {
-          targetRoom = 'Conference Room B';
-        } else if (fullUri.includes('huddle')) {
-          targetRoom = 'Round Table Huddle';
-        } else if (fullUri.includes('cafe')) {
-          targetRoom = 'Cafe / Bar';
-        } else if (fullUri.includes('desks')) {
-          targetRoom = 'Engineering Desks';
-        } else if (fullUri.includes('all-hands')) {
-          targetRoom = 'All-Hands Table';
+        if (fullUri.includes('boardroom')) {
+          targetRoom = 'Boardroom';
+        } else if (fullUri.includes('auditorium')) {
+          targetRoom = 'Auditorium';
+        } else if (fullUri.includes('conference-b')) {
+          targetRoom = 'Conference B';
+        } else if (fullUri.includes('conference-a')) {
+          targetRoom = 'Conference A';
+        } else if (fullUri.includes('chat-a')) {
+          targetRoom = 'Chat A';
+        } else if (fullUri.includes('chat-b')) {
+          targetRoom = 'Chat B';
+        } else if (fullUri.includes('lobby')) {
+          targetRoom = 'Lobby';
+        } else if (fullUri.includes('lounge-a')) {
+          targetRoom = 'Lounge A';
+        } else if (fullUri.includes('lounge-b')) {
+          targetRoom = 'Lounge B';
+        } else if (fullUri.includes('lounge-c')) {
+          targetRoom = 'Lounge C';
+        } else if (fullUri.includes('patio')) {
+          targetRoom = 'Patio';
+        } else if (fullUri.includes('workspace')) {
+          targetRoom = 'Workspace A';
+        } else {
+          targetRoom = 'Boardroom';
         }
 
         if (fullUri.includes('sunnkesh')) {

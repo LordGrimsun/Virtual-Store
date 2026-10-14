@@ -2,11 +2,16 @@ import * as THREE from 'three';
 
 /**
  * Builds the architectural environment matching the Spot Virtual desktop reference:
- * Rich bleached birch flooring, high acoustic black walls, glass boardroom partitions,
- * trough planters with multi-blade snake plants, exterior hills/trees, and calibrated lighting.
+ * Exact 12-room floorplan blueprint (media_1791969443822.png), wall thickness 0.32, height 6.0,
+ * wall color #f8f8f8, double doors with brass handles, transparent clerestory glass,
+ * and the Seattle environment (media_1791969444094.png) with asphalt roads, zebra crossings,
+ * sidewalk park benches, trees, and city skyline.
  */
-export function buildOfficeEnvironment(scene, screenTextures) {
+export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment = 'Seattle') {
   const materials = {};
+  const environmentGroup = new THREE.Group();
+  environmentGroup.name = 'office_environment_group';
+  scene.add(environmentGroup);
 
   // 1. Procedural Bleached Birch Wood Plank Floor Texture with rich grain
   const floorCanvas = document.createElement('canvas');
@@ -15,19 +20,19 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   const fCtx = floorCanvas.getContext('2d');
   
   // Base warm light oak / bleached birch tone
-  fCtx.fillStyle = '#f1efeb';
+  fCtx.fillStyle = '#f3f1ed';
   fCtx.fillRect(0, 0, 1024, 1024);
 
   // Alternating subtle plank lightness
   for (let y = 0; y < 1024; y += 32) {
-    const toneVariation = (Math.sin(y * 0.1) * 8);
-    fCtx.fillStyle = `rgba(255, 255, 255, ${0.025 + (toneVariation > 0 ? 0.025 : 0)})`;
+    const toneVariation = Math.sin(y * 0.1) * 8;
+    fCtx.fillStyle = `rgba(255, 255, 255, ${0.035 + (toneVariation > 0 ? 0.025 : 0)})`;
     fCtx.fillRect(0, y, 1024, 32);
   }
 
-  // Darker defined plank joint seams
-  fCtx.strokeStyle = '#c9c4bd';
-  fCtx.lineWidth = 1.25;
+  // Defined plank joint seams
+  fCtx.strokeStyle = '#cdc8c0';
+  fCtx.lineWidth = 1.2;
   for (let y = 0; y < 1024; y += 32) {
     fCtx.beginPath();
     fCtx.moveTo(0, y);
@@ -47,8 +52,8 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   }
 
   // Fine wood fiber streaks
-  fCtx.fillStyle = 'rgba(120, 100, 80, 0.045)';
-  for (let i = 0; i < 700; i++) {
+  fCtx.fillStyle = 'rgba(110, 95, 75, 0.035)';
+  for (let i = 0; i < 600; i++) {
     const rx = Math.random() * 1024;
     const ry = Math.random() * 1024;
     const rw = 25 + Math.random() * 75;
@@ -59,482 +64,533 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   floorTexture.colorSpace = THREE.SRGBColorSpace;
   floorTexture.wrapS = THREE.RepeatWrapping;
   floorTexture.wrapT = THREE.RepeatWrapping;
-  floorTexture.repeat.set(9, 7);
+  floorTexture.repeat.set(10, 8);
 
-  // Common Materials
   materials.floorMat = new THREE.MeshStandardMaterial({
     map: floorTexture,
-    roughness: 0.72,
-    metalness: 0.04
+    roughness: 0.68,
+    metalness: 0.03
   });
 
-  // Light brushed acoustic panel used on the architectural wall sections.
-  // Fine vertical grain and shallow seams match Spot's pale feature-wall finish.
-  const wallCanvas = document.createElement('canvas');
-  wallCanvas.width = 512;
-  wallCanvas.height = 512;
-  const wallCtx = wallCanvas.getContext('2d');
-  wallCtx.fillStyle = '#d4d3d0';
-  wallCtx.fillRect(0, 0, 512, 512);
-  for (let x = 0; x < 512; x += 24) {
-    const shade = 196 + ((x * 17) % 22);
-    wallCtx.fillStyle = `rgb(${shade}, ${shade}, ${shade - 1})`;
-    wallCtx.fillRect(x, 0, 21, 512);
-    wallCtx.fillStyle = 'rgba(255,255,255,0.38)';
-    wallCtx.fillRect(x, 0, 1.2, 512);
-    wallCtx.fillStyle = 'rgba(65,65,65,0.13)';
-    wallCtx.fillRect(x + 21, 0, 2, 512);
+  // Patio outdoor stone tile texture
+  const patioCanvas = document.createElement('canvas');
+  patioCanvas.width = 512;
+  patioCanvas.height = 512;
+  const pCtx = patioCanvas.getContext('2d');
+  pCtx.fillStyle = '#e5e7eb';
+  pCtx.fillRect(0, 0, 512, 512);
+  pCtx.strokeStyle = '#cbd5e1';
+  pCtx.lineWidth = 2;
+  for (let i = 0; i < 512; i += 64) {
+    pCtx.strokeRect(i, 0, 64, 512);
+    pCtx.strokeRect(0, i, 512, 64);
   }
-  wallCtx.fillStyle = 'rgba(80,75,70,0.045)';
-  for (let i = 0; i < 700; i++) {
-    const x = (i * 73) % 512;
-    const y = (i * 137) % 512;
-    wallCtx.fillRect(x, y, 1, 8 + (i % 18));
-  }
-  const wallTexture = new THREE.CanvasTexture(wallCanvas);
-  wallTexture.colorSpace = THREE.SRGBColorSpace;
-  wallTexture.wrapS = THREE.RepeatWrapping;
-  wallTexture.wrapT = THREE.RepeatWrapping;
-  wallTexture.repeat.set(3, 2);
-
-  materials.panelWallMat = new THREE.MeshStandardMaterial({
-    map: wallTexture,
-    color: 0xffffff,
-    roughness: 0.8,
-    metalness: 0.015
+  const patioTexture = new THREE.CanvasTexture(patioCanvas);
+  patioTexture.wrapS = THREE.RepeatWrapping;
+  patioTexture.wrapT = THREE.RepeatWrapping;
+  patioTexture.repeat.set(4, 4);
+  materials.patioFloorMat = new THREE.MeshStandardMaterial({
+    map: patioTexture,
+    roughness: 0.85
   });
 
-  materials.blackWallMat = new THREE.MeshStandardMaterial({
-    color: 0x111620,
-    roughness: 0.82,
-    metalness: 0.12
+  // Architectural Wall Material: #f8f8f8 matching Spot Virtual floorplan settings
+  materials.wallMat = new THREE.MeshStandardMaterial({
+    color: 0xf8f8f8,
+    roughness: 0.88,
+    metalness: 0.02
   });
 
-  materials.frameMat = new THREE.MeshStandardMaterial({
-    color: 0x090c12,
+  // Wall cap / trim material
+  materials.wallTrimMat = new THREE.MeshStandardMaterial({
+    color: 0xe5e7eb,
+    roughness: 0.7
+  });
+
+  // Double Door panel material (grey with brass handles)
+  materials.doorMat = new THREE.MeshStandardMaterial({
+    color: 0x9ca3af,
     roughness: 0.5,
-    metalness: 0.5
+    metalness: 0.15
   });
 
+  materials.doorFrameMat = new THREE.MeshStandardMaterial({
+    color: 0x4b5563,
+    roughness: 0.4
+  });
+
+  materials.brassHandleMat = new THREE.MeshStandardMaterial({
+    color: 0xd97706,
+    metalness: 0.85,
+    roughness: 0.25
+  });
+
+  // Glass Clerestory Windows
   materials.glassMat = new THREE.MeshPhysicalMaterial({
     color: 0xdbeafe,
     transparent: true,
-    opacity: 0.28,
-    roughness: 0.04,
-    transmission: 0.95,
-    thickness: 0.35,
+    opacity: 0.22,
+    roughness: 0.05,
+    transmission: 0.96,
+    thickness: 0.32,
     ior: 1.5
   });
 
-  materials.outdoorGrassMat = new THREE.MeshStandardMaterial({
-    color: 0x6e9354,
-    roughness: 0.95
+  materials.frameMat = new THREE.MeshStandardMaterial({
+    color: 0x374151,
+    roughness: 0.5,
+    metalness: 0.4
   });
 
-  // 2. Lighting System
-  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8ba67e, 1.45);
-  hemiLight.position.set(0, 60, 0);
-  scene.add(hemiLight);
+  // 2. Calibrated Spot Lighting System
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8da388, 1.35);
+  hemiLight.position.set(0, 50, 0);
+  environmentGroup.add(hemiLight);
 
-  const sunLight = new THREE.DirectionalLight(0xfffef5, 1.35);
-  sunLight.position.set(28, 48, 24);
+  const sunLight = new THREE.DirectionalLight(0xfffef5, 1.4);
+  sunLight.position.set(24, 46, 20);
   sunLight.castShadow = true;
-  // Higher-resolution shadow maps and a tighter camera frustum keep contact
-  // shadows crisp around desks, chairs, and architectural edges without wasting
-  // resolution on the distant landscape.
-  sunLight.shadow.mapSize.width = 3072;
-  sunLight.shadow.mapSize.height = 3072;
+  sunLight.shadow.mapSize.width = 2048;
+  sunLight.shadow.mapSize.height = 2048;
   sunLight.shadow.camera.near = 1.0;
   sunLight.shadow.camera.far = 110;
-  const sCam = 32;
+  const sCam = 36;
   sunLight.shadow.camera.left = -sCam;
   sunLight.shadow.camera.right = sCam;
   sunLight.shadow.camera.top = sCam;
   sunLight.shadow.camera.bottom = -sCam;
   sunLight.shadow.bias = -0.00015;
   sunLight.shadow.normalBias = 0.025;
-  sunLight.shadow.radius = 3;
-  sunLight.shadow.camera.updateProjectionMatrix();
-  scene.add(sunLight);
+  environmentGroup.add(sunLight);
 
-  const fillLight = new THREE.DirectionalLight(0xd9ebff, 0.65);
-  fillLight.position.set(-25, 28, -25);
-  scene.add(fillLight);
+  const fillLight = new THREE.DirectionalLight(0xd9ebff, 0.6);
+  fillLight.position.set(-20, 30, -20);
+  environmentGroup.add(fillLight);
 
-  // 3. Floor Mesh
-  const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(68, 0.4, 42), materials.floorMat);
-  floorMesh.position.set(0, -0.2, -4);
+  // 3. Main Interior Floor Mesh (Width: 64, Depth: 48)
+  const floorMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(64, 0.4, 48),
+    materials.floorMat
+  );
+  floorMesh.position.set(0, -0.2, 0);
   floorMesh.receiveShadow = true;
   floorMesh.name = 'floor';
-  scene.add(floorMesh);
+  environmentGroup.add(floorMesh);
 
-  // 4. Exterior Landscape (Rolling Green Hills & 3D Trees)
-  const outdoorGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 160),
-    materials.outdoorGrassMat
+  // Patio outdoor floor overlay (x: -32 to -14, z: -24 to -8)
+  const patioFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(18, 0.42, 16),
+    materials.patioFloorMat
   );
-  outdoorGround.rotation.x = -Math.PI / 2;
-  outdoorGround.position.set(0, -0.05, -20);
-  outdoorGround.receiveShadow = true;
-  scene.add(outdoorGround);
+  patioFloor.position.set(-23, -0.19, -16);
+  patioFloor.receiveShadow = true;
+  environmentGroup.add(patioFloor);
 
-  // Use broad, low ellipsoids instead of oversized cones. The old cones
-  // dominated the skyline and pushed the office down in the viewport.
-  const createHill = (x, z, r, h, color) => {
-    const hill = new THREE.Mesh(
-      new THREE.SphereGeometry(1, 32, 20),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.98 })
-    );
-    hill.scale.set(r, h * 0.42, r * 0.55);
-    hill.position.set(x, -h * 0.22, z);
-    hill.receiveShadow = true;
-    scene.add(hill);
-  };
-  createHill(-50, -84, 36, 22, 0x638c50);
-  createHill(-17, -88, 44, 27, 0x527f43);
-  createHill(23, -86, 40, 24, 0x638c50);
-  createHill(64, -80, 34, 20, 0x527f43);
+  // 4. Exact Wall Builder Helpers
+  const WALL_HEIGHT = 6.0;
+  const WALL_THICKNESS = 0.32;
 
-  const createTree = (x, z, scale = 1) => {
-    const treeGrp = new THREE.Group();
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.35 * scale, 0.45 * scale, 3 * scale, 6),
-      new THREE.MeshStandardMaterial({ color: 0x543d2b, roughness: 0.9 })
-    );
-    trunk.position.y = 1.5 * scale;
-    trunk.castShadow = true;
-    treeGrp.add(trunk);
-
-    [
-      { r: 2.2 * scale, h: 2.5 * scale, y: 3.2 * scale },
-      { r: 1.7 * scale, h: 2.2 * scale, y: 4.6 * scale },
-      { r: 1.1 * scale, h: 1.8 * scale, y: 5.8 * scale }
-    ].forEach((tier) => {
-      const cone = new THREE.Mesh(
-        new THREE.ConeGeometry(tier.r, tier.h, 7),
-        new THREE.MeshStandardMaterial({ color: 0x3d6b2c, roughness: 0.85 })
-      );
-      cone.position.y = tier.y;
-      cone.castShadow = true;
-      treeGrp.add(cone);
-    });
-    treeGrp.position.set(x, 0, z);
-    scene.add(treeGrp);
-  };
-
-  [-46, -30, -10, 8, 26, 42, 56].forEach((tx, idx) => {
-    createTree(tx, -72 - (idx % 3) * 2, 0.62 + (idx % 2) * 0.1);
-  });
-
-
-  // 4b. Stylized city context outside the office plot. These low-detail blocks
-  // provide the urban street-view seen through Spot's glazing without competing
-  // with furniture inside the office.
-  const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x41464a, roughness: 0.96 });
-  const curbMat = new THREE.MeshStandardMaterial({ color: 0xb9b9b4, roughness: 0.9 });
-  const roadMarkMat = new THREE.MeshBasicMaterial({ color: 0xf2f0e8 });
-  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xc9c7c0, roughness: 0.93 });
-
-  const addRoad = (width, depth, x, z) => {
-    const road = new THREE.Mesh(new THREE.BoxGeometry(width, 0.07, depth), asphaltMat);
-    road.position.set(x, -0.025, z);
-    scene.add(road);
-    return road;
-  };
-
-  // Four streets around a rectangular green forecourt.
-  addRoad(132, 7.4, 0, -36);
-  addRoad(132, 7.4, 0, 28);
-  addRoad(7.4, 88, -44.5, -4);
-  addRoad(7.4, 88, 44.5, -4);
-
-  // Pale sidewalks between the office lawn and the street edges.
-  addRoad(84, 1.15, 0, -30.1).material = sidewalkMat;
-  addRoad(84, 1.15, 0, 22.1).material = sidewalkMat;
-  addRoad(1.15, 56, -38.2, -4).material = sidewalkMat;
-  addRoad(1.15, 56, 38.2, -4).material = sidewalkMat;
-
-  // Broken lane markings.
-  for (let x = -64; x <= 64; x += 5.5) {
-    [-36, 28].forEach((z) => {
-      const dash = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.018, 0.12), roadMarkMat);
-      dash.position.set(x, 0.018, z);
-      scene.add(dash);
-    });
-  }
-  for (let z = -44; z <= 36; z += 5.5) {
-    [-44.5, 44.5].forEach((x) => {
-      const dash = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.018, 2.6), roadMarkMat);
-      dash.position.set(x, 0.018, z);
-      scene.add(dash);
-    });
-  }
-
-  // Zebra crossings at the four corners of the plot.
-  [-44.5, 44.5].forEach((x) => {
-    [-36, 28].forEach((z) => {
-      for (let i = -4; i <= 4; i++) {
-        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.02, 2.35), roadMarkMat);
-        stripe.position.set(x + i * 0.55, 0.02, z);
-        scene.add(stripe);
-      }
-    });
-  });
-  [-36, 28].forEach((z) => {
-    [-44.5, 44.5].forEach((x) => {
-      for (let i = -4; i <= 4; i++) {
-        const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.02, 0.34), roadMarkMat);
-        stripe.position.set(x, 0.022, z + i * 0.55);
-        scene.add(stripe);
-      }
-    });
-  });
-
-  // Repeating facade texture: understated dark glazing divided by light mullions.
-  const facadeCanvas = document.createElement('canvas');
-  facadeCanvas.width = 256;
-  facadeCanvas.height = 512;
-  const facadeCtx = facadeCanvas.getContext('2d');
-  facadeCtx.fillStyle = '#555b61';
-  facadeCtx.fillRect(0, 0, 256, 512);
-  for (let y = 8; y < 512; y += 34) {
-    facadeCtx.fillStyle = 'rgba(220,220,215,0.42)';
-    facadeCtx.fillRect(0, y, 256, 3);
-    for (let x = 9; x < 256; x += 31) {
-      const tone = 24 + ((x * 3 + y * 7) % 26);
-      facadeCtx.fillStyle = `rgb(${tone}, ${tone + 7}, ${tone + 12})`;
-      facadeCtx.fillRect(x, y + 5, 22, 23);
-      facadeCtx.fillStyle = 'rgba(210,220,225,0.28)';
-      facadeCtx.fillRect(x, y + 5, 2, 23);
-    }
-  }
-  const facadeTexture = new THREE.CanvasTexture(facadeCanvas);
-  facadeTexture.colorSpace = THREE.SRGBColorSpace;
-  facadeTexture.wrapS = THREE.RepeatWrapping;
-  facadeTexture.wrapT = THREE.RepeatWrapping;
-
-  const cityBlocks = [
-    { x: -63, z: -56, w: 19, d: 17, h: 31, color: 0xc6c4bd },
-    { x: -31, z: -57, w: 17, d: 16, h: 23, color: 0xd1c2a7 },
-    { x: 8, z: -58, w: 22, d: 17, h: 19, color: 0xbfc4c5 },
-    { x: 57, z: -57, w: 21, d: 18, h: 29, color: 0xc3c5c4 },
-    { x: -64, z: -3, w: 19, d: 20, h: 20, color: 0xc5c4bd },
-    { x: 63, z: -4, w: 21, d: 24, h: 34, color: 0xc1c3c2 },
-    { x: -63, z: 45, w: 23, d: 17, h: 28, color: 0xc5b9a2 },
-    { x: -25, z: 47, w: 19, d: 18, h: 22, color: 0xc6c6c2 },
-    { x: 19, z: 47, w: 22, d: 18, h: 35, color: 0xc5c8ca },
-    { x: 62, z: 46, w: 20, d: 18, h: 26, color: 0xc1c1bf }
-  ];
-
-  cityBlocks.forEach((b, index) => {
-    const facade = new THREE.MeshStandardMaterial({
-      map: facadeTexture,
-      color: b.color,
-      roughness: 0.86,
-      metalness: 0.06
-    });
-    const building = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), facade);
-    building.position.set(b.x, b.h / 2 - 0.04, b.z);
-    building.receiveShadow = true;
-    scene.add(building);
-
-    // Simple roof cap and setback parapet for readable architectural silhouettes.
-    const roof = new THREE.Mesh(
-      new THREE.BoxGeometry(b.w + 0.25, 0.28, b.d + 0.25),
-      new THREE.MeshStandardMaterial({ color: 0x454a4e, roughness: 0.82 })
-    );
-    roof.position.set(b.x, b.h - 0.02, b.z);
-    scene.add(roof);
-  });
-
-  // Small roadside trees soften the hard city blocks.
-  const addStreetTree = (x, z, scale = 1) => {
-    const tree = new THREE.Group();
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12 * scale, 0.16 * scale, 1.7 * scale, 7),
-      new THREE.MeshStandardMaterial({ color: 0x675343, roughness: 0.9 })
-    );
-    trunk.position.y = 0.85 * scale;
-    tree.add(trunk);
-    const crownMat = new THREE.MeshStandardMaterial({ color: 0x47783d, roughness: 0.92 });
-    [
-      [-0.34, 1.9, 0.1, 0.95],
-      [0.28, 2.2, -0.12, 0.82],
-      [0, 2.65, 0, 0.9]
-    ].forEach(([dx, y, dz, r]) => {
-      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(r * scale, 1), crownMat);
-      crown.position.set(dx * scale, y * scale, dz * scale);
-      crown.castShadow = true;
-      tree.add(crown);
-    });
-    tree.position.set(x, -0.035, z);
-    scene.add(tree);
-  };
-
-  [-29, -12, 7, 27].forEach((x, i) => addStreetTree(x, -31.35, 0.8 + (i % 2) * 0.12));
-  [-28, -8, 14, 29].forEach((x, i) => addStreetTree(x, 23.3, 0.85 + (i % 2) * 0.12));
-  [-20, 1, 22].forEach((z) => addStreetTree(-39.6, z, 0.82));
-  [-18, 4, 23].forEach((z) => addStreetTree(39.6, z, 0.82));
-
-  // Right brick wall accent
-  const brickWall = new THREE.Mesh(
-    new THREE.BoxGeometry(28, 3.4, 0.6),
-    new THREE.MeshStandardMaterial({ color: 0xb89880, roughness: 0.85 })
-  );
-  brickWall.position.set(32, 1.7, -34);
-  brickWall.castShadow = true;
-  brickWall.receiveShadow = true;
-  scene.add(brickWall);
-
-  // 5. Architectural Walls (High Black Acoustic Feature Walls)
-  const createWall = (x, z, w, d, h = 5.0, material = materials.blackWallMat) => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
-    wall.position.set(x, h / 2, z);
+  const createWall = (x, z, width, depth, height = WALL_HEIGHT, mat = materials.wallMat) => {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), mat);
+    wall.position.set(x, height / 2, z);
     wall.castShadow = true;
     wall.receiveShadow = true;
-    scene.add(wall);
+    environmentGroup.add(wall);
+
+    // Wall top trim cap
+    const trim = new THREE.Mesh(
+      new THREE.BoxGeometry(width + 0.04, 0.08, depth + 0.04),
+      materials.wallTrimMat
+    );
+    trim.position.set(x, height + 0.04, z);
+    environmentGroup.add(trim);
+
     return wall;
   };
 
-  // Solid Back Wall Framing the Triple Screens
-  createWall(18, -22, 28, 0.45, 5.0, materials.panelWallMat);
+  // Helper: Double Doorway with grey doors and horizontal brass handles
+  const createDoubleDoor = (x, z, rotY = 0) => {
+    const doorGroup = new THREE.Group();
 
-  // Theater Left Enclosure Walls
-  createWall(-20, -22, 24, 0.45, 5.0, materials.panelWallMat);
-  createWall(-33.5, -14, 0.45, 17, 5.0);
-  createWall(-20, -6, 25, 0.45, 4.5);
-  createWall(-8.5, -14, 0.45, 16, 4.5);
-  createWall(-8.5, 0, 0.45, 12, 4.5);
+    // Door frame
+    const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.4, 0.36), materials.doorFrameMat);
+    frameLeft.position.set(-1.45, 2.2, 0);
+    doorGroup.add(frameLeft);
 
-  // 6. Glass Boardroom Partitions & Sliding Door
-  const createGlassEnclosure = () => {
-    const group = new THREE.Group();
+    const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.4, 0.36), materials.doorFrameMat);
+    frameRight.position.set(1.45, 2.2, 0);
+    doorGroup.add(frameRight);
 
-    // Back Glass Wall
-    const glassBack = new THREE.Mesh(new THREE.BoxGeometry(9.6, 4.8, 0.1), materials.glassMat);
-    glassBack.position.set(0, 2.4, -21.8);
-    group.add(glassBack);
+    const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.12, 0.36), materials.doorFrameMat);
+    frameTop.position.set(0, 4.46, 0);
+    doorGroup.add(frameTop);
 
-    // Front Glass Wall with Doorway
-    const glassLeft = new THREE.Mesh(new THREE.BoxGeometry(3.6, 4.8, 0.1), materials.glassMat);
-    glassLeft.position.set(-3.0, 2.4, -12.5);
-    group.add(glassLeft);
+    // Left door leaf
+    const doorL = new THREE.Mesh(new THREE.BoxGeometry(1.36, 4.34, 0.08), materials.doorMat);
+    doorL.position.set(-0.7, 2.17, 0);
+    doorL.castShadow = true;
+    doorGroup.add(doorL);
 
-    const glassRight = new THREE.Mesh(new THREE.BoxGeometry(3.6, 4.8, 0.1), materials.glassMat);
-    glassRight.position.set(3.0, 2.4, -12.5);
-    group.add(glassRight);
+    // Right door leaf
+    const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 4.34, 0.08), materials.doorMat);
+    doorR.position.set(0.7, 2.17, 0);
+    doorR.castShadow = true;
+    doorGroup.add(doorR);
 
-    // Sliding Door (partially open)
-    const door = new THREE.Mesh(new THREE.BoxGeometry(2.4, 4.6, 0.08), materials.glassMat);
-    door.position.set(0.6, 2.3, -12.4);
-    group.add(door);
-
-    // Door vertical black handle
-    const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.4, 12), materials.frameMat);
-    handle.position.set(-0.4, 1.8, -12.3);
-    group.add(handle);
-
-    // Black frame trims
-    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.18, 0.16), materials.frameMat);
-    topBeam.position.set(0, 4.8, -12.5);
-    group.add(topBeam);
-
-    const bottomBeam = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.08, 0.16), materials.frameMat);
-    bottomBeam.position.set(0, 0.04, -12.5);
-    group.add(bottomBeam);
-
-    // Slim black aluminum mullions make the glass meeting room read as a
-    // framed architectural enclosure instead of floating transparent sheets.
-    [-4.78, -1.2, 1.8, 4.78].forEach((x) => {
-      const mullion = new THREE.Mesh(
-        new THREE.BoxGeometry(0.075, 4.72, 0.14),
-        materials.frameMat
+    // Brass horizontal handles
+    [-1, 1].forEach((side) => {
+      const handle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.022, 0.022, 0.45, 12),
+        materials.brassHandleMat
       );
-      mullion.position.set(x, 2.4, -12.46);
-      mullion.castShadow = true;
-      group.add(mullion);
-    });
-    [-4.78, -1.6, 1.6, 4.78].forEach((x) => {
-      const mullion = new THREE.Mesh(
-        new THREE.BoxGeometry(0.065, 4.72, 0.12),
-        materials.frameMat
-      );
-      mullion.position.set(x, 2.4, -21.72);
-      group.add(mullion);
+      handle.rotation.z = Math.PI / 2;
+      handle.position.set(side * 0.18, 2.1, 0.06);
+      doorGroup.add(handle);
     });
 
-    scene.add(group);
+    doorGroup.position.set(x, 0, z);
+    doorGroup.rotation.y = rotY;
+    environmentGroup.add(doorGroup);
   };
-  createGlassEnclosure();
 
-  // 7. Planters with Multi-Blade Snake Plants (Sansevieria)
-  const createPlanter = (x, z, w, d, h = 0.82) => {
-    const group = new THREE.Group();
-    const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), materials.blackWallMat);
-    box.position.y = h / 2;
-    box.castShadow = true;
-    box.receiveShadow = true;
-    group.add(box);
+  // 5. Build the Exact 12-Room Wall Blueprint (media_1791969443822.png)
+  // Overall interior dimensions: X = [-32, +32], Z = [-24, +24]
 
-    const soil = new THREE.Mesh(
-      new THREE.BoxGeometry(w - 0.1, 0.1, d - 0.1),
-      new THREE.MeshStandardMaterial({ color: 0x1f1610, roughness: 0.9 })
-    );
-    soil.position.y = h - 0.05;
-    group.add(soil);
+  // Outer Perimeter Walls:
+  // South Wall (Z = +24): Glass clerestory looking out onto the south sidewalk/trees!
+  // North Wall (Z = -24): Glass clerestory looking out onto Seattle street!
+  // West Wall (Z = -32): Solid exterior wall + monolith
+  createWall(-32, 0, WALL_THICKNESS, 48);
+  // East Wall (Z = +32): Solid exterior wall
+  createWall(32, 0, WALL_THICKNESS, 48);
 
-    // Realistic upright sword blades (Sansevieria)
-    const numPlants = Math.max(6, Math.floor((w + d) * 2.9));
-    for (let i = 0; i < numPlants; i++) {
-      const plantHeight = 0.62 + Math.random() * 0.42;
-      const blade = new THREE.Mesh(
-        new THREE.ConeGeometry(0.095, plantHeight, 6),
-        new THREE.MeshStandardMaterial({
-          color: i % 3 === 0 ? 0x1e4620 : i % 3 === 1 ? 0x276749 : 0x3b7650,
-          roughness: 0.6
-        })
+  // Transparent Clerestory Windows with mullions on North & South Perimeters
+  const createClerestoryFacade = (zPos) => {
+    for (let x = -30; x <= 30; x += 6) {
+      const glassPane = new THREE.Mesh(
+        new THREE.BoxGeometry(5.8, WALL_HEIGHT, 0.08),
+        materials.glassMat
       );
-      const px = (Math.random() - 0.5) * (w - 0.28);
-      const pz = (Math.random() - 0.5) * (d - 0.28);
-      blade.position.set(px, h + plantHeight / 2 - 0.1, pz);
-      blade.rotation.y = Math.random() * Math.PI;
-      blade.rotation.z = (Math.random() - 0.5) * 0.12;
-      blade.castShadow = true;
-      group.add(blade);
+      glassPane.position.set(x, WALL_HEIGHT / 2, zPos);
+      environmentGroup.add(glassPane);
+
+      // Frame mullions
+      const mullion = new THREE.Mesh(
+        new THREE.BoxGeometry(0.16, WALL_HEIGHT, 0.22),
+        materials.frameMat
+      );
+      mullion.position.set(x + 2.9, WALL_HEIGHT / 2, zPos);
+      environmentGroup.add(mullion);
     }
-
-    group.position.set(x, 0, z);
-    scene.add(group);
   };
+  createClerestoryFacade(-24); // North clerestory
+  createClerestoryFacade(24);  // South clerestory
 
-  // Planters bounding the middle nook & perimeter
-  createPlanter(-7.5, 3.5, 0.8, 7.0);
-  createPlanter(-4.0, 6.8, 6.5, 0.8);
-  createPlanter(-2.0, 1.8, 0.8, 4.2);
-  createPlanter(-33.5, 5.0, 0.8, 19.0);
-  createPlanter(-17.0, 16.5, 33.0, 0.8);
-  createPlanter(16.0, 16.5, 33.0, 0.8);
+  // Internal Horizontal Dividers:
+  // Divider between Row 3 (North) and Row 2 (Middle): Z = -8
+  // Patio partition (X = -32 to -14)
+  createWall(-23, -8, 18, WALL_THICKNESS);
+  // Workspace A partition (X = -14 to +14, with entryway openings at -3 and +3)
+  createWall(-8.5, -8, 11, WALL_THICKNESS);
+  createWall(8.5, -8, 11, WALL_THICKNESS);
+  // Lobby partition (X = +14 to +32, with doorway)
+  createWall(23, -8, 18, WALL_THICKNESS);
 
-  // 8. 3 Illuminated "● spot" Wall Plaques in Corridor
-  [-11.5, 0.5, 26.5].forEach((lx) => {
-    const signGrp = new THREE.Group();
-    const plaque = new THREE.Mesh(
-      new THREE.BoxGeometry(2.5, 1.25, 0.06),
-      new THREE.MeshStandardMaterial({
-        map: screenTextures.logoTexture,
-        roughness: 0.35,
-        metalness: 0.1
-      })
+  // Divider between Row 2 (Middle) and Row 1 (South): Z = +8
+  // Auditorium north wall (X = -32 to -16)
+  createWall(-24, 8, 16, WALL_THICKNESS);
+  // Boardroom north wall with double door (X = -16 to -2):
+  createWall(-14, 8, 4, WALL_THICKNESS);
+  createDoubleDoor(-9, 8, 0); // Double doors into Boardroom
+  createWall(-4, 8, 4, WALL_THICKNESS);
+  // Conference B north wall with double door (X = -2 to +12):
+  createWall(0.5, 8, 5, WALL_THICKNESS);
+  createDoubleDoor(5, 8, 0);  // Double doors into Conference B
+  createWall(9.5, 8, 5, WALL_THICKNESS);
+  // Conference A north wall with double door (X = +12 to +26):
+  createWall(14.5, 8, 5, WALL_THICKNESS);
+  createDoubleDoor(19, 8, 0); // Double doors into Conference A
+  createWall(23.5, 8, 5, WALL_THICKNESS);
+
+  // Internal Vertical Dividers:
+  // Between Auditorium and Boardroom (X = -16, Z = +8 to +24)
+  createWall(-16, 16, WALL_THICKNESS, 16);
+
+  // Between Boardroom and Conference B (X = -2, Z = +8 to +24)
+  createWall(-2, 16, WALL_THICKNESS, 16);
+
+  // Between Conference B and Conference A (X = +12, Z = +8 to +24)
+  createWall(12, 16, WALL_THICKNESS, 16);
+
+  // Between Patio and Workspace A (X = -14, Z = -24 to -8)
+  createWall(-14, -16, WALL_THICKNESS, 16);
+
+  // Between Workspace A and Lobby (X = +14, Z = -24 to -8)
+  createWall(14, -16, WALL_THICKNESS, 16);
+
+  // In Row 2 (Middle Row):
+  // Between Lounge C and Lounge B (X = -10, Z = -8 to +8, with central open portal)
+  createWall(-10, -5, WALL_THICKNESS, 6);
+  createWall(-10, 5, WALL_THICKNESS, 6);
+
+  // Chat A and Chat B Private Booth Enclosures (X: +8 to +16):
+  // West wall of Chat pods (X = +8, Z = -8 to +8)
+  createWall(8, -4, WALL_THICKNESS, 8);
+  createWall(8, 4, WALL_THICKNESS, 8);
+  // Partition dividing Chat A and Chat B (Z = 0, X = +8 to +16)
+  createWall(12, 0, 8, WALL_THICKNESS);
+  // East wall of Chat pods (X = +16, Z = -8 to +8)
+  createWall(16, -4, WALL_THICKNESS, 8);
+  createWall(16, 4, WALL_THICKNESS, 8);
+
+  // Door openings into Chat A and Chat B (sliding glass / open portal)
+  // Lounge A is located to the right of Chat A & B (X = +16 to +32, Z = -8 to +8)
+
+  // 6. Giant Spot Vertical Signboard / Monolith outside Auditorium (media_1791969443822.png)
+  const monolithGrp = new THREE.Group();
+  const monolith = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 11, 14),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.5 })
+  );
+  monolith.position.set(-34.5, 5.5, 16);
+  monolith.castShadow = true;
+  monolithGrp.add(monolith);
+
+  // Green circular Spot emblem on Monolith
+  const spotCircle = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.2, 1.2, 0.1, 32),
+    new THREE.MeshBasicMaterial({ color: 0x10b981 })
+  );
+  spotCircle.rotation.z = Math.PI / 2;
+  spotCircle.position.set(-34.0, 7.5, 14);
+  monolithGrp.add(spotCircle);
+
+  // Spot lowercase typography plaque
+  if (screenTextures?.logoTexture) {
+    const spotSign = new THREE.Mesh(
+      new THREE.PlaneGeometry(8, 2.5),
+      new THREE.MeshBasicMaterial({ map: screenTextures.logoTexture, transparent: true })
     );
-    signGrp.add(plaque);
+    spotSign.rotation.y = Math.PI / 2;
+    spotSign.position.set(-34.05, 5.5, 16);
+    monolithGrp.add(spotSign);
+  }
+  environmentGroup.add(monolithGrp);
 
-    const halo = new THREE.PointLight(0x22c55e, 0.6, 3.5);
-    halo.position.set(0, 0, 0.12);
-    signGrp.add(halo);
+  // 7. Seattle Environment: Asphalt Roads, Sidewalks, Park Benches, Trees & City
+  const seattleGroup = new THREE.Group();
+  seattleGroup.name = 'env_seattle_group';
 
-    signGrp.position.set(lx, 3.2, -26.5);
-    scene.add(signGrp);
+  // Asphalt roads
+  const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.94 });
+  const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.88 });
+  const roadMarkMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
+  const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.75 });
+  const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 });
+
+  // North Street (Z = -38)
+  const northRoad = new THREE.Mesh(new THREE.BoxGeometry(140, 0.08, 14), asphaltMat);
+  northRoad.position.set(0, -0.04, -38);
+  seattleGroup.add(northRoad);
+
+  // South Street (Z = +38)
+  const southRoad = new THREE.Mesh(new THREE.BoxGeometry(140, 0.08, 14), asphaltMat);
+  southRoad.position.set(0, -0.04, 38);
+  seattleGroup.add(southRoad);
+
+  // West Street (X = -46)
+  const westRoad = new THREE.Mesh(new THREE.BoxGeometry(14, 0.08, 90), asphaltMat);
+  westRoad.position.set(-46, -0.04, 0);
+  seattleGroup.add(westRoad);
+
+  // Sidewalks directly outside north and south clerestory
+  const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(80, 0.14, 4), sidewalkMat);
+  northSidewalk.position.set(0, 0.06, -26.5);
+  seattleGroup.add(northSidewalk);
+
+  const southSidewalk = new THREE.Mesh(new THREE.BoxGeometry(80, 0.14, 4), sidewalkMat);
+  southSidewalk.position.set(0, 0.06, 26.5);
+  seattleGroup.add(southSidewalk);
+
+  // Broken white lane divider lines on roads
+  for (let x = -60; x <= 60; x += 6) {
+    [-38, 38].forEach((z) => {
+      const dash = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.02, 0.18), roadMarkMat);
+      dash.position.set(x, 0.03, z);
+      seattleGroup.add(dash);
+    });
+  }
+
+  // Crosswalk zebra stripes
+  [-30, 30].forEach((cx) => {
+    for (let i = -4; i <= 4; i++) {
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.025, 3.2), roadMarkMat);
+      stripe.position.set(cx + i * 0.75, 0.03, -38);
+      seattleGroup.add(stripe);
+    }
   });
 
-  return { materials };
+  // Helper: Wooden Park Bench matching media_1791969444037.png and media_1791969444163.png
+  const createParkBench = (x, z, rotY = 0) => {
+    const bench = new THREE.Group();
+
+    // Wood seat slats
+    for (let s = -0.22; s <= 0.22; s += 0.11) {
+      const slat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.04, 0.09), benchWoodMat);
+      slat.position.set(0, 0.45, s);
+      slat.castShadow = true;
+      bench.add(slat);
+    }
+
+    // Wood backrest slats
+    for (let b = 0.58; b <= 0.88; b += 0.12) {
+      const bSlat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.09, 0.04), benchWoodMat);
+      bSlat.position.set(0, b, -0.26);
+      bSlat.castShadow = true;
+      bench.add(bSlat);
+    }
+
+    // Metal legs
+    [-0.95, 0.95].forEach((lx) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.52), benchMetalMat);
+      leg.position.set(lx, 0.22, 0);
+      leg.castShadow = true;
+      bench.add(leg);
+
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.35, 0.06), benchMetalMat);
+      arm.position.set(lx, 0.55, -0.24);
+      bench.add(arm);
+    });
+
+    bench.position.set(x, 0.14, z);
+    bench.rotation.y = rotY;
+    seattleGroup.add(bench);
+  };
+
+  // Place Park Benches outside north glass wall (media_1791969444037.png)
+  createParkBench(-12, -26.5, 0);
+  createParkBench(-6, -26.5, 0);
+  createParkBench(6, -26.5, 0);
+  createParkBench(14, -26.5, 0);
+
+  // Place Park Benches outside south glass wall (media_1791969444094.png)
+  createParkBench(-10, 26.5, Math.PI);
+  createParkBench(-4, 26.5, Math.PI);
+
+  // Helper: Low-poly Street Tree matching Spot Virtual (media_1791969444037.png)
+  const createStreetTree = (x, z, scale = 1) => {
+    const tree = new THREE.Group();
+
+    // Trunk
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18 * scale, 0.25 * scale, 2.4 * scale, 7),
+      new THREE.MeshStandardMaterial({ color: 0x5c3d2e, roughness: 0.9 })
+    );
+    trunk.position.y = 1.2 * scale;
+    trunk.castShadow = true;
+    tree.add(trunk);
+
+    // Green faceted foliage crown
+    const foliageMat = new THREE.MeshStandardMaterial({
+      color: 0x367c3b,
+      roughness: 0.85,
+      flatShading: true
+    });
+
+    [
+      { r: 1.4 * scale, y: 2.8 * scale, x: 0, z: 0 },
+      { r: 1.1 * scale, y: 3.8 * scale, x: 0.2 * scale, z: -0.1 * scale },
+      { r: 0.9 * scale, y: 3.2 * scale, x: -0.4 * scale, z: 0.3 * scale }
+    ].forEach((tier) => {
+      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(tier.r, 1), foliageMat);
+      crown.position.set(tier.x, tier.y, tier.z);
+      crown.castShadow = true;
+      tree.add(crown);
+    });
+
+    tree.position.set(x, 0, z);
+    seattleGroup.add(tree);
+  };
+
+  // Trees outside north clerestory
+  createStreetTree(0, -28, 1.1);
+  createStreetTree(-20, -28, 0.95);
+  createStreetTree(22, -28, 1.05);
+
+  // Trees outside south clerestory
+  createStreetTree(-16, 28, 1.0);
+  createStreetTree(2, 28, 1.15);
+
+  // Low-poly City Skyline Buildings (Seattle backdrop)
+  const buildingCanvas = document.createElement('canvas');
+  buildingCanvas.width = 128;
+  buildingCanvas.height = 256;
+  const bCtx = buildingCanvas.getContext('2d');
+  bCtx.fillStyle = '#475569';
+  bCtx.fillRect(0, 0, 128, 256);
+  // Subtle illuminated windows
+  bCtx.fillStyle = '#cbd5e1';
+  for (let wy = 12; wy < 250; wy += 20) {
+    for (let wx = 10; wx < 120; wx += 16) {
+      bCtx.fillRect(wx, wy, 10, 12);
+    }
+  }
+  const buildingTexture = new THREE.CanvasTexture(buildingCanvas);
+  buildingTexture.wrapS = THREE.RepeatWrapping;
+  buildingTexture.wrapT = THREE.RepeatWrapping;
+
+  const buildings = [
+    { x: -55, z: -55, w: 22, h: 36, d: 20 },
+    { x: -25, z: -58, w: 20, h: 28, d: 18 },
+    { x: 12, z: -60, w: 26, h: 42, d: 22 },
+    { x: 50, z: -56, w: 24, h: 32, d: 20 },
+    { x: -60, z: 52, w: 22, h: 30, d: 20 },
+    { x: -10, z: 56, w: 24, h: 38, d: 22 },
+    { x: 38, z: 54, w: 20, h: 26, d: 18 }
+  ];
+
+  buildings.forEach((b) => {
+    const bMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(b.w, b.h, b.d),
+      new THREE.MeshStandardMaterial({
+        map: buildingTexture,
+        roughness: 0.8
+      })
+    );
+    bMesh.position.set(b.x, b.h / 2, b.z);
+    bMesh.receiveShadow = true;
+    seattleGroup.add(bMesh);
+  });
+
+  environmentGroup.add(seattleGroup);
+
+  return {
+    materials,
+    environmentGroup,
+    setEnvironment: (theme) => {
+      // Toggle environment themes dynamically
+      if (theme === 'Beach') {
+        seattleGroup.visible = false;
+        hemiLight.color.setHex(0xfff7ed);
+        sunLight.color.setHex(0xfef08a);
+      } else if (theme === 'Desert' || theme === 'Simple Desert') {
+        seattleGroup.visible = false;
+        hemiLight.color.setHex(0xfef3c7);
+        sunLight.color.setHex(0xfde68a);
+      } else if (theme === 'Park') {
+        seattleGroup.visible = false;
+        hemiLight.color.setHex(0xdcfce7);
+        sunLight.color.setHex(0xecfdf5);
+      } else if (theme === 'Park Night' || theme === 'Moon' || theme === 'Mars') {
+        seattleGroup.visible = false;
+        hemiLight.color.setHex(0x1e293b);
+        sunLight.color.setHex(0x60a5fa);
+      } else {
+        // Seattle (Default)
+        seattleGroup.visible = true;
+        hemiLight.color.setHex(0xffffff);
+        sunLight.color.setHex(0xfffef5);
+      }
+    }
+  };
 }
