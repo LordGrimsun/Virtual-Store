@@ -56,6 +56,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   }
 
   const floorTexture = new THREE.CanvasTexture(floorCanvas);
+  floorTexture.colorSpace = THREE.SRGBColorSpace;
   floorTexture.wrapS = THREE.RepeatWrapping;
   floorTexture.wrapT = THREE.RepeatWrapping;
   floorTexture.repeat.set(8, 6);
@@ -127,7 +128,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
 
   // 4. Exterior Landscape (Rolling Green Hills & 3D Trees)
   const outdoorGround = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
+    new THREE.PlaneGeometry(200, 88),
     materials.outdoorGrassMat
   );
   outdoorGround.rotation.x = -Math.PI / 2;
