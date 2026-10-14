@@ -59,11 +59,20 @@ export default function WorkspaceLiveDemo() {
       <div className="Sandbox_header">
         <div className="Sandbox_title">
           <Sparkles size={18} color="#60c449" />
-          <span>Interactive Spot Virtual HQ Demo</span>
+          <span>Interactive Spot Virtual HQ Sandbox</span>
         </div>
-        <div className="Sandbox_status">
-          <span className="ai-agents_liveDot" />
-          <span>Zone: {activeZone}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="Sandbox_status">
+            <span className="ai-agents_liveDot" />
+            <span>Zone: {activeZone}</span>
+          </div>
+          <button
+            onClick={() => { window.location.hash = 'platform'; }}
+            className="ButtonLink_button ButtonLink_green ButtonLink_small"
+            style={{ padding: '0.35rem 0.85rem', fontSize: '0.8rem', gap: '5px' }}
+          >
+            Launch Full 3D Office →
+          </button>
         </div>
       </div>
 
