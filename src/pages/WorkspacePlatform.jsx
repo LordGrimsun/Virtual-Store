@@ -2137,25 +2137,6 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         )}
 
-        {/* Top-Left Controls Legend */}
-        <div style={{
-          position: 'absolute',
-          top: '20px',
-          left: '20px',
-          background: 'rgba(255, 255, 255, 0.92)',
-          backdropFilter: 'blur(8px)',
-          padding: '10px 16px',
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
-          zIndex: 20,
-          pointerEvents: 'none'
-        }}>
-          <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>SPOT VIRTUAL PLATFORM &bull; PHOTOREALISTIC 3D</p>
-          <p style={{ margin: '3px 0 0', fontSize: '0.85rem', color: '#0f172a', fontWeight: 700 }}>
-            WASD / Arrows to walk &bull; Click chairs to sit &bull; Click boards to inspect &bull; Spacebar PTT
-          </p>
-        </div>
 
         {/* 8. Spot Bottom Control Bar (media_1791969444163.png) */}
         <div style={{
