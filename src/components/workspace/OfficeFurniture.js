@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /**
  * Builds all high-fidelity office furniture, workstations, chairs, tables,
@@ -17,6 +18,129 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const darkTableMat = new THREE.MeshStandardMaterial({ color: 0x1e2430, roughness: 0.5 });
   const screenBezelMat = new THREE.MeshStandardMaterial({ color: 0x0a0d14, roughness: 0.6 });
   const screenGlowMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
+
+  const roundedBox = (width, height, depth, radius = 0.045) => {
+    const safeRadius = Math.max(
+      0.005,
+      Math.min(radius, width * 0.45, height * 0.45, depth * 0.45)
+    );
+    return new RoundedBoxGeometry(width, height, depth, 3, safeRadius);
+  };
+
+  const sofaCushionMat = new THREE.MeshStandardMaterial({
+    color: 0x252a31,
+    roughness: 0.92
+  });
+  const paleCushionMat = new THREE.MeshStandardMaterial({
+    color: 0xf1ece4,
+    roughness: 0.92
+  });
+  const sofaBaseMat = new THREE.MeshStandardMaterial({
+    color: 0x14171c,
+    roughness: 0.86
+  });
+
+  const createUpholsteredSofa = (cx, cz, width, depth, rotation, upholsteryMat, name, objectName) => {
+    const sofa = new THREE.Group();
+
+    const base = new THREE.Mesh(roundedBox(width - 0.06, 0.24, depth - 0.04, 0.07), sofaBaseMat);
+    base.position.y = 0.25;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    sofa.add(base);
+
+    const seatWidth = (width - 0.24) / 2;
+    [-1, 1].forEach((side) => {
+      const cushion = new THREE.Mesh(
+        roundedBox(seatWidth, 0.15, depth - 0.30, 0.055),
+        upholsteryMat
+      );
+      cushion.position.set(side * (width * 0.25), 0.43, 0.08);
+      cushion.castShadow = true;
+      cushion.receiveShadow = true;
+      sofa.add(cushion);
+    });
+
+    const back = new THREE.Mesh(
+      roundedBox(width - 0.12, 0.56, 0.22, 0.06),
+      upholsteryMat
+    );
+    back.position.set(0, 0.65, -depth / 2 + 0.14);
+    back.castShadow = true;
+    back.receiveShadow = true;
+    sofa.add(back);
+
+    [-1, 1].forEach((side) => {
+      const arm = new THREE.Mesh(roundedBox(0.22, 0.38, depth - 0.04, 0.055), upholsteryMat);
+      arm.position.set(side * (width / 2 - 0.12), 0.47, 0);
+      arm.castShadow = true;
+      sofa.add(arm);
+    });
+
+    [-1, 1].forEach((sx) => {
+      [-1, 1].forEach((sz) => {
+        const foot = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.045, 0.05, 0.12, 10),
+          blackMetalMat
+        );
+        foot.position.set(sx * (width / 2 - 0.22), 0.06, sz * (depth / 2 - 0.15));
+        sofa.add(foot);
+      });
+    });
+
+    sofa.position.set(cx, 0, cz);
+    sofa.rotation.y = rotation;
+    sofa.name = objectName;
+    scene.add(sofa);
+    chairsRef.current.push({
+      name,
+      pos: new THREE.Vector3(cx, 0, cz),
+      rot: rotation
+    });
+    return sofa;
+  };
+
+  const createLoungeChair = (cx, cz, rotation, name) => {
+    const chair = new THREE.Group();
+    const base = new THREE.Mesh(roundedBox(0.92, 0.24, 0.84, 0.075), paleCushionMat);
+    base.position.y = 0.27;
+    base.castShadow = true;
+    chair.add(base);
+
+    const seat = new THREE.Mesh(roundedBox(0.74, 0.14, 0.62, 0.055), chairBeigeMat);
+    seat.position.set(0, 0.45, 0.06);
+    seat.castShadow = true;
+    seat.name = 'clickable_chair';
+    chair.add(seat);
+
+    const back = new THREE.Mesh(roundedBox(0.78, 0.62, 0.19, 0.06), paleCushionMat);
+    back.position.set(0, 0.74, -0.31);
+    back.rotation.x = -0.05;
+    back.castShadow = true;
+    back.name = 'clickable_chair';
+    chair.add(back);
+
+    [-0.38, 0.38].forEach((x) => {
+      const arm = new THREE.Mesh(roundedBox(0.18, 0.34, 0.68, 0.05), paleCushionMat);
+      arm.position.set(x, 0.52, -0.01);
+      arm.castShadow = true;
+      chair.add(arm);
+    });
+
+    [-1, 1].forEach((sx) => {
+      [-1, 1].forEach((sz) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.028, 0.19, 8), brassMat);
+        leg.position.set(sx * 0.34, 0.095, sz * 0.29);
+        chair.add(leg);
+      });
+    });
+
+    chair.position.set(cx, 0, cz);
+    chair.rotation.y = rotation;
+    scene.add(chair);
+    chairsRef.current.push({ name, pos: new THREE.Vector3(cx, 0, cz), rot: rotation });
+    return chair;
+  };
 
   const glassDomeMat = new THREE.MeshPhysicalMaterial({
     color: 0xffffff,
@@ -52,7 +176,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     cGrp.add(riserR);
 
     // Upholstered Seat Cushion
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.09, 0.62), chairFabricMat);
+    const seat = new THREE.Mesh(roundedBox(0.68, 0.09, 0.62, 0.03), chairFabricMat);
     seat.position.set(0, 0.7, 0);
     seat.castShadow = true;
     seat.receiveShadow = true;
@@ -60,7 +184,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     cGrp.add(seat);
 
     // Contoured Backrest
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.62, 0.07), chairFabricMat);
+    const back = new THREE.Mesh(roundedBox(0.68, 0.62, 0.07, 0.025), chairFabricMat);
     back.position.set(0, 1.02, 0.28);
     back.rotation.x = -0.06;
     back.castShadow = true;
@@ -155,14 +279,14 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     group.add(cylinder);
 
     // Ergonomic Contoured Seat
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.08, 0.58), darkWallMat);
+    const seat = new THREE.Mesh(roundedBox(0.62, 0.08, 0.58, 0.025), darkWallMat);
     seat.position.y = 0.68;
     seat.castShadow = true;
     seat.name = 'clickable_chair';
     group.add(seat);
 
     // Mesh Backrest with Lumbar Curve
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.65, 0.06), darkWallMat);
+    const back = new THREE.Mesh(roundedBox(0.58, 0.65, 0.06, 0.02), darkWallMat);
     back.position.set(0, 1.04, 0.26);
     back.rotation.x = -0.08;
     back.castShadow = true;
@@ -258,43 +382,19 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   });
 
   // 3. Zone 3: Middle Nook Sofa & Gold Drink Table
-  const nookSofa = new THREE.Mesh(
-    new THREE.BoxGeometry(2.5, 0.58, 0.98),
-    new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 })
-  );
-  nookSofa.position.set(-4.5, 0.36, 4.2);
-  nookSofa.rotation.y = Math.PI / 2;
-  nookSofa.castShadow = true;
-  nookSofa.name = 'chair_nook';
-  scene.add(nookSofa);
-  chairsRef.current.push({ name: 'Nook Sofa', pos: new THREE.Vector3(-4.5, 0, 4.2), rot: Math.PI / 2 });
+  const paleSofaMat = new THREE.MeshStandardMaterial({ color: 0xf6f3ed, roughness: 0.88 });
+  createUpholsteredSofa(-4.5, 4.2, 2.5, 0.98, Math.PI / 2, paleSofaMat, 'Nook Sofa', 'chair_nook');
 
   const goldTable = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.52, 20), brassMat);
   goldTable.position.set(-4.5, 0.26, 1.8);
   goldTable.castShadow = true;
   scene.add(goldTable);
 
-  // 4. Zone 4: Foreground Lounge (Black Sofa + Beige Club Chairs + Drum Table)
-  const bSofa = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.58, 1.15), darkWallMat);
-  bSofa.position.set(-2.0, 0.36, 9.8);
-  bSofa.castShadow = true;
-  bSofa.name = 'chair_lounge';
-  scene.add(bSofa);
-  chairsRef.current.push({ name: 'Lounge Sofa', pos: new THREE.Vector3(-2.0, 0, 9.8), rot: 0 });
+  // 4. Zone 4: Foreground Lounge — padded black sofa and proper club chairs.
+  createUpholsteredSofa(-2.0, 9.8, 3.6, 1.15, 0, darkWallMat, 'Lounge Sofa', 'chair_lounge');
 
-  // Two Beige Club Chairs
   [-4.8, 1.2].forEach((cx, idx) => {
-    const club = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.62, 1.05), chairBeigeMat);
-    club.position.set(cx, 0.38, 11.8);
-    club.rotation.y = idx === 0 ? Math.PI / 4 : -Math.PI / 4;
-    club.castShadow = true;
-    club.name = 'clickable_chair';
-    scene.add(club);
-    chairsRef.current.push({
-      name: `Club Chair ${idx + 1}`,
-      pos: new THREE.Vector3(cx, 0, 11.8),
-      rot: idx === 0 ? Math.PI / 4 : -Math.PI / 4
-    });
+    createLoungeChair(cx, 11.8, idx === 0 ? Math.PI / 4 : -Math.PI / 4, `Club Chair ${idx + 1}`);
   });
 
   // Round Drum Coffee Table with Small Plant
