@@ -161,13 +161,13 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                   )}
                 </div>
 
-                {/* Pricing Link */}
+                {/* Free Access Link */}
                 <a
                   href="#pricing"
                   onClick={(e) => { e.preventDefault(); navigateTo('pricing'); }}
                   className={`NavLink_link ${currentPage === 'pricing' ? 'active-link' : ''} ${isDarkPage ? 'NavLink_linkWhite' : ''}`}
                 >
-                  Pricing
+                  Free Access
                 </a>
 
                 {/* Resources Dropdown */}
@@ -243,7 +243,7 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                   onClick={() => openAuthModal('signup')}
                   className="ButtonLink_button ButtonLink_green ButtonLink_small Navbar_navButton"
                 >
-                  Start free trial
+                  Start Free
                 </button>
               </div>
             </div>
@@ -255,7 +255,7 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                 onClick={() => openAuthModal('signup')}
                 className="ButtonLink_button ButtonLink_green Navbar_mobileNavButton"
               >
-                Free trial
+                Start Free
               </button>
               <button
                 type="button"
@@ -340,7 +340,7 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                   onClick={(e) => { e.preventDefault(); navigateTo('pricing'); }}
                   className="NavLink_link"
                 >
-                  Pricing
+                  Free Access
                 </a>
 
                 <div className="NavLink_dropdownWrapper">
@@ -389,7 +389,7 @@ export default function Navbar({ currentPage, setCurrentPage, openAuthModal, the
                   onClick={() => openAuthModal('signup')}
                   className="ButtonLink_button ButtonLink_green ButtonLink_small Navbar_navButton"
                 >
-                  Start free trial
+                  Start Free
                 </button>
               </div>
             </div>

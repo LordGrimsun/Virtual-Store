@@ -267,7 +267,7 @@ export default function DownloadsPage({ openAuthModal, setCurrentPage }) {
                   onClick={() => openAuthModal('signup')}
                   className="ButtonLink_button ButtonLink_regular ButtonLink_green CTASection_button"
                 >
-                  Start Free Trial
+                  Start Free (100% Free)
                 </button>
                 <button
                   onClick={() => openAuthModal('signin')}

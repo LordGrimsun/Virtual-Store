@@ -42,7 +42,7 @@ export default function HomePage({ setCurrentPage, openAuthModal }) {
                 onClick={() => openAuthModal('signup')}
                 className="ButtonLink_button ButtonLink_green ButtonLink_regular HeroSection_heroButton"
               >
-                Start your free trial
+                Start Free (100% Free Forever)
               </button>
             </div>
           </div>
@@ -410,7 +410,7 @@ export default function HomePage({ setCurrentPage, openAuthModal }) {
                   onClick={() => openAuthModal('signup')}
                   className="ButtonLink_button ButtonLink_blue ButtonLink_regular CallToAction_button"
                 >
-                  Start free trial
+                  Start Free (100% Free Forever)
                 </button>
               </div>
             </div>

@@ -183,14 +183,14 @@ export default function VirtualOfficesPage({ openAuthModal, setCurrentPage }) {
                   onClick={() => openAuthModal('signup')}
                   className="ButtonLink_button ButtonLink_regular ButtonLink_green CTASection_button"
                 >
-                  Start 14-Day Free Trial
+                  Create Free Office (100% Free)
                 </button>
                 <button
                   onClick={() => setCurrentPage('pricing')}
                   className="ButtonLink_button ButtonLink_regular ButtonLink_outline CTASection_button"
                   style={{ borderColor: 'rgba(255,255,255,0.7)', color: '#fff' }}
                 >
-                  View All Plans
+                  Free Access Details
                 </button>
               </div>
             </div>

@@ -1,110 +1,82 @@
 import React, { useState } from 'react';
-import { Check, X, ChevronDown, Sparkles, Shield, Zap, Users, ArrowRight } from 'lucide-react';
+import { Check, X, ChevronDown, Sparkles, Shield, Zap, Users, ArrowRight, Heart, Gift, Globe, Bot, Building2 } from 'lucide-react';
 
 export default function PricingPage({ openAuthModal, setCurrentPage }) {
-  const [isYearly, setIsYearly] = useState(true);
   const [openFaq, setOpenFaq] = useState(0);
 
   const toggleFaq = (index) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
-  const pricingPlans = [
+  const freePillars = [
     {
-      id: 'basic',
-      name: 'Basic',
-      price: isYearly ? '$6' : '$8',
-      period: 'per user / month',
-      description: 'Small teams who want to build a shared space to work together asynchronously & in real-time.',
-      buttonText: 'Start Free Trial',
-      buttonStyle: 'ButtonLink_outline',
-      isPopular: false,
-      features: [
-        'Up to 25 active members',
-        'Unlimited guest passes',
-        '1 dedicated customizable space',
-        '2 simultaneous screen shares',
-        'Permanent chat history & search',
-        'OpenClaw AI Bot ready',
-        'Standard floorplan library'
+      icon: <Building2 size={24} color="#60c449" />,
+      title: 'Unlimited Virtual Offices',
+      items: [
+        'Unlimited customizable spaces & rooms',
+        'Custom furniture & floorplan editor',
+        'Private focus pods & sound-isolated doors',
+        'Interactive whiteboards & shared screens'
       ]
     },
     {
-      id: 'growth',
-      name: 'Growth',
-      price: isYearly ? '$10' : '$13',
-      period: 'per user / month',
-      description: 'Growing companies looking to boost communication, spontaneous collaboration, and team culture.',
-      buttonText: 'Start Free Trial',
-      buttonStyle: 'ButtonLink_green',
-      isPopular: true,
-      features: [
-        'Everything in Basic, plus:',
-        'Up to 100 active members',
-        'Unlimited customizable spaces',
-        '5 simultaneous screen shares',
-        'Priority email & chat support',
-        'AI meeting transcriptions & notes',
-        'Advanced roles and permissions',
-        'Custom asset library & office branding'
+      icon: <Bot size={24} color="#59a7f0" />,
+      title: 'Full AI Agent Access',
+      items: [
+        'OpenClaw autonomous agent integration',
+        'Live spatial avatar presence at desks',
+        'Walk-up proximity voice & text queries',
+        'Multi-agent collaborative war rooms'
       ]
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: "Let's chat",
-      period: 'custom agreement',
-      description: 'Large organizations that need advanced security, dedicated compliance, and custom onboarding.',
-      buttonText: 'Contact Sales',
-      buttonStyle: 'ButtonLink_blue',
-      isPopular: false,
-      features: [
-        'Everything in Growth, plus:',
-        'Unlimited members and spaces',
-        'Dedicated Account Manager & 99.9% SLA',
-        'SAML 2.0 Single Sign-On (Okta, Google, Azure)',
-        'Custom Security Review & SOC2/DPA',
-        'Compliance audit logs & export APIs',
-        'Tailored team onboarding & architecture'
+      icon: <Users size={24} color="#a855f7" />,
+      title: 'Zero Member Limits',
+      items: [
+        'Unlimited teammates and members',
+        'Instant frictionless guest drop-in links',
+        'Simultaneous multi-display screen sharing',
+        'Native macOS, Windows, Linux, & Web apps'
       ]
     }
   ];
 
   const comparisonRows = [
-    { feature: 'Always-on 2D/3D spatial presence', spot: true, slack: false, zoom: false, teams: false },
-    { feature: 'Walk-up audio & proximity conversation', spot: true, slack: false, zoom: false, teams: false },
-    { feature: 'Integrated OpenClaw AI Agents', spot: true, slack: false, zoom: false, teams: false },
-    { feature: 'Simultaneous multi-screen sharing', spot: true, slack: false, zoom: true, teams: true },
-    { feature: 'Customizable virtual floorplans & desks', spot: true, slack: false, zoom: false, teams: false },
-    { feature: 'Instant guest drop-in without login', spot: true, slack: false, zoom: true, teams: false },
-    { feature: 'In-space whiteboards & casual games', spot: true, slack: false, zoom: false, teams: false },
-    { feature: 'Automated AI meeting summaries', spot: true, slack: true, zoom: true, teams: true }
+    { feature: 'Always-on 2D/3D spatial presence', spot: '$0 (Included)', slack: 'No', zoom: 'No', teams: 'No' },
+    { feature: 'Walk-up audio & proximity conversation', spot: '$0 (Included)', slack: 'No', zoom: 'No', teams: 'No' },
+    { feature: 'Integrated OpenClaw AI Agents', spot: '$0 (Included)', slack: 'No', zoom: 'No', teams: 'No' },
+    { feature: 'Simultaneous multi-screen sharing', spot: '$0 (Included)', slack: 'No', zoom: '$13.33/user', teams: '$4/user' },
+    { feature: 'Customizable virtual floorplans & desks', spot: '$0 (Included)', slack: 'No', zoom: 'No', teams: 'No' },
+    { feature: 'Instant guest drop-in without login', spot: '$0 (Included)', slack: 'No', zoom: '$13.33/user', teams: 'No' },
+    { feature: 'In-space whiteboards & casual games', spot: '$0 (Included)', slack: 'No', zoom: 'No', teams: 'No' },
+    { feature: 'Automated AI meeting summaries', spot: '$0 (Included)', slack: '$8.75/user', zoom: '$13.33/user', teams: '$4/user' },
+    { feature: 'Monthly cost per user', spot: '$0 (Free Forever)', slack: '$8.75 / mo', zoom: '$13.33 / mo', teams: '$4.00 / mo' }
   ];
 
   const faqs = [
     {
-      question: 'Can I try Spot for free?',
-      answer: 'Yes! Every organization gets a full 14-day free trial with unlimited access to all features on the Growth plan. No credit card is required to sign up.'
+      question: 'Is Spot really 100% free?',
+      answer: 'Yes! Spot is completely free to use. There are no paid tiers, no subscription fees, and no feature paywalls. You get unlimited team members, unlimited spaces, and full access to everything.'
     },
     {
-      question: 'How does guest access work?',
-      answer: 'Guests can enter your Spot space without creating an account or installing anything via a simple, secure link. You can restrict guest access to specific lobbies or meeting rooms.'
+      question: 'Are there any hidden limits or time-restricted trials?',
+      answer: 'No. There are no 14-day trials or hidden limitations. Your workspace will never expire, and all features—including AI Agent integrations, multi-screen sharing, and custom floorplans—are permanently available.'
     },
     {
-      question: 'Can I upgrade, downgrade, or cancel at any time?',
-      answer: 'Yes, your subscription is completely flexible. You can adjust user seats, switch between monthly and annual billing, or cancel anytime directly from your team settings.'
+      question: 'Do I need a credit card to sign up or use Spot?',
+      answer: 'Never. No credit card is required. You can launch a space or join an existing office with zero payment information.'
     },
     {
-      question: 'Do you offer non-profit or educational discounts?',
-      answer: 'We provide a 30% discount for registered non-profit organizations, accredited schools, and student research labs. Contact our sales team with your organization details to apply.'
+      question: 'How many team members and guests can I invite?',
+      answer: 'You can invite as many team members and guests as you like. We do not enforce artificial seat limits or charge per-user licenses.'
+    },
+    {
+      question: 'Are the AI Agent features included for free?',
+      answer: 'Yes! Spot natively supports OpenClaw and Model Context Protocol (MCP) agents right out of the box at no additional platform fee.'
     },
     {
       question: 'What devices and operating systems does Spot support?',
-      answer: 'Spot runs natively in modern web browsers (Chrome, Edge, Safari, Firefox, Brave) and also provides dedicated high-performance desktop apps for macOS (Intel & Apple Silicon), Windows 10/11, and Linux.'
-    },
-    {
-      question: 'How secure is our audio, video, and communication data?',
-      answer: 'Security is paramount at Spot. All media streams use encrypted WebRTC connections with DTLS/SRTP. Data at rest is encrypted using AES-256, and data in transit is protected with TLS 1.3.'
+      answer: 'Spot runs natively in all modern web browsers (Chrome, Edge, Safari, Firefox, Brave) and also provides dedicated high-performance desktop apps for macOS (Intel & Apple Silicon), Windows 10/11, and Linux.'
     }
   ];
 
@@ -115,14 +87,32 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
         <div className="Section_container Section_normal">
           <div className="HeroSection_contentWrapper_pricing">
             <div className="HeroSection_heroTextWrapper_pricing">
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                backgroundColor: 'rgba(96, 196, 73, 0.15)',
+                color: '#2e7d32',
+                padding: '6px 14px',
+                borderRadius: '2rem',
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                width: 'fit-content'
+              }}>
+                <Gift size={16} color="#60c449" />
+                100% Free &amp; Open Access
+              </div>
+
               <h1 className="HeroSection_heroTitle_pricing h1">
-                Fair pricing, <br />
-                <span className="HeroSection_green">no fluff.</span>
+                Everything is free. <br />
+                <span className="HeroSection_green">Free to access &amp; use everything.</span>
               </h1>
               <div className="HeroSection_heroSubWrapper">
                 <div className="HeroSection_highPerformerBadge">
                   <div style={{
-                    background: '#ff4d4f',
+                    background: '#60c449',
                     color: '#fff',
                     borderRadius: '8px',
                     padding: '8px 12px',
@@ -131,12 +121,27 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
                     fontSize: '0.75rem',
                     lineHeight: '1.2'
                   }}>
-                    G2 High Performer
+                    $0 Forever Free
                   </div>
                 </div>
                 <div className="HeroSection_heroSubText bodyText">
-                  No credit card required. Free 14-day trial on all tiers. Upgrade or cancel anytime.
+                  No credit card required. No subscriptions. No seat limits. Complete access to virtual offices, AI agents, and events for everyone.
                 </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => openAuthModal('signup')}
+                  className="ButtonLink_button ButtonLink_regular ButtonLink_green"
+                >
+                  Launch Free Workspace <ArrowRight size={18} style={{ marginLeft: 8 }} />
+                </button>
+                <button
+                  onClick={() => setCurrentPage('ai-agents')}
+                  className="ButtonLink_button ButtonLink_regular ButtonLink_outline"
+                >
+                  Explore AI Agents
+                </button>
               </div>
             </div>
 
@@ -146,7 +151,6 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
                 alt="Spot Virtual Office Overview"
                 className="HeroSection_office"
                 onError={(e) => {
-                  // Fallback to high-res vector graphic if image loading fails
                   e.target.style.display = 'none';
                 }}
               />
@@ -155,84 +159,125 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
         </div>
       </section>
 
-      {/* Pricing Options Section */}
+      {/* 100% Free Showcase Section */}
       <section className="PricingOptionsSection_section">
         <div className="Section_container Section_normal">
           <div className="PricingOptionsSection_contentWrapper">
-            {/* Toggle Switch */}
-            <div
-              className="PricingOptionsSection_buttonWrapper"
-              onClick={() => setIsYearly(!isYearly)}
-              role="button"
-              tabIndex={0}
-              aria-label="Toggle annual or monthly billing"
-            >
-              <span style={{ color: !isYearly ? '#1e293b' : '#64748b' }}>Monthly</span>
-              <div className={`PricingOptionsSection_toggleButton ${isYearly ? 'PricingOptionsSection_yearly' : ''}`}>
-                <div className="PricingOptionsSection_toggleCircle" />
-              </div>
-              <span className="PricingOptionsSection_yearlyText" style={{ color: isYearly ? '#1e293b' : '#64748b' }}>
-                Yearly
-                <span className="PricingOptionsSection_discountDisclaimer">20% off</span>
-              </span>
+            <div style={{ textAlign: 'center', maxWidth: '42rem' }}>
+              <h2 className="h2" style={{ marginBottom: '0.75rem' }}>
+                All features unlocked. Zero paywalls.
+              </h2>
+              <p className="bodyText" style={{ color: '#64748b' }}>
+                We believe remote collaboration should be open, human, and accessible to every team, startup, and community on Earth.
+              </p>
             </div>
 
-            {/* Pricing Cards Grid */}
-            <div className="PricingOptionsSection_optionsGrid">
-              {pricingPlans.map((plan) => (
-                <div
-                  key={plan.id}
-                  className={`PricingOptionsSection_optionBlock ${plan.isPopular ? 'PricingOptionsSection_active' : ''}`}
-                >
-                  {plan.isPopular && (
-                    <div className="PricingOptionsSection_popularTag">Most Popular</div>
-                  )}
+            {/* Single Giant All-Access Free Banner Card */}
+            <div style={{
+              width: '100%',
+              maxWidth: '960px',
+              background: 'linear-gradient(135deg, #f0fdf4 0%, #ffffff 50%, #f0f9ff 100%)',
+              border: '2px solid #86efac',
+              borderRadius: '2rem',
+              padding: '3.5rem 3rem',
+              boxShadow: '0 20px 50px rgba(96, 196, 73, 0.12)',
+              position: 'relative'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '-14px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                background: '#60c449',
+                color: '#fff',
+                padding: '6px 20px',
+                borderRadius: '2rem',
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                boxShadow: '0 4px 12px rgba(96, 196, 73, 0.35)'
+              }}>
+                100% Free For Everyone
+              </div>
 
-                  <div>
-                    <h3 className="h3" style={{ marginBottom: '0.5rem', fontWeight: 800 }}>
-                      {plan.name}
-                    </h3>
-                    <div className="PricingOptionsSection_title">
-                      <span className="h1" style={{ fontSize: '2.75rem', fontWeight: 800, color: '#1e293b' }}>
-                        {plan.price}
-                      </span>
-                      <span className="PricingOptionsSection_perUserText">/{plan.period}</span>
-                    </div>
-                    <p className="PricingOptionsSection_perfectFor xsmallBodyText">
-                      {plan.description}
-                    </p>
-
-                    <div className="PricingOptionsSection_bulletWrapper">
-                      {plan.features.map((feature, idx) => (
-                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.95rem' }}>
-                          <Check size={18} color="#60c449" style={{ flexShrink: 0 }} />
-                          <span style={{ color: '#334155' }}>{feature}</span>
-                        </div>
-                      ))}
-                    </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '2rem', marginBottom: '2.5rem' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    <span style={{ fontSize: '4.5rem', fontWeight: 900, color: '#166534', fontFamily: "'Space Grotesk', monospace", lineHeight: 1 }}>
+                      $0
+                    </span>
+                    <span style={{ fontSize: '1.25rem', fontWeight: 700, color: '#475569' }}>
+                      / forever free
+                    </span>
                   </div>
+                  <p style={{ color: '#4b5563', fontSize: '1.1rem', marginTop: '0.5rem' }}>
+                    Full unrestricted access for teams, universities, and open source communities.
+                  </p>
+                </div>
 
+                <div>
                   <button
-                    onClick={() => openAuthModal(plan.id === 'enterprise' ? 'demo' : 'signup')}
-                    className={`ButtonLink_button ButtonLink_regular PricingOptionsSection_button ${plan.buttonStyle}`}
+                    onClick={() => openAuthModal('signup')}
+                    className="ButtonLink_button ButtonLink_regular ButtonLink_green"
+                    style={{ fontSize: '1.15rem', padding: '1rem 2.5rem', borderRadius: '2rem' }}
                   >
-                    {plan.buttonText}
+                    Start Using Spot Free
                   </button>
                 </div>
-              ))}
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                gap: '2rem',
+                borderTop: '1px solid #dcfce7',
+                paddingTop: '2.5rem'
+              }}>
+                {freePillars.map((pillar, idx) => (
+                  <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '2.5rem',
+                        height: '2.5rem',
+                        borderRadius: '10px',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {pillar.icon}
+                      </div>
+                      <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#1e293b' }}>
+                        {pillar.title}
+                      </h3>
+                    </div>
+
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                      {pillar.items.map((item, itemIdx) => (
+                        <li key={itemIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem', color: '#334155' }}>
+                          <Check size={16} color="#60c449" strokeWidth={3} style={{ flexShrink: 0 }} />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Feature Comparison Matrix */}
+      {/* Comparison: Free Spot vs Expensive Paid Competitors */}
       <section className="ComparisonSection_section_pricing">
         <div className="Section_container Section_normal">
           <div className="ComparisonSection_contentWrapper_pricing">
             <div className="ComparisonSection_header_pricing">
               <h2 className="h2" style={{ marginBottom: '1rem' }}>How Spot compares</h2>
               <p className="bodyText" style={{ color: '#64748b' }}>
-                See why forward-thinking remote and hybrid teams replace disconnected tools with Spot.
+                Why pay thousands of dollars in seat licenses when Spot gives your team superior spatial collaboration for free?
               </p>
             </div>
 
@@ -241,8 +286,8 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
               <div className="ComparisonSection_topRowBlock" style={{ justifyContent: 'flex-start', paddingLeft: '1.5rem' }}>
                 Feature / Capability
               </div>
-              <div className="ComparisonSection_topRowBlock ComparisonSection_spotBlock" style={{ color: '#0284c7' }}>
-                Spot Virtual
+              <div className="ComparisonSection_topRowBlock ComparisonSection_spotBlock" style={{ color: '#15803d', fontWeight: 800 }}>
+                Spot (100% Free)
               </div>
               <div className="ComparisonSection_topRowBlock">Slack</div>
               <div className="ComparisonSection_topRowBlock">Zoom</div>
@@ -251,44 +296,64 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
               {/* Rows */}
               {comparisonRows.map((row, idx) => {
                 const isGray = idx % 2 === 1;
+                const isCostRow = idx === comparisonRows.length - 1;
+
                 return (
                   <React.Fragment key={idx}>
-                    <div className={`ComparisonSection_gridBlock ${isGray ? 'ComparisonSection_gray' : ''}`}>
+                    <div className={`ComparisonSection_gridBlock ${isGray ? 'ComparisonSection_gray' : ''}`} style={isCostRow ? { fontWeight: 800, color: '#0f172a' } : {}}>
                       {row.feature}
                     </div>
-                    <div className={`ComparisonSection_gridBlock ComparisonSection_bullet ComparisonSection_spotBlock`}>
-                      <div style={{
-                        width: '1.5rem',
-                        height: '1.5rem',
-                        borderRadius: '50%',
-                        backgroundColor: '#60c449',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Check size={14} strokeWidth={3} />
-                      </div>
-                    </div>
-                    <div className={`ComparisonSection_gridBlock ComparisonSection_bullet ${isGray ? 'ComparisonSection_gray' : ''}`}>
-                      {row.slack ? (
-                        <Check size={18} color="#60c449" />
+
+                    {/* Spot Column */}
+                    <div className={`ComparisonSection_gridBlock ComparisonSection_bullet ComparisonSection_spotBlock`} style={isCostRow ? { color: '#166534', fontWeight: 800 } : {}}>
+                      {isCostRow ? (
+                        <span>{row.spot}</span>
                       ) : (
-                        <X size={18} color="#cbd5e1" />
+                        <div style={{
+                          width: '1.5rem',
+                          height: '1.5rem',
+                          borderRadius: '50%',
+                          backgroundColor: '#60c449',
+                          color: '#fff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          <Check size={14} strokeWidth={3} />
+                        </div>
                       )}
                     </div>
+
+                    {/* Slack Column */}
                     <div className={`ComparisonSection_gridBlock ComparisonSection_bullet ${isGray ? 'ComparisonSection_gray' : ''}`}>
-                      {row.zoom ? (
-                        <Check size={18} color="#60c449" />
-                      ) : (
+                      {isCostRow ? (
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>{row.slack}</span>
+                      ) : row.slack === 'No' ? (
                         <X size={18} color="#cbd5e1" />
+                      ) : (
+                        <Check size={18} color="#60c449" />
                       )}
                     </div>
+
+                    {/* Zoom Column */}
                     <div className={`ComparisonSection_gridBlock ComparisonSection_bullet ${isGray ? 'ComparisonSection_gray' : ''}`}>
-                      {row.teams ? (
-                        <Check size={18} color="#60c449" />
-                      ) : (
+                      {isCostRow ? (
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>{row.zoom}</span>
+                      ) : row.zoom === 'No' ? (
                         <X size={18} color="#cbd5e1" />
+                      ) : (
+                        <Check size={18} color="#60c449" />
+                      )}
+                    </div>
+
+                    {/* Teams Column */}
+                    <div className={`ComparisonSection_gridBlock ComparisonSection_bullet ${isGray ? 'ComparisonSection_gray' : ''}`}>
+                      {isCostRow ? (
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>{row.teams}</span>
+                      ) : row.teams === 'No' ? (
+                        <X size={18} color="#cbd5e1" />
+                      ) : (
+                        <Check size={18} color="#60c449" />
                       )}
                     </div>
                   </React.Fragment>
@@ -337,7 +402,7 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
             <div className="FaqSection_header">
               <h2 className="h2" style={{ marginBottom: '1rem' }}>Frequently Asked Questions</h2>
               <p className="bodyText" style={{ color: '#64748b' }}>
-                Everything you need to know about Spot plans, onboarding, and billing.
+                Everything you need to know about free and open access in Spot.
               </p>
             </div>
 
@@ -376,23 +441,23 @@ export default function PricingPage({ openAuthModal, setCurrentPage }) {
         <div className="Section_container Section_normal">
           <div className="CTASection_banner">
             <div className="CTASection_content">
-              <h2 className="CTASection_title h2">Ready to bring your team together?</h2>
+              <h2 className="CTASection_title h2">Ready to bring your team together for free?</h2>
               <p className="CTASection_subtitle">
-                Create your custom virtual office in seconds. Free 14-day trial, no credit card required.
+                Create your custom virtual office in seconds. Free forever, no credit card required.
               </p>
               <div className="CTASection_buttonWrapper">
                 <button
                   onClick={() => openAuthModal('signup')}
                   className="ButtonLink_button ButtonLink_regular ButtonLink_green CTASection_button"
                 >
-                  Start Free Trial
+                  Start Free
                 </button>
                 <button
-                  onClick={() => openAuthModal('demo')}
+                  onClick={() => setCurrentPage('home')}
                   className="ButtonLink_button ButtonLink_regular ButtonLink_outline CTASection_button"
                   style={{ borderColor: 'rgba(255,255,255,0.7)', color: '#fff' }}
                 >
-                  Book a Demo
+                  Explore Virtual Office
                 </button>
               </div>
             </div>

@@ -89,10 +89,10 @@ export default function Footer({ setCurrentPage, openAuthModal }) {
                 </a>
               </div>
 
-              {/* Pricing & Downloads */}
+              {/* Free Access & Downloads */}
               <div className="Footer_block">
                 <a href="#pricing" onClick={(e) => { e.preventDefault(); navigateTo('pricing'); }} className="Footer_link smallBodyText">
-                  Pricing
+                  Free Access
                 </a>
                 <a href="#downloads" onClick={(e) => { e.preventDefault(); navigateTo('downloads'); }} className="Footer_link smallBodyText">
                   Download

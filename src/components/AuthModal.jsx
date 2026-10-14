@@ -66,7 +66,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
                 {mode === 'signin' ? 'Sign in to your virtual HQ' : 'Create your virtual workspace'}
               </h2>
               <p className="smallBodyText" style={{ color: '#64748b', marginTop: '0.25rem' }}>
-                {mode === 'signin' ? 'Welcome back! Enter your credentials below.' : '30-day free trial. No credit card required.'}
+                {mode === 'signin' ? 'Welcome back! Enter your credentials below.' : '100% Free Forever. No credit card required.'}
               </p>
             </div>
 
@@ -87,7 +87,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
                   transition: 'all 0.2s ease'
                 }}
               >
-                Start free trial
+                Instant Free Access
               </button>
               <button
                 type="button"
@@ -224,7 +224,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', sel
                 className="ButtonLink_button ButtonLink_green ButtonLink_regular"
                 style={{ width: '100%', borderRadius: '2rem', marginTop: '0.75rem' }}
               >
-                {mode === 'signin' ? 'Sign in' : 'Start your 30-day free trial'}
+                {mode === 'signin' ? 'Sign in' : 'Create Free Workspace (100% Free)'}
               </button>
             </form>
           </div>
