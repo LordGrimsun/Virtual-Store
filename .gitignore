@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .vercel
+capture_screenshot.js
+office_rebuild_validation.png
+*.png

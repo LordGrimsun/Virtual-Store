@@ -6,8 +6,13 @@ import {
   Sparkles, Send, Plus, Check, ChevronRight, X, PhoneCall, VolumeX,
   Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
   Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
-  TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye
+  TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag
 } from 'lucide-react';
+
+import { createOfficeScreenTextures } from '../components/workspace/OfficeScreens';
+import { buildOfficeEnvironment } from '../components/workspace/OfficeEnvironment';
+import { buildOfficeFurniture } from '../components/workspace/OfficeFurniture';
+import { createAvatarSystem } from '../components/workspace/AvatarSystem';
 
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
@@ -20,6 +25,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings'
   const [activeReaction, setActiveReaction] = useState(null);
   const [donutToast, setDonutToast] = useState(null);
+  const [showNameplates, setShowNameplates] = useState(true);
 
   // Audio / Media toggles
   const [isMuted, setIsMuted] = useState(false);
@@ -64,7 +70,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [aiMessages, setAiMessages] = useState([
     {
       sender: 'DevBot',
-      text: 'Welcome back Stan! OpenClaw Gateway v0.2.0 is live with photorealistic spatial rendering. You can walk with WASD/Arrows, click to sit, share your screen, or execute spatial tools.',
+      text: 'Welcome back Stan! The 3D virtual office is rebuilt with stylized humanoid avatars, high-poly ergonomic furniture, and photorealistic lighting. You can walk with WASD/Arrows, click to sit, share your screen, or execute spatial tools.',
       time: '12:10 PM'
     }
   ]);
@@ -92,6 +98,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const rendererRef = useRef(null);
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
+  const playerPartsRef = useRef(null);
   const targetPosRef = useRef(new THREE.Vector3(0.3, 0, 11.2));
   const isSittingRef = useRef(false);
   const avatarsRef = useRef([]);
@@ -215,6 +222,10 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
         keysPressedRef.current[e.code] = true;
         isSittingRef.current = false;
+      }
+
+      if (e.code === 'KeyN') {
+        setShowNameplates((prev) => !prev);
       }
 
       if (e.code === 'Space' && !e.repeat) {
@@ -372,768 +383,53 @@ export default function WorkspacePlatform({ user, onExit }) {
     scene.fog = new THREE.FogExp2(0xbdd4bc, 0.0065);
     sceneRef.current = scene;
 
-    // Narrow FOV (30°) positioned for exact perspective alignment matching the screenshot
+    // Calibrated FOV (33°) and elevated perspective camera for comprehensive 1:1 office framing
     const aspect = width / height;
-    const camera = new THREE.PerspectiveCamera(30, aspect, 0.5, 600);
-    camera.position.set(0.0, 22.5, 43.5);
-    camera.lookAt(0.0, 1.8, -4.5);
+    const camera = new THREE.PerspectiveCamera(33, aspect, 0.5, 600);
+    camera.position.set(-2.0, 24.5, 48.5);
+    camera.lookAt(-2.0, 1.8, -4.0);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     // ACES Filmic Tone Mapping for authentic photographic fidelity
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.18;
+    renderer.toneMappingExposure = 1.08;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Lighting System
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8ba67e, 1.55);
-    hemiLight.position.set(0, 60, 0);
-    scene.add(hemiLight);
+    chairsRef.current = [];
 
-    const sunLight = new THREE.DirectionalLight(0xfffef5, 1.65);
-    sunLight.position.set(28, 48, 24);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 1.0;
-    sunLight.shadow.camera.far = 130;
-    const sCam = 38;
-    sunLight.shadow.camera.left = -sCam;
-    sunLight.shadow.camera.right = sCam;
-    sunLight.shadow.camera.top = sCam;
-    sunLight.shadow.camera.bottom = -sCam;
-    sunLight.shadow.bias = -0.0002;
-    scene.add(sunLight);
+    // Build Screen Textures
+    const screenTextures = createOfficeScreenTextures();
 
-    const ambientFill = new THREE.DirectionalLight(0xd9ebff, 0.75);
-    ambientFill.position.set(-25, 28, -25);
-    scene.add(ambientFill);
+    // Build Architecture Environment & Lighting
+    buildOfficeEnvironment(scene, screenTextures);
 
-    // Procedural Floor Texture
-    const floorCanvas = document.createElement('canvas');
-    floorCanvas.width = 1024;
-    floorCanvas.height = 1024;
-    const fCtx = floorCanvas.getContext('2d');
-    fCtx.fillStyle = '#ede6dc';
-    fCtx.fillRect(0, 0, 1024, 1024);
-    fCtx.strokeStyle = 'rgba(0, 0, 0, 0.04)';
-    fCtx.lineWidth = 1.5;
-    for (let y = 0; y < 1024; y += 32) {
-      fCtx.beginPath();
-      fCtx.moveTo(0, y);
-      fCtx.lineTo(1024, y);
-      fCtx.stroke();
+    // Build Office Furniture, Desks, Cantilever Chairs, Props
+    buildOfficeFurniture(scene, screenTextures, chairsRef);
+
+    // Build Stylized 3D Humanoid Avatars
+    const avatarSystem = createAvatarSystem();
+    const roster = avatarSystem.createRoster(scene);
+    avatarsRef.current = roster;
+
+    const playerObj = roster.find((a) => a.isPlayer);
+    if (playerObj) {
+      playerMeshRef.current = playerObj.mesh;
+      playerPartsRef.current = playerObj.parts;
     }
-    for (let y = 0; y < 1024; y += 32) {
-      const offset = (y / 32) % 2 === 0 ? 0 : 80;
-      for (let x = offset; x < 1024; x += 160) {
-        fCtx.beginPath();
-        fCtx.moveTo(x, y);
-        fCtx.lineTo(x, y + 32);
-        fCtx.stroke();
-      }
+
+    const sarahObj = roster.find((a) => a.name === 'Sarah');
+    if (sarahObj && sarahObj.parts?.wavingHandMesh) {
+      wavingHandMeshRef.current = sarahObj.parts.wavingHandMesh;
     }
-    const floorTexture = new THREE.CanvasTexture(floorCanvas);
-    floorTexture.wrapS = THREE.RepeatWrapping;
-    floorTexture.wrapT = THREE.RepeatWrapping;
-    floorTexture.repeat.set(16, 12);
 
-    // Blue Chart Canvas
-    const chartCanvas = document.createElement('canvas');
-    chartCanvas.width = 1024;
-    chartCanvas.height = 512;
-    const cCtx = chartCanvas.getContext('2d');
-    cCtx.fillStyle = '#ffffff';
-    cCtx.fillRect(0, 0, 1024, 512);
-    cCtx.strokeStyle = '#e2e8f0';
-    cCtx.lineWidth = 2;
-    for (let y = 60; y < 450; y += 60) {
-      cCtx.beginPath();
-      cCtx.moveTo(60, y);
-      cCtx.lineTo(960, y);
-      cCtx.stroke();
-    }
-    const pts = [
-      [80, 360], [140, 320], [200, 370], [260, 240], [320, 280],
-      [380, 190], [440, 230], [500, 150], [560, 220], [620, 120],
-      [680, 180], [740, 110], [800, 160], [860, 90], [940, 130]
-    ];
-    const grad = cCtx.createLinearGradient(0, 90, 0, 420);
-    grad.addColorStop(0, 'rgba(37, 99, 235, 0.7)');
-    grad.addColorStop(1, 'rgba(59, 130, 246, 0.05)');
-    cCtx.beginPath();
-    cCtx.moveTo(pts[0][0], 420);
-    pts.forEach(([px, py]) => cCtx.lineTo(px, py));
-    cCtx.lineTo(pts[pts.length - 1][0], 420);
-    cCtx.closePath();
-    cCtx.fillStyle = grad;
-    cCtx.fill();
-    cCtx.beginPath();
-    pts.forEach(([px, py], i) => {
-      if (i === 0) cCtx.moveTo(px, py);
-      else cCtx.lineTo(px, py);
-    });
-    cCtx.strokeStyle = '#2563eb';
-    cCtx.lineWidth = 6;
-    cCtx.stroke();
-    const chartTexture = new THREE.CanvasTexture(chartCanvas);
-
-    // KPI Scoreboard Canvas
-    const kpiCanvas = document.createElement('canvas');
-    kpiCanvas.width = 1024;
-    kpiCanvas.height = 512;
-    const kCtx = kpiCanvas.getContext('2d');
-    kCtx.fillStyle = '#0f172a';
-    kCtx.fillRect(0, 0, 1024, 512);
-    kCtx.font = 'bold 96px "Courier New", monospace';
-    kCtx.textAlign = 'center';
-    kCtx.textBaseline = 'middle';
-    const topKPIs = [
-      { text: '168', color: '#f43f5e', x: 120 },
-      { text: '161', color: '#06b6d4', x: 330 },
-      { text: '47', color: '#22c55e', x: 550 },
-      { text: '34', color: '#22c55e', x: 730 },
-      { text: '34', color: '#22c55e', x: 910 }
-    ];
-    topKPIs.forEach(({ text, color, x }) => {
-      kCtx.fillStyle = color;
-      kCtx.shadowColor = color;
-      kCtx.shadowBlur = 18;
-      kCtx.fillText(text, x, 170);
-    });
-    const btmKPIs = [
-      { text: '83', color: '#38bdf8', x: 120 },
-      { text: '85', color: '#38bdf8', x: 330 },
-      { text: '6', color: '#f8fafc', x: 550 },
-      { text: '52', color: '#38bdf8', x: 730 },
-      { text: '25', color: '#22c55e', x: 910 }
-    ];
-    btmKPIs.forEach(({ text, color, x }) => {
-      kCtx.fillStyle = color;
-      kCtx.shadowColor = color;
-      kCtx.shadowBlur = 18;
-      kCtx.fillText(text, x, 360);
-    });
-    kCtx.shadowBlur = 0;
-    const kpiTexture = new THREE.CanvasTexture(kpiCanvas);
-
-    // Architecture Canvas
-    const archCanvas = document.createElement('canvas');
-    archCanvas.width = 1024;
-    archCanvas.height = 512;
-    const aCtx = archCanvas.getContext('2d');
-    aCtx.fillStyle = '#ffffff';
-    aCtx.fillRect(0, 0, 1024, 512);
-    aCtx.strokeStyle = '#94a3b8';
-    aCtx.lineWidth = 3;
-    aCtx.strokeRect(80, 60, 360, 390);
-    aCtx.strokeRect(520, 60, 420, 390);
-    aCtx.fillStyle = '#fef08a';
-    aCtx.fillRect(430, 90, 80, 70);
-    aCtx.fillStyle = '#fbcfe8';
-    aCtx.fillRect(430, 200, 80, 70);
-    aCtx.strokeStyle = '#ef4444';
-    aCtx.lineWidth = 4;
-    aCtx.beginPath();
-    aCtx.moveTo(410, 160);
-    aCtx.lineTo(520, 160);
-    aCtx.stroke();
-    const archTexture = new THREE.CanvasTexture(archCanvas);
-
-    // Features Canvas
-    const featCanvas = document.createElement('canvas');
-    featCanvas.width = 512;
-    featCanvas.height = 512;
-    const featCtx = featCanvas.getContext('2d');
-    featCtx.fillStyle = '#ffffff';
-    featCtx.fillRect(0, 0, 512, 512);
-    featCtx.fillStyle = '#0f172a';
-    featCtx.font = 'bold 34px sans-serif';
-    featCtx.fillText('New Features', 40, 70);
-    featCtx.fillStyle = '#f8fafc';
-    featCtx.fillRect(40, 110, 432, 60);
-    featCtx.fillStyle = '#334155';
-    featCtx.font = '500 24px sans-serif';
-    featCtx.fillText('Calendar', 60, 148);
-    featCtx.fillText('0%', 420, 148);
-    featCtx.fillStyle = '#2563eb';
-    featCtx.fillRect(40, 190, 432, 65);
-    featCtx.fillStyle = '#ffffff';
-    featCtx.font = 'bold 24px sans-serif';
-    featCtx.fillText('Spot Prints', 60, 230);
-    featCtx.fillText('100%', 400, 230);
-    featCtx.fillStyle = '#f8fafc';
-    featCtx.fillRect(40, 275, 432, 60);
-    featCtx.fillStyle = '#334155';
-    featCtx.font = '500 24px sans-serif';
-    featCtx.fillText('Documents', 60, 313);
-    featCtx.fillText('0%', 420, 313);
-    const featTexture = new THREE.CanvasTexture(featCanvas);
-
-    // Mobile Schedule Canvas
-    const schedCanvas = document.createElement('canvas');
-    schedCanvas.width = 512;
-    schedCanvas.height = 768;
-    const sCtx = schedCanvas.getContext('2d');
-    sCtx.fillStyle = '#ffffff';
-    sCtx.fillRect(0, 0, 512, 768);
-    sCtx.fillStyle = '#0f172a';
-    sCtx.font = 'bold 54px sans-serif';
-    sCtx.fillText('10:42', 50, 90);
-    const bColors = ['#f59e0b', '#ef4444', '#06b6d4', '#10b981', '#8b5cf6'];
-    bColors.forEach((col, idx) => {
-      sCtx.fillStyle = col;
-      sCtx.fillRect(50 + idx * 75, 260 - (idx % 3) * 50, 65, 180 + (idx % 3) * 50);
-    });
-    sCtx.fillStyle = '#1e293b';
-    sCtx.font = 'bold 30px sans-serif';
-    sCtx.fillText('1 on 1 with Stan', 50, 520);
-    sCtx.fillStyle = '#22c55e';
-    sCtx.beginPath();
-    sCtx.roundRect(50, 560, 180, 55, 12);
-    sCtx.fill();
-    sCtx.fillStyle = '#ffffff';
-    sCtx.font = 'bold 22px sans-serif';
-    sCtx.fillText('Schedule', 85, 595);
-    const schedTexture = new THREE.CanvasTexture(schedCanvas);
-
-    const createNoMeetTexture = (timeStr) => {
-      const nmCanvas = document.createElement('canvas');
-      nmCanvas.width = 512;
-      nmCanvas.height = 256;
-      const nmCtx = nmCanvas.getContext('2d');
-      nmCtx.fillStyle = '#ffffff';
-      nmCtx.fillRect(0, 0, 512, 256);
-      nmCtx.fillStyle = '#38bdf8';
-      nmCtx.fillRect(30, 30, 140, 196);
-      nmCtx.fillStyle = '#fef08a';
-      nmCtx.beginPath();
-      nmCtx.arc(70, 70, 22, 0, Math.PI * 2);
-      nmCtx.fill();
-      nmCtx.fillStyle = '#22c55e';
-      nmCtx.beginPath();
-      nmCtx.arc(100, 226, 70, Math.PI, 0);
-      nmCtx.fill();
-      nmCtx.fillStyle = '#0f172a';
-      nmCtx.font = 'bold 42px sans-serif';
-      nmCtx.fillText(timeStr, 200, 95);
-      nmCtx.fillStyle = '#64748b';
-      nmCtx.font = '500 24px sans-serif';
-      nmCtx.fillText('No meetings', 200, 145);
-      return new THREE.CanvasTexture(nmCanvas);
-    };
-
-    // Spot Logo Texture
-    const logoCanvas = document.createElement('canvas');
-    logoCanvas.width = 512;
-    logoCanvas.height = 256;
-    const lCtx = logoCanvas.getContext('2d');
-    lCtx.fillStyle = '#000000';
-    lCtx.fillRect(0, 0, 512, 256);
-    lCtx.fillStyle = '#22c55e';
-    lCtx.beginPath();
-    lCtx.arc(120, 128, 38, 0, Math.PI * 2);
-    lCtx.fill();
-    lCtx.fillStyle = '#ffffff';
-    lCtx.font = 'bold 84px sans-serif';
-    lCtx.fillText('spot', 185, 156);
-    const logoTexture = new THREE.CanvasTexture(logoCanvas);
-
-    // Buffalo Plaid Flannel Texture (Red and Black)
-    const plaidCanvas = document.createElement('canvas');
-    plaidCanvas.width = 128;
-    plaidCanvas.height = 128;
-    const pCtx = plaidCanvas.getContext('2d');
-    pCtx.fillStyle = '#b91c1c';
-    pCtx.fillRect(0, 0, 128, 128);
-    pCtx.fillStyle = '#111827';
-    pCtx.fillRect(0, 0, 64, 64);
-    pCtx.fillRect(64, 64, 64, 64);
-    pCtx.fillStyle = 'rgba(0,0,0,0.4)';
-    pCtx.fillRect(64, 0, 64, 64);
-    pCtx.fillRect(0, 64, 64, 64);
-    const plaidTexture = new THREE.CanvasTexture(plaidCanvas);
-    plaidTexture.wrapS = THREE.RepeatWrapping;
-    plaidTexture.wrapT = THREE.RepeatWrapping;
-    plaidTexture.repeat.set(4, 4);
-
-    // Striped Sweater Texture (Purple and White)
-    const stripeCanvas = document.createElement('canvas');
-    stripeCanvas.width = 64;
-    stripeCanvas.height = 64;
-    const stCtx = stripeCanvas.getContext('2d');
-    stCtx.fillStyle = '#ffffff';
-    stCtx.fillRect(0, 0, 64, 64);
-    stCtx.fillStyle = '#6b21a8';
-    stCtx.fillRect(0, 0, 64, 32);
-    const stripeTexture = new THREE.CanvasTexture(stripeCanvas);
-    stripeTexture.wrapS = THREE.RepeatWrapping;
-    stripeTexture.wrapT = THREE.RepeatWrapping;
-    stripeTexture.repeat.set(1, 6);
-
-    // Shared Materials
-    const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture, roughness: 0.82 });
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
-    const blackMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.85 });
-    const metalMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.85, roughness: 0.25 });
-    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.8, roughness: 0.3 });
-    const redMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.4 });
-    const chairBeigeMat = new THREE.MeshStandardMaterial({ color: 0xd5cbbe, roughness: 0.75 });
-    const screenGlowMat = new THREE.MeshBasicMaterial({ color: 0x60a5fa });
-
-    const glassMat = new THREE.MeshPhysicalMaterial({
-      color: 0xbfdbfe,
-      transparent: true,
-      opacity: 0.28,
-      roughness: 0.05,
-      transmission: 0.94,
-      thickness: 0.3
-    });
-
-    // Exterior Landscape (Rolling Green Hills & 3D Trees Outside)
-    const outdoorGround = new THREE.Mesh(
-      new THREE.PlaneGeometry(160, 160),
-      new THREE.MeshStandardMaterial({ color: 0x82a56a, roughness: 0.95 })
-    );
-    outdoorGround.rotation.x = -Math.PI / 2;
-    outdoorGround.position.set(0, -0.05, -20);
-    outdoorGround.receiveShadow = true;
-    scene.add(outdoorGround);
-
-    const createHill = (x, z, r, h, color) => {
-      const hill = new THREE.Mesh(new THREE.ConeGeometry(r, h, 18), new THREE.MeshStandardMaterial({ color, roughness: 0.9 }));
-      hill.position.set(x, h / 2 - 2, z);
-      scene.add(hill);
-    };
-    createHill(-45, -55, 38, 22, 0x5b8a45);
-    createHill(-15, -65, 48, 28, 0x4d7c3b);
-    createHill(25, -60, 42, 25, 0x5b8a45);
-    createHill(60, -50, 36, 20, 0x4d7c3b);
-
-    const createTree = (x, z, scale = 1) => {
-      const treeGrp = new THREE.Group();
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * scale, 0.45 * scale, 3 * scale, 6), new THREE.MeshStandardMaterial({ color: 0x543d2b }));
-      trunk.position.y = 1.5 * scale;
-      treeGrp.add(trunk);
-      [
-        { r: 2.2 * scale, h: 2.5 * scale, y: 3.2 * scale },
-        { r: 1.7 * scale, h: 2.2 * scale, y: 4.6 * scale },
-        { r: 1.1 * scale, h: 1.8 * scale, y: 5.8 * scale }
-      ].forEach((tier) => {
-        const cone = new THREE.Mesh(new THREE.ConeGeometry(tier.r, tier.h, 7), new THREE.MeshStandardMaterial({ color: 0x3d6b2c, roughness: 0.8 }));
-        cone.position.y = tier.y;
-        treeGrp.add(cone);
-      });
-      treeGrp.position.set(x, 0, z);
-      scene.add(treeGrp);
-    };
-    [-42, -28, -8, 8, 24, 38, 52].forEach((tx, idx) => {
-      createTree(tx, -42 - (idx % 3) * 6, 1.2 + (idx % 2) * 0.4);
-    });
-
-    const brickWall = new THREE.Mesh(new THREE.BoxGeometry(28, 3.2, 0.6), new THREE.MeshStandardMaterial({ color: 0xba9b84, roughness: 0.85 }));
-    brickWall.position.set(32, 1.6, -34);
-    scene.add(brickWall);
-
-    // Floor Slab
-    const floorMesh = new THREE.Mesh(new THREE.BoxGeometry(64, 0.4, 40), floorMat);
-    floorMesh.position.set(0, -0.2, -4);
-    floorMesh.receiveShadow = true;
-    floorMesh.name = 'floor';
-    scene.add(floorMesh);
-
-    // Walls
-    const createWall = (x, z, w, d, h = 3.6) => {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), blackMat);
-      wall.position.set(x, h / 2, z);
-      wall.castShadow = true;
-      wall.receiveShadow = true;
-      scene.add(wall);
-      return wall;
-    };
-    createWall(-20, -22, 24, 0.45);
-    createWall(18, -22, 28, 0.45);
-    createWall(-31.5, -14, 0.45, 16);
-    createWall(-20, -6, 23, 0.45);
-    createWall(-8.5, -14, 0.45, 16);
-    createWall(-8.5, 0, 0.45, 12);
-
-    // Planters
-    const createPlanter = (x, z, w, d, h = 1.05) => {
-      const group = new THREE.Group();
-      const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), blackMat);
-      box.position.y = h / 2;
-      box.castShadow = true;
-      group.add(box);
-      const soil = new THREE.Mesh(new THREE.BoxGeometry(w - 0.1, 0.1, d - 0.1), new THREE.MeshStandardMaterial({ color: 0x1f1610 }));
-      soil.position.y = h - 0.05;
-      group.add(soil);
-      const numPlants = Math.max(5, Math.floor((w + d) * 3.2));
-      for (let i = 0; i < numPlants; i++) {
-        const blade = new THREE.Mesh(
-          new THREE.ConeGeometry(0.24, 1.1 + Math.random() * 0.4, 5),
-          new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0x22543d : 0x2f855a, roughness: 0.6 })
-        );
-        blade.position.set((Math.random() - 0.5) * (w - 0.25), h + 0.4, (Math.random() - 0.5) * (d - 0.25));
-        blade.rotation.y = Math.random() * Math.PI;
-        group.add(blade);
-      }
-      group.position.set(x, 0, z);
-      scene.add(group);
-    };
-    createPlanter(-7.5, 3.5, 0.8, 7.0);
-    createPlanter(-4.0, 6.8, 6.5, 0.8);
-    createPlanter(-2.0, 1.8, 0.8, 4.2);
-    createPlanter(-31.5, 5.0, 0.8, 18.0);
-    createPlanter(-16.0, 15.5, 31.0, 0.8);
-    createPlanter(15.0, 15.5, 31.0, 0.8);
-
-    // Zone 1: Theater Screen & Chairs
-    const theaterScreen = new THREE.Mesh(
-      new THREE.BoxGeometry(7.2, 3.8, 0.08),
-      new THREE.MeshStandardMaterial({ map: createNoMeetTexture('09:38'), roughness: 0.3 })
-    );
-    theaterScreen.position.set(-20, 2.2, -21.7);
-    theaterScreen.name = 'theaterScreen';
-    scene.add(theaterScreen);
-
-    // Zone 2: Round Table Huddle & Interactive Board
-    const featBoard = new THREE.Mesh(
-      new THREE.BoxGeometry(4.8, 3.2, 0.1),
-      new THREE.MeshStandardMaterial({ map: featTexture, roughness: 0.25 })
-    );
-    featBoard.position.set(-20.5, 2.3, -5.6);
-    featBoard.name = 'featBoard';
-    scene.add(featBoard);
-
-    const roundTable = new THREE.Mesh(new THREE.CylinderGeometry(2.1, 2.1, 0.12, 32), whiteMat);
-    roundTable.position.set(-19.5, 1.15, 4.5);
-    scene.add(roundTable);
-
-    const roundPylon = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.6, 1.1, 16), whiteMat);
-    roundPylon.position.set(-19.5, 0.55, 4.5);
-    scene.add(roundPylon);
-
-    // Zone 3: Middle Nook Sofa & Gold Table
-    const nookSofa = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.55, 0.95), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 }));
-    nookSofa.position.set(-4.5, 0.35, 4.2);
-    nookSofa.rotation.y = Math.PI / 2;
-    nookSofa.name = 'chair_nook';
-    scene.add(nookSofa);
-    chairsRef.current.push({ name: 'Nook Sofa', pos: new THREE.Vector3(-4.5, 0, 4.2), rot: Math.PI / 2 });
-
-    const goldTable = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.5, 16), brassMat);
-    goldTable.position.set(-4.5, 0.25, 1.8);
-    scene.add(goldTable);
-
-    // Zone 4: Foreground Lounge & Sofa
-    const bSofa = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.55, 1.1), blackMat);
-    bSofa.position.set(-2.0, 0.35, 9.8);
-    bSofa.name = 'chair_lounge';
-    scene.add(bSofa);
-    chairsRef.current.push({ name: 'Lounge Sofa', pos: new THREE.Vector3(-2.0, 0, 9.8), rot: 0 });
-
-    const drumTable = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.42, 24), whiteMat);
-    drumTable.position.set(-1.8, 0.21, 11.8);
-    scene.add(drumTable);
-
-    // Zone 5: Center Long All-Hands Table & Doughnuts Plate
-    const createAllHandsTable = () => {
-      const group = new THREE.Group();
-      const table = new THREE.Mesh(new THREE.BoxGeometry(8.8, 0.12, 2.0), whiteMat);
-      table.position.y = 1.15;
-      group.add(table);
-
-      [-3.0, 0, 3.0].forEach((px) => {
-        const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.36, 1.1, 16), whiteMat);
-        pylon.position.set(px, 0.55, 0);
-        group.add(pylon);
-      });
-
-      // Bowl of red apples
-      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.26, 0.2, 16), whiteMat);
-      bowl.position.set(-2.0, 1.3, 0.1);
-      bowl.name = 'appleBowl';
-      group.add(bowl);
-      for (let a = 0; a < 5; a++) {
-        const apple = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 10), redMat);
-        apple.position.set(-2.0 + (a % 2) * 0.12, 1.42, 0.1 + Math.floor(a / 2) * 0.12);
-        group.add(apple);
-      }
-
-      // Doughnuts Plate (Clickable)
-      const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 0.05, 18), redMat);
-      plate.position.set(0.2, 1.23, 0.1);
-      plate.name = 'doughnutPlate';
-      group.add(plate);
-      for (let i = 0; i < 4; i++) {
-        const donut = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.05, 8, 16), new THREE.MeshStandardMaterial({ color: 0x92400e }));
-        donut.rotation.x = Math.PI / 2;
-        donut.position.set(0.15 + (i % 2) * 0.13, 1.28, 0.05 + Math.floor(i / 2) * 0.13);
-        group.add(donut);
-      }
-
-      // Pastry Dome
-      const domeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.34, 0.06, 16), whiteMat);
-      domeBase.position.set(2.6, 1.23, 0.1);
-      group.add(domeBase);
-      const glassDome = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), glassMat);
-      glassDome.position.set(2.6, 1.26, 0.1);
-      group.add(glassDome);
-
-      // Chairs with click-to-sit registration
-      const addTableChair = (cx, cz, crot) => {
-        const cGrp = new THREE.Group();
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.08, 0.7), chairBeigeMat);
-        seat.position.y = 0.72;
-        seat.name = 'clickable_chair';
-        cGrp.add(seat);
-        const back = new THREE.Mesh(new THREE.BoxGeometry(0.76, 0.65, 0.08), chairBeigeMat);
-        back.position.set(0, 1.02, 0.32);
-        cGrp.add(back);
-        cGrp.position.set(cx, 0, cz);
-        cGrp.rotation.y = crot;
-        group.add(cGrp);
-
-        chairsRef.current.push({
-          name: 'Conference Chair',
-          pos: new THREE.Vector3(cx + 4.5, 0, cz + 3.8),
-          rot: crot
-        });
-      };
-      [-3.3, -2.0, -0.7, 0.7, 2.0, 3.3].forEach((xOff) => {
-        addTableChair(xOff, -1.35, 0);
-        addTableChair(xOff, 1.35, Math.PI);
-      });
-
-      group.position.set(4.5, 0, 3.8);
-      scene.add(group);
-    };
-    createAllHandsTable();
-
-    // Zone 6: Glass Boardroom
-    const glassBack = new THREE.Mesh(new THREE.BoxGeometry(9.6, 3.5, 0.1), glassMat);
-    glassBack.position.set(0, 1.75, -21.8);
-    scene.add(glassBack);
-    const glassFront = new THREE.Mesh(new THREE.BoxGeometry(9.6, 3.5, 0.1), glassMat);
-    glassFront.position.set(0, 1.75, -12.5);
-    scene.add(glassFront);
-    const innerTable = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.12, 1.8), blackMat);
-    innerTable.position.set(0, 1.1, -17.0);
-    scene.add(innerTable);
-
-    // Zone 7: Mobile Whiteboard Stand
-    const mobileScreen = new THREE.Mesh(
-      new THREE.BoxGeometry(2.4, 3.4, 0.08),
-      new THREE.MeshStandardMaterial({ map: schedTexture, roughness: 0.25 })
-    );
-    mobileScreen.position.set(12.5, 2.4, 3.8);
-    mobileScreen.rotation.y = -Math.PI / 10;
-    mobileScreen.name = 'mobileSchedule';
-    scene.add(mobileScreen);
-
-    // Zone 8: Desk Pairs
-    const createDeskPair = (x, z) => {
-      const group = new THREE.Group();
-      const top1 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1.5), whiteMat);
-      top1.position.set(0, 1.15, -0.8);
-      group.add(top1);
-      const top2 = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.1, 1.5), whiteMat);
-      top2.position.set(0, 1.15, 0.8);
-      group.add(top2);
-      const div = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.5, 0.06), new THREE.MeshStandardMaterial({ color: 0xe2e8f0 }));
-      div.position.set(0, 1.45, 0);
-      group.add(div);
-      const mon1 = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.58, 0.04), blackMat);
-      mon1.position.set(-0.4, 1.58, -0.6);
-      group.add(mon1);
-      const disp1 = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 0.48), screenGlowMat);
-      disp1.position.set(-0.4, 1.58, -0.57);
-      disp1.rotation.y = Math.PI;
-      group.add(disp1);
-
-      [-1.6, 1.6].forEach((cz, i) => {
-        chairsRef.current.push({
-          name: 'Desk Chair',
-          pos: new THREE.Vector3(x, 0, z + cz),
-          rot: i === 0 ? 0 : Math.PI
-        });
-      });
-
-      group.position.set(x, 0, z);
-      scene.add(group);
-    };
-    createDeskPair(17.5, -12.5);
-    createDeskPair(22.5, -12.5);
-    createDeskPair(18.5, -6.0);
-    createDeskPair(23.5, -6.0);
-    createDeskPair(19.0, 0.5);
-    createDeskPair(24.0, 0.5);
-
-    // Zone 9: Triple Back Wall Dashboards
-    const screen1 = new THREE.Mesh(new THREE.BoxGeometry(5.0, 2.7, 0.08), new THREE.MeshStandardMaterial({ map: chartTexture, roughness: 0.2 }));
-    screen1.position.set(10.8, 2.3, -21.7);
-    screen1.name = 'screen1';
-    scene.add(screen1);
-
-    const screen2 = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.7, 0.08), new THREE.MeshStandardMaterial({ map: kpiTexture, roughness: 0.2 }));
-    screen2.position.set(16.5, 2.3, -21.7);
-    screen2.name = 'screen2';
-    scene.add(screen2);
-
-    const screen3 = new THREE.Mesh(new THREE.BoxGeometry(5.0, 2.7, 0.08), new THREE.MeshStandardMaterial({ map: archTexture, roughness: 0.2 }));
-    screen3.position.set(22.2, 2.3, -21.7);
-    screen3.name = 'screen3';
-    scene.add(screen3);
-
-    // Zone 10: Background Corridor with 3 Illuminated Spot Logos
-    [-11.5, 0.5, 26.5].forEach((lx) => {
-      const sign = new THREE.Mesh(
-        new THREE.BoxGeometry(2.4, 1.2, 0.06),
-        new THREE.MeshStandardMaterial({ map: logoTexture })
-      );
-      sign.position.set(lx, 2.8, -26.5);
-      scene.add(sign);
-    });
-
-    // Avatar Generator with exact clothing textures
-    const createAvatar = (name, initialPos, config = {}) => {
-      const group = new THREE.Group();
-      group.name = `avatar_${name}`;
-      const skinMat = new THREE.MeshStandardMaterial({ color: config.skinColor || 0xf6d8c3, roughness: 0.55 });
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 20), skinMat);
-      head.position.y = 1.9;
-      head.name = `avatar_head_${name}`;
-      group.add(head);
-
-      if (config.hatType === 'spot_cap') {
-        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.2, 16), whiteMat);
-        cap.position.set(0, 2.15, -0.05);
-        cap.rotation.x = 0.15;
-        group.add(cap);
-        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.05, 0.35), whiteMat);
-        visor.position.set(0, 2.05, 0.4);
-        group.add(visor);
-        const logoDot = new THREE.Mesh(new THREE.CircleGeometry(0.08, 16), new THREE.MeshBasicMaterial({ color: 0x22c55e }));
-        logoDot.position.set(0, 2.18, 0.42);
-        logoDot.rotation.x = -0.2;
-        group.add(logoDot);
-      } else if (config.hatType === 'beanie') {
-        const beanie = new THREE.Mesh(new THREE.SphereGeometry(0.46, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5), blackMat);
-        beanie.position.set(0, 2.0, 0);
-        group.add(beanie);
-      } else if (config.hairType === 'blond_styled') {
-        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.45, 16, 16), new THREE.MeshStandardMaterial({ color: 0xfacc15 }));
-        hair.position.set(0, 2.05, -0.05);
-        group.add(hair);
-      } else {
-        const hair = new THREE.Mesh(new THREE.SphereGeometry(0.44, 16, 16), new THREE.MeshStandardMaterial({ color: config.hairColor || 0x4a3728 }));
-        hair.position.set(0, 2.02, -0.06);
-        group.add(hair);
-      }
-
-      if (config.hasGlasses) {
-        const gFrameMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
-        const g1 = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.1, 16), gFrameMat);
-        g1.position.set(-0.16, 1.92, 0.41);
-        group.add(g1);
-        const g2 = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.1, 16), gFrameMat);
-        g2.position.set(0.16, 1.92, 0.41);
-        group.add(g2);
-      }
-
-      if (config.hasBeard) {
-        const beard = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.18, 12), blackMat);
-        beard.position.set(0, 1.68, 0.32);
-        group.add(beard);
-      }
-
-      if (config.hasWavingHand) {
-        const handGroup = new THREE.Group();
-        const palm = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.38, 0.06), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
-        handGroup.add(palm);
-        for (let f = 0; f < 4; f++) {
-          const finger = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
-          finger.position.set(-0.12 + f * 0.08, 0.28, 0);
-          handGroup.add(finger);
-        }
-        const thumb = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 8), new THREE.MeshBasicMaterial({ color: 0xfbbf24 }));
-        thumb.position.set(0.2, 0.05, 0);
-        thumb.rotation.z = -Math.PI / 4;
-        handGroup.add(thumb);
-        handGroup.position.set(0.55, 2.45, 0.2);
-        group.add(handGroup);
-        wavingHandMeshRef.current = handGroup;
-      }
-
-      let torsoMat;
-      if (config.clothing === 'cyan_puffer') {
-        torsoMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.35 });
-      } else if (config.clothing === 'plaid_flannel') {
-        torsoMat = new THREE.MeshStandardMaterial({ map: plaidTexture, roughness: 0.8 });
-      } else if (config.clothing === 'purple_striped') {
-        torsoMat = new THREE.MeshStandardMaterial({ map: stripeTexture, roughness: 0.8 });
-      } else {
-        torsoMat = new THREE.MeshStandardMaterial({ color: config.shirtColor || 0xffffff, roughness: 0.65 });
-      }
-
-      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.85, 16), torsoMat);
-      torso.position.y = 1.15;
-      group.add(torso);
-
-      // Puffer horizontal rings
-      if (config.clothing === 'cyan_puffer') {
-        [0.9, 1.15, 1.4].forEach((qy) => {
-          const ring = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.04, 8, 16), new THREE.MeshStandardMaterial({ color: 0x0369a1 }));
-          ring.rotation.x = Math.PI / 2;
-          ring.position.y = qy;
-          group.add(ring);
-        });
-      }
-
-      group.position.copy(initialPos);
-      scene.add(group);
-      return {
-        name,
-        role: config.role || 'Teammate',
-        mesh: group,
-        isPlayer: config.isPlayer || false,
-        status: config.status || 'online'
-      };
-    };
-
-    const avatarsList = [];
-    const playerObj = createAvatar('Stan (you)', new THREE.Vector3(0.3, 0, 11.2), {
-      isPlayer: true,
-      hatType: 'spot_cap',
-      hasGlasses: true,
-      hasBeard: true,
-      clothing: 'cyan_puffer',
-      role: 'Fullstack Lead'
-    });
-    playerMeshRef.current = playerObj.mesh;
-    avatarsList.push(playerObj);
-
-    avatarsList.push(createAvatar('Wes', new THREE.Vector3(2.4, 0, 11.2), { hairType: 'blond_styled', clothing: 'plaid_flannel', role: 'Platform Architect' }));
-    avatarsList.push(createAvatar('Stefan', new THREE.Vector3(1.2, 0, 2.5), { clothing: 'purple_striped', role: 'Audio Engineer' }));
-    avatarsList.push(createAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), { shirtColor: 0xdc2626, hasGlasses: true, role: 'Infrastructure' }));
-    avatarsList.push(createAvatar('Sarah', new THREE.Vector3(-17.2, 0, 4.8), { shirtColor: 0x0284c7, hasWavingHand: true, role: 'Product Designer' }));
-    avatarsList.push(createAvatar('Andi', new THREE.Vector3(-21.5, 0, 5.8), { shirtColor: 0xf472b6, role: 'Operations' }));
-    avatarsList.push(createAvatar('Chloe', new THREE.Vector3(-4.5, 0, 4.2), { shirtColor: 0xf1f5f9, role: 'Growth & Events' }));
-    avatarsList.push(createAvatar('Steven', new THREE.Vector3(17.5, 0, -14.1), { shirtColor: 0xffffff, role: 'Frontend Engineer' }));
-    avatarsList.push(createAvatar('Alex', new THREE.Vector3(22.5, 0, -14.1), { hatType: 'beanie', shirtColor: 0x334155, role: 'WebRTC Specialist' }));
-    avatarsList.push(createAvatar('Graham', new THREE.Vector3(15.2, 0, -5.2), { shirtColor: 0x16a34a, role: 'Security & DevOps' }));
-    avatarsList.push(createAvatar('DevBot (AI)', new THREE.Vector3(0, 0, -17.0), { shirtColor: 0x10b981, status: 'ai-agent', role: 'Autonomous Agent' }));
-
-    avatarsRef.current = avatarsList;
-
-    // Raycast Pointer Down
+    // Raycast Pointer Down (Interactions, Movement & Click-to-Sit)
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -1196,7 +492,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
           if (clickedObj.name?.startsWith('avatar_')) {
             const rawName = clickedObj.name.replace('avatar_head_', '').replace('avatar_', '');
-            const av = avatarsList.find((a) => a.name === rawName && !a.isPlayer);
+            const av = roster.find((a) => a.name === rawName && !a.isPlayer);
             if (av) {
               playSound('click');
               setSelectedTeammate(av);
@@ -1253,13 +549,18 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     // Animation Loop
     let animId;
-    let clock = new THREE.Clock();
+    let lastTime = performance.now();
+    const startTime = performance.now();
+    let walkCycle = 0;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      const elapsed = clock.getElapsedTime();
+      const currentTime = performance.now();
+      const delta = Math.min((currentTime - lastTime) / 1000, 0.1);
+      lastTime = currentTime;
+      const elapsed = (currentTime - startTime) / 1000;
 
+      // Sarah's waving cartoon hand
       if (wavingHandMeshRef.current) {
         wavingHandMeshRef.current.rotation.z = Math.sin(elapsed * 5) * 0.22;
       }
@@ -1272,8 +573,10 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (keys['KeyA'] || keys['ArrowLeft']) moveVec.x -= 1;
       if (keys['KeyD'] || keys['ArrowRight']) moveVec.x += 1;
 
-      if (playerMeshRef.current) {
+      if (playerMeshRef.current && playerPartsRef.current) {
         const player = playerMeshRef.current;
+        const parts = playerPartsRef.current;
+        let isMoving = false;
 
         if (moveVec.lengthSq() > 0) {
           moveVec.normalize();
@@ -1281,35 +584,69 @@ export default function WorkspacePlatform({ user, onExit }) {
           targetPosRef.current.copy(player.position);
           const angle = Math.atan2(moveVec.x, moveVec.z);
           player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, angle, 0.25);
-          player.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.12;
           isSittingRef.current = false;
+          isMoving = true;
         } else {
           const target = targetPosRef.current;
           const dist = player.position.distanceTo(target);
 
-          const animState = playerAnimStateRef.current;
-          if (animState.emote) {
-            if (animState.emote === 'wave' || animState.emote === 'cheer') {
-              player.position.y = Math.abs(Math.sin(elapsed * 10)) * 0.35;
-            } else if (animState.emote === 'dance') {
-              player.rotation.y += delta * 6;
-              player.position.y = Math.abs(Math.sin(elapsed * 8)) * 0.2;
-            }
-          } else if (dist > 0.15) {
+          if (dist > 0.15) {
             const dir = new THREE.Vector3().subVectors(target, player.position).normalize();
             const targetAngle = Math.atan2(dir.x, dir.z);
             player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.2);
             player.position.addScaledVector(dir, Math.min(dist, delta * 6.2));
-            player.position.y = Math.abs(Math.sin(elapsed * 12)) * 0.12;
-          } else {
-            player.position.y = isSittingRef.current ? -0.25 : 0;
+            isMoving = true;
+          }
+        }
+
+        // Kinematics & Pose Animation
+        if (isMoving) {
+          walkCycle += delta * 12;
+          // Articulated legs alternating swing
+          if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = Math.sin(walkCycle) * 0.55;
+          if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -Math.sin(walkCycle) * 0.55;
+          // Articulated arms counter swing
+          if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = -Math.sin(walkCycle) * 0.45;
+          if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = Math.sin(walkCycle) * 0.45;
+          // Natural vertical hip bobbing
+          player.position.y = Math.abs(Math.sin(walkCycle * 2)) * 0.08;
+        } else if (isSittingRef.current) {
+          // Seated pose on chair cushion
+          player.position.y = -0.15;
+          if (parts.leftLegPivot) {
+            parts.leftLegPivot.rotation.x = -Math.PI / 2;
+            parts.rightLegPivot.rotation.x = -Math.PI / 2;
+          }
+          if (parts.leftArmPivot) {
+            parts.leftArmPivot.rotation.x = -Math.PI / 3;
+            parts.rightArmPivot.rotation.x = -Math.PI / 3;
+          }
+        } else {
+          // Idle standing pose with gentle breathing sway
+          player.position.y = 0;
+          if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = 0;
+          if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = 0;
+          if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = 0;
+
+          // Emote handling
+          const animState = playerAnimStateRef.current;
+          if (animState.emote === 'wave' && parts.rightArmPivot) {
+            parts.rightArmPivot.rotation.z = Math.PI * 0.75 + Math.sin(elapsed * 12) * 0.3;
+            parts.rightArmPivot.rotation.x = -0.3;
+          } else if (parts.rightArmPivot) {
+            parts.rightArmPivot.rotation.z = 0;
+            parts.rightArmPivot.rotation.x = 0;
+          }
+
+          if (parts.torsoGroup) {
+            parts.torsoGroup.position.y = 1.15 + Math.sin(elapsed * 2.5) * 0.015;
           }
         }
 
         setPlayerCoord({ x: player.position.x, z: player.position.z });
       }
 
-      // Project Avatar Names
+      // Project Avatar Names to 2D Screen Space
       const projected = [];
       avatarsRef.current.forEach((av) => {
         const pos = new THREE.Vector3();
@@ -1598,61 +935,89 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
 
           <div style={{
-            background: '#f1f5f9',
-            padding: '5px 14px',
-            borderRadius: '2rem',
-            fontSize: '0.85rem',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            color: '#334155',
-            fontWeight: 600
+            background: '#f1f5f9',
+            padding: '5px 12px',
+            borderRadius: '2rem',
+            border: '1px solid #e2e8f0'
           }}>
-            <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#0284c7' }} />
-            <span>Zone: <strong style={{ color: '#0f172a' }}>{currentRoom}</strong></span>
+            <MapPin size={14} color="#0284c7" />
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>{currentRoom}</span>
           </div>
 
-          {inAudioRange.length > 0 && (
-            <div style={{
-              background: 'rgba(96, 196, 73, 0.12)',
-              border: '1px solid #86efac',
-              padding: '5px 14px',
+          {/* Spatial Audio Range Counter */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: inAudioRange.length > 0 ? '#f0fdf4' : '#f8fafc',
+            border: inAudioRange.length > 0 ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+            padding: '5px 10px',
+            borderRadius: '2rem',
+            fontSize: '0.8rem',
+            color: inAudioRange.length > 0 ? '#16a34a' : '#64748b',
+            fontWeight: 600
+          }}>
+            <Headphones size={13} />
+            <span>{inAudioRange.length} in voice range</span>
+          </div>
+        </div>
+
+        {/* Center: Quick Room Switcher Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {[
+            'All-Hands Table',
+            'Round Table Huddle',
+            'Engineering Desks',
+            'Glass Boardroom',
+            'Foreground Lounge',
+            'Presentation Hall'
+          ].map((r) => (
+            <button
+              key={r}
+              onClick={() => jumpToRoom(r)}
+              style={{
+                background: currentRoom === r ? '#0284c7' : 'transparent',
+                color: currentRoom === r ? '#ffffff' : '#64748b',
+                border: 'none',
+                padding: '6px 11px',
+                borderRadius: '8px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {r.split(' ')[0]}
+            </button>
+          ))}
+        </div>
+
+        {/* Right: Media Controls, Screen Share, Nameplates Toggle, Leave */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Nameplates Visibility Toggle */}
+          <button
+            onClick={() => setShowNameplates(!showNameplates)}
+            title="Toggle Floating Nameplates (Hotkey: N)"
+            style={{
+              padding: '7px 12px',
               borderRadius: '2rem',
-              fontSize: '0.85rem',
-              color: '#166534',
+              background: showNameplates ? '#e0f2fe' : '#f8fafc',
+              border: showNameplates ? '1px solid #7dd3fc' : '1px solid #cbd5e1',
+              color: showNameplates ? '#0369a1' : '#64748b',
+              fontSize: '0.82rem',
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              fontWeight: 600
-            }}>
-              <PhoneCall size={14} color="#16a34a" />
-              <span>Spatial Audio: <strong>{inAudioRange.slice(0, 3).join(', ')}{inAudioRange.length > 3 ? ` +${inAudioRange.length - 3}` : ''}</strong></span>
-            </div>
-          )}
-        </div>
-
-        {/* Right: Quick Zone Jump & Media Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-          <div style={{ display: 'flex', gap: '4px', background: '#f8fafc', padding: '3px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            {['Foreground Lounge', 'All-Hands Table', 'Engineering Desks', 'Round Table Huddle', 'Presentation Hall'].map((r) => (
-              <button
-                key={r}
-                onClick={() => jumpToRoom(r)}
-                style={{
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  background: currentRoom === r ? '#ffffff' : 'transparent',
-                  color: currentRoom === r ? '#0f172a' : '#64748b',
-                  boxShadow: currentRoom === r ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {r.split(' ')[0]}
-              </button>
-            ))}
-          </div>
+              cursor: 'pointer'
+            }}
+          >
+            <Tag size={14} />
+            <span>{showNameplates ? 'Tags: On' : 'Tags: Off'}</span>
+          </button>
 
           {/* Real Screen Share Button */}
           <button
@@ -1762,7 +1127,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'crosshair' }} />
 
         {/* Projected 2D Floating Nameplates */}
-        {screenAvatars.map((av, idx) => (
+        {showNameplates && screenAvatars.map((av, idx) => (
           <div
             key={idx}
             style={{
@@ -1773,13 +1138,13 @@ export default function WorkspacePlatform({ user, onExit }) {
               pointerEvents: 'none',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              background: av.isPlayer ? 'rgba(30, 41, 59, 0.92)' : 'rgba(255, 255, 255, 0.92)',
-              color: av.isPlayer ? '#ffffff' : '#0f172a',
-              padding: '3px 8px',
-              borderRadius: '12px',
-              boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
-              border: av.isPlayer ? '1px solid #0284c7' : '1px solid #e2e8f0',
+              gap: '6px',
+              background: av.isPlayer ? 'rgba(22, 101, 52, 0.94)' : 'rgba(15, 23, 42, 0.88)',
+              color: '#ffffff',
+              padding: '3px 9px',
+              borderRadius: '14px',
+              boxShadow: '0 3px 10px rgba(0, 0, 0, 0.2)',
+              border: av.isPlayer ? '1.5px solid #4ade80' : '1px solid rgba(255, 255, 255, 0.2)',
               fontSize: '11px',
               fontWeight: 700,
               whiteSpace: 'nowrap',
@@ -1790,7 +1155,7 @@ export default function WorkspacePlatform({ user, onExit }) {
               width: 7,
               height: 7,
               borderRadius: '50%',
-              background: av.status === 'ai-agent' ? '#10b981' : '#22c55e',
+              background: av.isPlayer ? '#4ade80' : av.status === 'ai-agent' ? '#10b981' : '#22c55e',
               boxShadow: '0 0 6px rgba(34, 197, 94, 0.8)'
             }} />
             <span>{av.name}</span>
@@ -1803,169 +1168,134 @@ export default function WorkspacePlatform({ user, onExit }) {
             position: 'absolute',
             top: '20px',
             right: '20px',
-            width: '280px',
-            background: 'rgba(15, 23, 42, 0.95)',
-            border: '1px solid #334155',
-            borderRadius: '14px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            width: '230px',
+            background: '#ffffff',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+            border: '1px solid #cbd5e1',
             overflow: 'hidden',
-            zIndex: 40
+            zIndex: 30
           }}>
-            <div style={{ padding: '8px 12px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Camera size={14} color="#38bdf8" />
-                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#f8fafc' }}>Virtual Background</span>
-              </div>
-              <button onClick={() => setIsVideoOn(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+            <div style={{ background: '#0f172a', padding: '6px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#fff', fontSize: '11px', fontWeight: 700 }}>SPOT CAMERA FEED</span>
+              <button onClick={() => setIsVideoOn(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
                 <X size={14} />
               </button>
             </div>
-
-            <canvas ref={videoCanvasRef} width={280} height={210} style={{ display: 'block', width: '100%', height: '210px' }} />
-
-            <div style={{ padding: '8px 10px', background: '#0f172a', display: 'flex', gap: '6px', justifyContent: 'center' }}>
-              {[
-                { id: 'blur', label: 'Bokeh Blur' },
-                { id: 'spot-office', label: 'Spot HQ' },
-                { id: 'cyber', label: 'Cyber Grid' },
-                { id: 'none', label: 'None' }
-              ].map((m) => (
+            <canvas ref={videoCanvasRef} width={230} height={155} style={{ display: 'block', background: '#000' }} />
+            <div style={{ padding: '8px', display: 'flex', gap: '4px', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+              {['blur', 'spot-office', 'cyber', 'none'].map((mode) => (
                 <button
-                  key={m.id}
-                  onClick={() => setBgMode(m.id)}
+                  key={mode}
+                  onClick={() => setBgMode(mode)}
                   style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    fontSize: '0.72rem',
-                    fontWeight: 600,
-                    background: bgMode === m.id ? '#0284c7' : '#1e293b',
-                    color: bgMode === m.id ? '#ffffff' : '#94a3b8',
+                    flex: 1,
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    padding: '4px 0',
+                    borderRadius: '4px',
                     border: 'none',
+                    background: bgMode === mode ? '#0284c7' : '#e2e8f0',
+                    color: bgMode === mode ? '#fff' : '#475569',
                     cursor: 'pointer'
                   }}
                 >
-                  {m.label}
+                  {mode.toUpperCase()}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* Live Screen Share Presentation Floating Window */}
-        {isScreenModalOpen && (
+        {/* Live Floating Screen Share Broadcast Window */}
+        {isScreenSharing && isScreenModalOpen && (
           <div style={{
             position: 'absolute',
-            top: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '680px',
-            maxWidth: '92vw',
-            background: 'rgba(15, 23, 42, 0.98)',
-            border: '2px solid #22c55e',
-            borderRadius: '16px',
-            boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            bottom: '90px',
+            left: '24px',
+            width: '380px',
+            background: '#0f172a',
+            borderRadius: '12px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.3)',
+            border: '2px solid #2563eb',
             overflow: 'hidden',
-            zIndex: 45
+            zIndex: 35
           }}>
-            <div style={{ padding: '10px 16px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #334155' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />
-                <Monitor size={16} color="#4ade80" />
-                <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f8fafc' }}>
-                  {userName}'s Live Screen Share (Broadcasting to All Rooms)
-                </span>
-              </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={stopScreenShare}
-                  style={{ padding: '4px 10px', borderRadius: '6px', background: '#ef4444', color: '#fff', border: 'none', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Stop Sharing
-                </button>
-                <button onClick={() => setIsScreenModalOpen(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                  <X size={16} />
-                </button>
-              </div>
+            <div style={{ padding: '8px 12px', background: '#1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#38bdf8', fontSize: '12px', fontWeight: 700 }}>LIVE SCREEN BROADCAST</span>
+              <button onClick={() => setIsScreenModalOpen(false)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
+                <Minimize2 size={15} />
+              </button>
             </div>
-            <div style={{ background: '#000000', display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '420px' }}>
-              <video ref={screenShareVideoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', maxHeight: '420px', objectFit: 'contain' }} />
+            <video ref={screenShareVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '210px', objectFit: 'contain', background: '#000' }} />
+            <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a' }}>
+              <span style={{ color: '#22c55e', fontSize: '11px', fontWeight: 600 }}>● Broadcasting to all teammates</span>
+              <button onClick={stopScreenShare} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}>
+                Stop Sharing
+              </button>
             </div>
           </div>
         )}
 
         {/* Interactive Object Modals */}
         {activeModal && (
-          <div className="Platform_modal" style={{
+          <div style={{
             position: 'absolute',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: '560px',
-            maxWidth: '90vw',
             background: '#ffffff',
             borderRadius: '16px',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-            border: '1px solid #e2e8f0',
-            overflow: 'hidden',
-            zIndex: 150
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            border: '1px solid #cbd5e1',
+            width: '460px',
+            maxWidth: '90vw',
+            zIndex: 100,
+            overflow: 'hidden'
           }}>
-            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {activeModal === 'features' && <Sparkles size={20} color="#2563eb" />}
-                {activeModal === 'schedule' && <Calendar size={20} color="#16a34a" />}
-                {activeModal === 'analytics' && <TrendingUp size={20} color="#0284c7" />}
-                {activeModal === 'kpi' && <Activity size={20} color="#f43f5e" />}
-                {activeModal === 'blueprint' && <Layers size={20} color="#6366f1" />}
-                {activeModal === 'theater' && <Tv size={20} color="#8b5cf6" />}
-                {activeModal === 'teammate' && <UserCheck size={20} color="#059669" />}
-                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>
-                  {activeModal === 'features' && 'Spot Prints & Release Roadmap'}
-                  {activeModal === 'schedule' && 'Schedule 1 on 1 with Stan'}
-                  {activeModal === 'analytics' && 'Real-Time Telemetry & Systems'}
-                  {activeModal === 'kpi' && 'Production KPI Matrix'}
-                  {activeModal === 'blueprint' && 'Spot Virtual Architecture Blueprint'}
-                  {activeModal === 'theater' && 'All-Hands Presentation Stage'}
-                  {activeModal === 'teammate' && selectedTeammate?.name}
-                </h3>
-              </div>
-              <button onClick={() => setActiveModal(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
-                <X size={20} />
+            <div style={{
+              background: '#0f172a',
+              color: '#ffffff',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <strong style={{ fontSize: '0.95rem' }}>
+                {activeModal === 'features' && '🚀 Spot Release Roadmap'}
+                {activeModal === 'schedule' && '📅 1 on 1 Schedule with Stan'}
+                {activeModal === 'analytics' && '📈 Realtime Cluster Telemetry'}
+                {activeModal === 'kpi' && '⚡ Production KPI Scoreboard'}
+                {activeModal === 'blueprint' && '🛠️ Architecture Flowchart'}
+                {activeModal === 'theater' && '🎭 All-Hands Presentation Stage'}
+                {activeModal === 'teammate' && '👤 Teammate Profile & Actions'}
+              </strong>
+              <button
+                onClick={() => setActiveModal(null)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ padding: '1.5rem', maxHeight: '65vh', overflowY: 'auto' }}>
+            <div style={{ padding: '1.25rem' }}>
               {activeModal === 'features' && (
                 <div>
-                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.9rem' }}>
-                    Active sprint features tracked on the interactive office board:
+                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.85rem' }}>
+                    Features status as displayed on the huddle board:
                   </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#1d4ed8', marginBottom: '4px' }}>
-                        <span>Spot Prints (3D Virtual Whiteboard Exports)</span>
-                        <span>100% COMPLETE</span>
-                      </div>
-                      <div style={{ width: '100%', height: 8, background: '#dbeafe', borderRadius: 4 }}>
-                        <div style={{ width: '100%', height: 8, background: '#2563eb', borderRadius: 4 }} />
-                      </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontWeight: 600, color: '#1e293b' }}>Calendar Integration</span>
+                      <span style={{ fontWeight: 700, color: '#64748b' }}>0%</span>
                     </div>
-                    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        <span>Calendar Sync & Teleport Invitations</span>
-                        <span>75% IN PROGRESS</span>
-                      </div>
-                      <div style={{ width: '100%', height: 8, background: '#e2e8f0', borderRadius: 4 }}>
-                        <div style={{ width: '75%', height: 8, background: '#0284c7', borderRadius: 4 }} />
-                      </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#dbeafe', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                      <span style={{ fontWeight: 700, color: '#1d4ed8' }}>Spot Prints (3D Office Engine)</span>
+                      <span style={{ fontWeight: 800, color: '#1d4ed8' }}>100% Complete</span>
                     </div>
-                    <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                        <span>Spatial Documents & PDF Collaborative Markup</span>
-                        <span>40% IN DEVELOPMENT</span>
-                      </div>
-                      <div style={{ width: '100%', height: 8, background: '#e2e8f0', borderRadius: 4 }}>
-                        <div style={{ width: '40%', height: 8, background: '#10b981', borderRadius: 4 }} />
-                      </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <span style={{ fontWeight: 600, color: '#1e293b' }}>Documents Collaboration</span>
+                      <span style={{ fontWeight: 700, color: '#64748b' }}>0%</span>
                     </div>
                   </div>
                 </div>
@@ -1973,26 +1303,26 @@ export default function WorkspacePlatform({ user, onExit }) {
 
               {activeModal === 'schedule' && (
                 <div>
-                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.9rem' }}>
-                    Book a direct 1-on-1 session with Stan at the mobile schedule stand:
+                  <p style={{ margin: '0 0 1rem', color: '#475569', fontSize: '0.85rem' }}>
+                    Book a direct 1-on-1 sync with Stan:
                   </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '1.25rem' }}>
-                    {['Today, 2:00 PM', 'Today, 3:30 PM', 'Tomorrow, 10:00 AM', 'Tomorrow, 1:15 PM'].map((slot) => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                    {['11:00 AM (Today)', '02:30 PM (Today)', '04:00 PM (Today)', '10:00 AM (Tomorrow)'].map((slot) => (
                       <button
                         key={slot}
                         onClick={() => {
                           playSound('chime');
                           setActiveModal(null);
-                          setDonutToast(`1-on-1 scheduled for ${slot}! 📅`);
-                          setTimeout(() => setDonutToast(null), 3000);
+                          setDonutToast(`1 on 1 scheduled with Stan for ${slot}! 📅`);
+                          setTimeout(() => setDonutToast(null), 3500);
                         }}
                         style={{
-                          padding: '12px',
+                          padding: '10px',
                           borderRadius: '8px',
-                          background: '#f8fafc',
                           border: '1px solid #cbd5e1',
+                          background: '#f8fafc',
                           fontWeight: 600,
-                          color: '#0f172a',
+                          fontSize: '0.82rem',
                           cursor: 'pointer'
                         }}
                       >
@@ -2348,7 +1678,7 @@ export default function WorkspacePlatform({ user, onExit }) {
               padding: '8px 16px',
               borderRadius: '2rem',
               background: activeTab === 'ai' ? '#10b981' : '#f0fdf4',
-              color: activeTab === 'ai' ? '#ffffff' : '#15803d',
+              color: activeTab === 'ai' ? '#ffffff' : '#047857',
               border: '1px solid #86efac',
               fontSize: '0.82rem',
               fontWeight: 700,
@@ -2359,7 +1689,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             }}
           >
             <Bot size={16} />
-            <span>OpenClaw Plugin</span>
+            <span>OpenClaw Agent</span>
           </button>
 
           <button
@@ -2389,7 +1719,7 @@ export default function WorkspacePlatform({ user, onExit }) {
               borderRadius: '2rem',
               background: activeTab === 'chat' ? '#0f172a' : '#f8fafc',
               color: activeTab === 'chat' ? '#ffffff' : '#334155',
-              border: '1px solid #e2e8f0',
+              border: '1px solid #cbd5e1',
               fontSize: '0.82rem',
               fontWeight: 700,
               display: 'flex',
@@ -2399,463 +1729,347 @@ export default function WorkspacePlatform({ user, onExit }) {
             }}
           >
             <MessageSquare size={16} />
-            <span>Chat</span>
+            <span>Room Chat</span>
           </button>
         </div>
+      </main>
 
-        {/* 9. Side Drawer: OpenClaw Agent & Tools Console */}
-        {activeTab === 'ai' && (
-          <aside style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '420px',
-            height: '100%',
-            background: '#ffffff',
-            boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-            borderLeft: '1px solid #e2e8f0',
+      {/* 9. Sliding Side Drawers (AI Agent, Room Chat, Whiteboard, Settings) */}
+      {activeTab !== 'none' && (
+        <aside style={{
+          position: 'fixed',
+          top: '62px',
+          right: 0,
+          bottom: 0,
+          width: '420px',
+          background: '#ffffff',
+          borderLeft: '1px solid #e2e8f0',
+          boxShadow: '-4px 0 24px rgba(0,0,0,0.08)',
+          zIndex: 60,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {/* Drawer Header */}
+          <div style={{
+            padding: '1rem 1.25rem',
+            borderBottom: '1px solid #e2e8f0',
             display: 'flex',
-            flexDirection: 'column',
-            zIndex: 60
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#f8fafc'
           }}>
-            <div style={{
-              padding: '1rem 1.25rem',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
-                  <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#0f172a' }}>Spot OpenClaw Gateway</h3>
-                </div>
-                <span style={{ fontSize: '0.72rem', color: '#64748b' }}>Plugin v0.2.0 &bull; WebSocket Connected</span>
-              </div>
-              <button onClick={() => setActiveTab('none')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={18} />
-              </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {activeTab === 'ai' && <Bot size={18} color="#10b981" />}
+              {activeTab === 'chat' && <MessageSquare size={18} color="#0284c7" />}
+              {activeTab === 'whiteboard' && <Edit3 size={18} color="#2563eb" />}
+              {activeTab === 'settings' && <Sliders size={18} color="#64748b" />}
+              <strong style={{ fontSize: '1rem', color: '#0f172a' }}>
+                {activeTab === 'ai' && 'Spot OpenClaw Gateway (v0.2.0)'}
+                {activeTab === 'chat' && 'Room Chat & Threads'}
+                {activeTab === 'whiteboard' && 'Interactive Whiteboard'}
+                {activeTab === 'settings' && 'Audio & Device Settings'}
+              </strong>
             </div>
+            <button
+              onClick={() => setActiveTab('none')}
+              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+            >
+              <X size={18} />
+            </button>
+          </div>
 
-            <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', background: '#f1f5f9' }}>
-              <button
-                onClick={() => setOpenClawSubTab('chat')}
-                style={{
-                  flex: 1,
-                  padding: '9px',
-                  background: openClawSubTab === 'chat' ? '#ffffff' : 'transparent',
-                  border: 'none',
-                  borderBottom: openClawSubTab === 'chat' ? '2px solid #10b981' : 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: openClawSubTab === 'chat' ? '#0f172a' : '#64748b',
-                  cursor: 'pointer'
-                }}
-              >
-                Agent Chat
-              </button>
-              <button
-                onClick={() => setOpenClawSubTab('console')}
-                style={{
-                  flex: 1,
-                  padding: '9px',
-                  background: openClawSubTab === 'console' ? '#ffffff' : 'transparent',
-                  border: 'none',
-                  borderBottom: openClawSubTab === 'console' ? '2px solid #10b981' : 'none',
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  color: openClawSubTab === 'console' ? '#0f172a' : '#64748b',
-                  cursor: 'pointer'
-                }}
-              >
-                Tools Execution
-              </button>
-            </div>
-
-            {openClawSubTab === 'chat' ? (
-              <>
-                <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {aiMessages.map((msg, i) => (
-                    <div key={i} style={{
-                      alignSelf: msg.sender === 'You' ? 'flex-end' : 'flex-start',
-                      maxWidth: '85%',
-                      background: msg.sender === 'You' ? '#2563eb' : '#f1f5f9',
-                      color: msg.sender === 'You' ? '#ffffff' : '#1e293b',
-                      padding: '10px 14px',
-                      borderRadius: '12px',
-                      fontSize: '0.85rem',
-                      lineHeight: 1.45
-                    }}>
-                      <div style={{ fontSize: '0.72rem', opacity: 0.75, marginBottom: '3px' }}>{msg.sender} &bull; {msg.time}</div>
-                      <div>{msg.text}</div>
-                    </div>
-                  ))}
-                  {aiTyping && (
-                    <div style={{ color: '#64748b', fontSize: '0.8rem', fontStyle: 'italic' }}>DevBot is executing tool...</div>
-                  )}
-                </div>
-
-                <form onSubmit={sendAiMessage} style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
-                  <input
-                    type="text"
-                    placeholder="Ask DevBot or command avatar..."
-                    value={aiInput}
-                    onChange={(e) => setAiInput(e.target.value)}
+          {/* Drawer Content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column' }}>
+            {/* OpenClaw Sub-Tabs */}
+            {activeTab === 'ai' && (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '1rem', background: '#f1f5f9', padding: '4px', borderRadius: '8px' }}>
+                  <button
+                    onClick={() => setOpenClawSubTab('chat')}
                     style={{
                       flex: 1,
-                      padding: '10px 14px',
-                      borderRadius: '2rem',
-                      border: '1px solid #cbd5e1',
-                      outline: 'none',
-                      fontSize: '0.85rem'
+                      padding: '6px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: openClawSubTab === 'chat' ? '#ffffff' : 'transparent',
+                      color: openClawSubTab === 'chat' ? '#0f172a' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
                     }}
+                  >
+                    AI Agent Chat
+                  </button>
+                  <button
+                    onClick={() => setOpenClawSubTab('console')}
+                    style={{
+                      flex: 1,
+                      padding: '6px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: openClawSubTab === 'console' ? '#ffffff' : 'transparent',
+                      color: openClawSubTab === 'console' ? '#0f172a' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    OpenClaw Tools Console
+                  </button>
+                </div>
+
+                {openClawSubTab === 'chat' ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {aiMessages.map((m, idx) => (
+                        <div
+                          key={idx}
+                          style={{
+                            alignSelf: m.sender === 'You' ? 'flex-end' : 'flex-start',
+                            maxWidth: '85%',
+                            background: m.sender === 'You' ? '#0284c7' : '#f1f5f9',
+                            color: m.sender === 'You' ? '#ffffff' : '#0f172a',
+                            padding: '10px 14px',
+                            borderRadius: '12px',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: '2px', fontWeight: 600 }}>{m.sender} &bull; {m.time}</div>
+                          <div>{m.text}</div>
+                        </div>
+                      ))}
+                      {aiTyping && (
+                        <div style={{ alignSelf: 'flex-start', background: '#f1f5f9', padding: '8px 12px', borderRadius: '12px', fontSize: '0.8rem', color: '#64748b' }}>
+                          DevBot is querying OpenClaw gateway...
+                        </div>
+                      )}
+                    </div>
+                    <form onSubmit={sendAiMessage} style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
+                      <input
+                        type="text"
+                        value={aiInput}
+                        onChange={(e) => setAiInput(e.target.value)}
+                        placeholder="Ask DevBot or trigger spatial tools..."
+                        style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                      />
+                      <button type="submit" style={{ background: '#10b981', color: '#fff', border: 'none', padding: '0 16px', borderRadius: '8px', cursor: 'pointer' }}>
+                        <Send size={16} />
+                      </button>
+                    </form>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                      <button
+                        onClick={() => executeOpenClawTool('spot_observe')}
+                        style={{ padding: '8px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        📡 spot_observe
+                      </button>
+                      <button
+                        onClick={() => executeOpenClawTool('spot_rooms')}
+                        style={{ padding: '8px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        🏢 spot_rooms
+                      </button>
+                      <button
+                        onClick={() => executeOpenClawTool('spot_emotes')}
+                        style={{ padding: '8px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        🎉 spot_emotes
+                      </button>
+                      <button
+                        onClick={() => executeOpenClawTool('spot_teleport')}
+                        style={{ padding: '8px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer' }}
+                      >
+                        ⚡ spot_teleport
+                      </button>
+                    </div>
+
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', marginTop: '6px' }}>EXECUTION LOGS:</div>
+                    <div style={{ flex: 1, background: '#090d16', color: '#22c55e', padding: '10px', borderRadius: '8px', fontFamily: 'monospace', fontSize: '10px', overflowY: 'auto', maxHeight: '320px' }}>
+                      {toolLogs.map((log, idx) => (
+                        <div key={idx} style={{ marginBottom: '8px', borderBottom: '1px dashed #1e293b', paddingBottom: '6px' }}>
+                          <span style={{ color: '#94a3b8' }}>[{log.time}]</span> <span style={{ color: '#38bdf8' }}>TOOL:</span> {log.tool}
+                          <pre style={{ margin: '4px 0 0', color: '#a7f3d0', whiteSpace: 'pre-wrap' }}>{JSON.stringify(log.result, null, 2)}</pre>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Room Chat */}
+            {activeTab === 'chat' && (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {chatMessages.map((m, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        alignSelf: m.sender === userName ? 'flex-end' : 'flex-start',
+                        maxWidth: '85%',
+                        background: m.sender === userName ? '#0f172a' : '#f1f5f9',
+                        color: m.sender === userName ? '#ffffff' : '#0f172a',
+                        padding: '10px 14px',
+                        borderRadius: '12px',
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: '2px', fontWeight: 600 }}>{m.sender} &bull; {m.time}</div>
+                      <div>{m.text}</div>
+                    </div>
+                  ))}
+                </div>
+                <form onSubmit={sendChatMessage} style={{ display: 'flex', gap: '8px', marginTop: '1rem' }}>
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder={`Message in #${currentRoomId}...`}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
                   />
-                  <button type="submit" style={{
-                    background: '#10b981',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '50%',
-                    width: '40px',
-                    height: '40px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer'
-                  }}>
+                  <button type="submit" style={{ background: '#0284c7', color: '#fff', border: 'none', padding: '0 16px', borderRadius: '8px', cursor: 'pointer' }}>
                     <Send size={16} />
                   </button>
                 </form>
-              </>
-            ) : (
-              <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#64748b' }}>
-                  Execute official Spot OpenClaw Agent tools directly against the live world:
-                </p>
+              </div>
+            )}
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-                  {[
-                    { id: 'spot_observe', label: 'spot_observe' },
-                    { id: 'spot_rooms', label: 'spot_rooms' },
-                    { id: 'spot_emotes', label: 'spot_emotes' },
-                    { id: 'spot_gestures', label: 'spot_gestures' },
-                    { id: 'spot_teleport', label: 'spot_teleport' },
-                    { id: 'spot_move_to_room', label: 'spot_move_to_room' }
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      onClick={() => executeOpenClawTool(t.id)}
-                      style={{
-                        padding: '7px 10px',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        color: '#0f172a',
-                        cursor: 'pointer',
-                        textAlign: 'left'
-                      }}
-                    >
-                      ▶ {t.label}
-                    </button>
-                  ))}
+            {/* Whiteboard */}
+            {activeTab === 'whiteboard' && (
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {['#2563eb', '#ef4444', '#10b981', '#f59e0b', '#0f172a'].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setDrawColor(color)}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: '50%',
+                          background: color,
+                          border: drawColor === color ? '2px solid #000' : 'none',
+                          cursor: 'pointer'
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={clearWhiteboard}
+                    style={{ padding: '4px 10px', fontSize: '11px', fontWeight: 700, borderRadius: '4px', background: '#fee2e2', color: '#b91c1c', border: 'none', cursor: 'pointer' }}
+                  >
+                    Clear Board
+                  </button>
+                </div>
+                <canvas
+                  ref={whiteboardCanvasRef}
+                  width={380}
+                  height={420}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  style={{
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    background: '#ffffff',
+                    cursor: 'crosshair',
+                    touchAction: 'none'
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748b', marginTop: '8px', textAlign: 'center' }}>
+                  Whiteboard changes synchronize live with all participants in {currentRoom}.
+                </span>
+              </div>
+            )}
+
+            {/* Device Settings */}
+            {activeTab === 'settings' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Microphone Input
+                  </label>
+                  <select
+                    value={selectedInput}
+                    onChange={(e) => setSelectedInput(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                  >
+                    {audioDevices.inputs.length > 0 ? (
+                      audioDevices.inputs.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>{d.label || `Microphone (${d.deviceId.slice(0, 8)})`}</option>
+                      ))
+                    ) : (
+                      <option value="">Default Internal Microphone</option>
+                    )}
+                  </select>
                 </div>
 
-                <h4 style={{ margin: '10px 0 0', fontSize: '0.8rem', color: '#334155' }}>Tool Execution Telemetry:</h4>
-                <div style={{
-                  flex: 1,
-                  background: '#0f172a',
-                  color: '#38bdf8',
-                  padding: '10px',
-                  borderRadius: '8px',
-                  fontFamily: 'monospace',
-                  fontSize: '0.75rem',
-                  overflowY: 'auto',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '8px'
-                }}>
-                  {toolLogs.map((log, idx) => (
-                    <div key={idx} style={{ borderBottom: '1px solid #1e293b', paddingBottom: '6px' }}>
-                      <span style={{ color: '#22c55e' }}>[{log.time}]</span> <span style={{ color: '#f59e0b' }}>{log.tool}()</span>
-                      <pre style={{ margin: '3px 0 0', whiteSpace: 'pre-wrap', color: '#94a3b8' }}>
-                        {JSON.stringify(log.result, null, 2)}
-                      </pre>
-                    </div>
-                  ))}
+                <div>
+                  <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Audio Output (Speakers/Headphones)
+                  </label>
+                  <select
+                    value={selectedOutput}
+                    onChange={(e) => setSelectedOutput(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                  >
+                    {audioDevices.outputs.length > 0 ? (
+                      audioDevices.outputs.map((d) => (
+                        <option key={d.deviceId} value={d.deviceId}>{d.label || `Speaker (${d.deviceId.slice(0, 8)})`}</option>
+                      ))
+                    ) : (
+                      <option value="">Default Audio Output</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Spatial Audio Radius</label>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0284c7' }}>{spatialFalloff}m</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="4"
+                    max="18"
+                    step="0.5"
+                    value={spatialFalloff}
+                    onChange={(e) => setSpatialFalloff(parseFloat(e.target.value))}
+                    style={{ width: '100%' }}
+                  />
+                  <span style={{ fontSize: '11px', color: '#64748b' }}>Voices fade realistically as teammates move outside this proximity radius.</span>
+                </div>
+
+                <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e293b' }}>DeepFilterNet Noise Suppression</span>
+                    <input
+                      type="checkbox"
+                      checked={noiseSuppression}
+                      onChange={(e) => setNoiseSuppression(e.target.checked)}
+                      style={{ width: 18, height: 18 }}
+                    />
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                    Filters out background typing, air conditioning, and room reverb in WebRTC Opus streams.
+                  </span>
+                </div>
+
+                <div style={{ padding: '12px', background: '#eff6ff', borderRadius: '8px', border: '1px solid #bfdbfe' }}>
+                  <strong style={{ fontSize: '0.85rem', color: '#1d4ed8', display: 'block', marginBottom: '4px' }}>Spacebar Push-to-Talk</strong>
+                  <span style={{ fontSize: '0.82rem', color: '#334155' }}>
+                    Hold down the <strong>Spacebar</strong> anytime to instantly unmute your microphone. Releasing spacebar returns you to muted state.
+                  </span>
                 </div>
               </div>
             )}
-          </aside>
-        )}
-
-        {/* 10. Side Drawer: Audio Devices & Settings */}
-        {activeTab === 'settings' && (
-          <aside style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '380px',
-            height: '100%',
-            background: '#ffffff',
-            boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-            borderLeft: '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 60
-          }}>
-            <div style={{
-              padding: '1.25rem',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sliders size={18} color="#0f172a" />
-                <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>Audio & Spatial Settings</h3>
-              </div>
-              <button onClick={() => setActiveTab('none')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ flex: 1, padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '16px', overflowY: 'auto' }}>
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  Microphone Input Device:
-                </label>
-                <select
-                  value={selectedInput}
-                  onChange={(e) => setSelectedInput(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                >
-                  {audioDevices.inputs.length > 0 ? (
-                    audioDevices.inputs.map((d, i) => (
-                      <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</option>
-                    ))
-                  ) : (
-                    <option value="default">Default System Microphone</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  Speaker / Headphone Output:
-                </label>
-                <select
-                  value={selectedOutput}
-                  onChange={(e) => setSelectedOutput(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
-                >
-                  {audioDevices.outputs.length > 0 ? (
-                    audioDevices.outputs.map((d, i) => (
-                      <option key={d.deviceId || i} value={d.deviceId}>{d.label || `Speaker ${i + 1}`}</option>
-                    ))
-                  ) : (
-                    <option value="default">Default System Output</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Spatial Audio Radius:</label>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0284c7' }}>{spatialFalloff} units</span>
-                </div>
-                <input
-                  type="range"
-                  min="4"
-                  max="16"
-                  step="0.5"
-                  value={spatialFalloff}
-                  onChange={(e) => setSpatialFalloff(parseFloat(e.target.value))}
-                  style={{ width: '100%' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderTop: '1px solid #f1f5f9' }}>
-                <div>
-                  <strong style={{ fontSize: '0.85rem', color: '#0f172a', display: 'block' }}>Noise Suppression</strong>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Filters typing and background noise</span>
-                </div>
-                <input
-                  type="checkbox"
-                  checked={noiseSuppression}
-                  onChange={(e) => setNoiseSuppression(e.target.checked)}
-                  style={{ width: 18, height: 18 }}
-                />
-              </div>
-
-              <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <strong style={{ fontSize: '0.82rem', color: '#0f172a', display: 'block', marginBottom: '4px' }}>Push-to-Talk Hotkey:</strong>
-                <p style={{ margin: 0, fontSize: '0.78rem', color: '#64748b' }}>
-                  Hold <kbd style={{ background: '#e2e8f0', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>Spacebar</kbd> anytime to temporarily unmute and speak.
-                </p>
-              </div>
-            </div>
-          </aside>
-        )}
-
-        {/* 11. Side Drawer: Interactive Whiteboard */}
-        {activeTab === 'whiteboard' && (
-          <aside style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '460px',
-            height: '100%',
-            background: '#ffffff',
-            boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-            borderLeft: '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 60
-          }}>
-            <div style={{
-              padding: '1.25rem',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Edit3 size={18} color="#2563eb" />
-                <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>Office Whiteboard</h3>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button onClick={clearWhiteboard} style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: 'pointer' }}>Clear</button>
-                <button onClick={() => setActiveTab('none')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            <div style={{ padding: '8px 16px', display: 'flex', gap: '8px', borderBottom: '1px solid #f1f5f9' }}>
-              {['#2563eb', '#dc2626', '#16a34a', '#0f172a', '#d97706'].map((color) => (
-                <button
-                  key={color}
-                  onClick={() => setDrawColor(color)}
-                  style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    background: color,
-                    border: drawColor === color ? '2px solid #000' : 'none',
-                    cursor: 'pointer'
-                  }}
-                />
-              ))}
-            </div>
-
-            <div style={{ flex: 1, padding: '12px', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <canvas
-                ref={whiteboardCanvasRef}
-                width={420}
-                height={540}
-                onMouseDown={startDrawing}
-                onMouseMove={draw}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                style={{
-                  background: '#ffffff',
-                  borderRadius: '8px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                  cursor: 'crosshair',
-                  border: '1px solid #e2e8f0'
-                }}
-              />
-            </div>
-          </aside>
-        )}
-
-        {/* 12. Side Drawer: Room Chat */}
-        {activeTab === 'chat' && (
-          <aside style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            width: '360px',
-            height: '100%',
-            background: '#ffffff',
-            boxShadow: '-4px 0 24px rgba(0,0,0,0.15)',
-            borderLeft: '1px solid #e2e8f0',
-            display: 'flex',
-            flexDirection: 'column',
-            zIndex: 60
-          }}>
-            <div style={{
-              padding: '1.25rem',
-              borderBottom: '1px solid #e2e8f0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: '#f8fafc'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MessageSquare size={18} color="#0f172a" />
-                <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a' }}>Room Chat &bull; {currentRoom}</h3>
-              </div>
-              <button onClick={() => setActiveTab('none')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div style={{ flex: 1, padding: '1rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {chatMessages.map((msg, i) => (
-                <div key={i} style={{
-                  background: msg.sender === userName ? '#eff6ff' : '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  padding: '8px 12px',
-                  borderRadius: '10px',
-                  fontSize: '0.85rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px', fontSize: '0.75rem', fontWeight: 600, color: '#475569' }}>
-                    <span>{msg.sender}</span>
-                    <span>{msg.time}</span>
-                  </div>
-                  <div style={{ color: '#0f172a' }}>{msg.text}</div>
-                </div>
-              ))}
-            </div>
-
-            <form onSubmit={sendChatMessage} style={{ padding: '1rem', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
-              <input
-                type="text"
-                placeholder="Message room..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '2rem',
-                  border: '1px solid #cbd5e1',
-                  outline: 'none',
-                  fontSize: '0.85rem'
-                }}
-              />
-              <button type="submit" style={{
-                background: '#0f172a',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '50%',
-                width: '40px',
-                height: '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}>
-                <Send size={16} />
-              </button>
-            </form>
-          </aside>
-        )}
-      </main>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }
