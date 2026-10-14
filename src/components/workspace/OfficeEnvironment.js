@@ -217,7 +217,7 @@ export function buildOfficeEnvironment(scene, screenTextures) {
   };
 
   [-46, -30, -10, 8, 26, 42, 56].forEach((tx, idx) => {
-    createTree(tx, -54 - (idx % 3) * 4, 0.85 + (idx % 2) * 0.18);
+    createTree(tx, -72 - (idx % 3) * 2, 0.62 + (idx % 2) * 0.1);
   });
 
 
@@ -436,6 +436,26 @@ export function buildOfficeEnvironment(scene, screenTextures) {
     const bottomBeam = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.08, 0.16), materials.frameMat);
     bottomBeam.position.set(0, 0.04, -12.5);
     group.add(bottomBeam);
+
+    // Slim black aluminum mullions make the glass meeting room read as a
+    // framed architectural enclosure instead of floating transparent sheets.
+    [-4.78, -1.2, 1.8, 4.78].forEach((x) => {
+      const mullion = new THREE.Mesh(
+        new THREE.BoxGeometry(0.075, 4.72, 0.14),
+        materials.frameMat
+      );
+      mullion.position.set(x, 2.4, -12.46);
+      mullion.castShadow = true;
+      group.add(mullion);
+    });
+    [-4.78, -1.6, 1.6, 4.78].forEach((x) => {
+      const mullion = new THREE.Mesh(
+        new THREE.BoxGeometry(0.065, 4.72, 0.12),
+        materials.frameMat
+      );
+      mullion.position.set(x, 2.4, -21.72);
+      group.add(mullion);
+    });
 
     scene.add(group);
   };
