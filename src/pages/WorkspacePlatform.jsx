@@ -34,6 +34,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings'
   const [activeReaction, setActiveReaction] = useState(null);
   const [donutToast, setDonutToast] = useState(null);
+  const setToastMessage = (msg) => setDonutToast(msg);
   const [showNameplates, setShowNameplates] = useState(true);
 
   // Spot UI & Build Mode state (media_1791969443822.png & media_1791969444094.png)
@@ -149,6 +150,8 @@ export default function WorkspacePlatform({ user, onExit }) {
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const lastUiUpdateRef = useRef(0);
   const activeVideoTextureRef = useRef(null);
+  const activeVideoElementRef = useRef(null);
+  const screenTimerIntervalRef = useRef(null);
 
   // 1. Procedural Web Audio Sound Synthesizer
   const audioCtxRef = useRef(null);
@@ -223,9 +226,9 @@ export default function WorkspacePlatform({ user, onExit }) {
     loadDevices();
   }, []);
 
-  // 3. Real Screen Sharing & Telecast Engine
+  // 3. Real Screen Sharing & Telecast Engine (Real Hardware Streams — No Dummies)
   const startScreenShare = async (specificScreenId) => {
-    const targetScreenId = specificScreenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'conference_b';
+    const targetScreenId = specificScreenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
     let target = null;
     if (activeScreenTarget?.id === targetScreenId && activeScreenTarget?.mesh) {
       target = activeScreenTarget.mesh;
@@ -240,65 +243,71 @@ export default function WorkspacePlatform({ user, onExit }) {
     const screenName = target?.userData?.displayName || activeScreenTarget?.name || `Office Screen (${targetScreenId})`;
 
     try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia && !navigator.userAgent.includes('Headless')) {
-        const getStreamPromise = navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: 'always', displaySurface: 'monitor' },
-          audio: true
-        });
-
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Prompt timeout or headless environment')), 1500)
-        );
-
-        const stream = await Promise.race([getStreamPromise, timeoutPromise]);
-        setScreenStream(stream);
-        setIsScreenSharing(true);
-        setIsScreenModalOpen(true);
-
-        if (screenShareVideoRef.current) {
-          screenShareVideoRef.current.srcObject = stream;
-          screenShareVideoRef.current.play();
-
-          // Project real-time video texture directly onto this specific 3D display
-          const vidTex = new THREE.VideoTexture(screenShareVideoRef.current);
-          vidTex.colorSpace = THREE.SRGBColorSpace;
-          vidTex.minFilter = THREE.LinearFilter;
-          vidTex.magFilter = THREE.LinearFilter;
-          activeVideoTextureRef.current = vidTex;
-
-          if (target && target.material) {
-            target.material.map = vidTex;
-            target.material.needsUpdate = true;
-          }
-        }
-        playSound('chime');
-        setChatMessages((prev) => [
-          ...prev,
-          { sender: userName, text: `🖥️ *started telecasting live screen to ${screenName}!*`, time: 'Just now' }
-        ]);
-        stream.getVideoTracks()[0].onended = () => {
-          stopScreenShare(targetScreenId);
-        };
-        return true;
-      } else {
-        throw new Error('Running in automated test or getDisplayMedia unsupported');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+        alert('Screen sharing is not supported by your current browser. Please use Google Chrome, Edge, or Firefox.');
+        return false;
       }
-    } catch (err) {
-      console.log('Real screen share fallback to live telecast simulation:', err?.message || err);
-      // Fallback: Use high-definition live telecast simulation texture
-      if (target && target.material && screenTexturesRef.current?.createTelecastLiveTexture) {
-        const telecastTex = screenTexturesRef.current.createTelecastLiveTexture(screenName, userName);
-        telecastTex.colorSpace = THREE.SRGBColorSpace;
-        target.material.map = telecastTex;
+
+      // Request real user display media (screen/window/tab)
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: 'always', displaySurface: 'monitor' },
+        audio: false
+      });
+
+      setScreenStream(stream);
+      setIsScreenSharing(true);
+      setIsScreenModalOpen(true);
+
+      // Clean up previous video element if any
+      if (activeVideoElementRef.current) {
+        try {
+          activeVideoElementRef.current.pause();
+          activeVideoElementRef.current.srcObject = null;
+        } catch (e) {}
+      }
+
+      // Create in-memory HTML5 video element (never blocked by React re-render timing)
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      await video.play();
+
+      activeVideoElementRef.current = video;
+
+      // Project real-time video texture directly onto this specific 3D display
+      const vidTex = new THREE.VideoTexture(video);
+      vidTex.colorSpace = THREE.SRGBColorSpace;
+      vidTex.minFilter = THREE.LinearFilter;
+      vidTex.magFilter = THREE.LinearFilter;
+      vidTex.generateMipmaps = false;
+      activeVideoTextureRef.current = vidTex;
+
+      if (target && target.material) {
+        target.material.map = vidTex;
         target.material.needsUpdate = true;
       }
-      setIsScreenSharing(true);
+
       playSound('chime');
+      setToastMessage(`Telecasting live screen to ${screenName}! 🖥️`);
+      setTimeout(() => setToastMessage(null), 3500);
+
       setChatMessages((prev) => [
         ...prev,
-        { sender: userName, text: `🖥️ *started telecasting live broadcast to ${screenName}!*`, time: 'Just now' }
+        { sender: userName, text: `🖥️ *started telecasting live screen to ${screenName}!*`, time: 'Just now' }
       ]);
+
+      stream.getVideoTracks()[0].onended = () => {
+        stopScreenShare(targetScreenId);
+      };
       return true;
+    } catch (err) {
+      console.log('Screen share cancelled or error:', err);
+      if (err.name !== 'NotAllowedError') {
+        alert(`Screen share error: ${err.message || err}`);
+      }
+      return false;
     }
   };
 
@@ -309,9 +318,17 @@ export default function WorkspacePlatform({ user, onExit }) {
     setScreenStream(null);
     setIsScreenSharing(false);
     setIsScreenModalOpen(false);
+
+    if (activeVideoElementRef.current) {
+      try {
+        activeVideoElementRef.current.pause();
+        activeVideoElementRef.current.srcObject = null;
+        activeVideoElementRef.current = null;
+      } catch (e) {}
+    }
     activeVideoTextureRef.current = null;
 
-    const targetScreenId = screenId || activeScreenTarget?.id || 'conference_b';
+    const targetScreenId = screenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
     let target = null;
     if (screensRef.current?.[targetScreenId]) {
       target = screensRef.current[targetScreenId];
@@ -322,9 +339,9 @@ export default function WorkspacePlatform({ user, onExit }) {
     }
 
     if (target && target.material) {
-      // Restore role-specific texture
+      // Restore authentic role-specific texture
       const texSys = screenTexturesRef.current;
-      let defaultTex = texSys?.starryLogoTexture;
+      let defaultTex = texSys?.createStarryLogoTexture ? texSys.createStarryLogoTexture() : texSys?.starryLogoTexture;
       if (targetScreenId.includes('conference_b') && texSys?.createSprintBoardTexture) {
         defaultTex = texSys.createSprintBoardTexture();
       } else if (targetScreenId.includes('conference_a') && texSys?.kpiTexture) {
@@ -343,6 +360,62 @@ export default function WorkspacePlatform({ user, onExit }) {
       }
     }
     playSound('click');
+    setToastMessage('Stopped screen telecast.');
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  // Real Camera Streaming directly to screen
+  const startCameraStream = async (specificScreenId) => {
+    const targetScreenId = specificScreenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
+    let target = null;
+    if (activeScreenTarget?.id === targetScreenId && activeScreenTarget?.mesh) {
+      target = activeScreenTarget.mesh;
+    } else if (screensRef.current?.[targetScreenId]) {
+      target = screensRef.current[targetScreenId];
+    } else if (screensRef.current?.[`screen_${targetScreenId}`]) {
+      target = screensRef.current[`screen_${targetScreenId}`];
+    } else if (sceneRef.current) {
+      target = sceneRef.current.getObjectByName(`screen_${targetScreenId}`);
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+
+      if (activeVideoElementRef.current) {
+        try {
+          activeVideoElementRef.current.pause();
+          activeVideoElementRef.current.srcObject = null;
+        } catch (e) {}
+      }
+
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      await video.play();
+
+      activeVideoElementRef.current = video;
+
+      const vidTex = new THREE.VideoTexture(video);
+      vidTex.colorSpace = THREE.SRGBColorSpace;
+      vidTex.minFilter = THREE.LinearFilter;
+      vidTex.magFilter = THREE.LinearFilter;
+      vidTex.generateMipmaps = false;
+      activeVideoTextureRef.current = vidTex;
+
+      if (target && target.material) {
+        target.material.map = vidTex;
+        target.material.needsUpdate = true;
+      }
+
+      playSound('chime');
+      setToastMessage('Live camera stream broadcast on screen! 📹');
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch (err) {
+      console.warn('Camera access denied:', err);
+      alert('Camera permission denied or camera device not found.');
+    }
   };
 
   // 4. Keyboard WASD & Spacebar PTT Listeners
@@ -1170,71 +1243,71 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     const texSys = screenTexturesRef.current;
 
+    // Clear any previous countdown timer interval on screen
+    if (screenTimerIntervalRef.current) {
+      clearInterval(screenTimerIntervalRef.current);
+      screenTimerIntervalRef.current = null;
+    }
+
     if (contentType === 'starry-logo') {
       activeVideoTextureRef.current = null;
       const tex = texSys?.createStarryLogoTexture ? texSys.createStarryLogoTexture() : texSys?.starryLogoTexture;
-      if (tex) {
+      if (tex && targetMesh.material) {
         tex.colorSpace = THREE.SRGBColorSpace;
         targetMesh.material.map = tex;
         targetMesh.material.needsUpdate = true;
       }
+      setToastMessage('Reset screen to Spot Starry Space Galaxy! 🌌');
+      setTimeout(() => setToastMessage(null), 2500);
     } else if (contentType === 'timer') {
       activeVideoTextureRef.current = null;
-      const minutes = payload?.minutes || 15;
-      const tex = texSys?.createTimerTexture ? texSys.createTimerTexture(`${minutes}:00`, 'Session Countdown') : null;
-      if (tex) {
-        tex.colorSpace = THREE.SRGBColorSpace;
-        targetMesh.material.map = tex;
-        targetMesh.material.needsUpdate = true;
-      }
+      const totalMinutes = payload?.minutes || 15;
+      let remainingSeconds = totalMinutes * 60;
+
+      const renderTimerFrame = (secs) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        const timeStr = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        const tex = texSys?.createTimerTexture ? texSys.createTimerTexture(timeStr, 'Session Countdown') : null;
+        if (tex && targetMesh.material) {
+          tex.colorSpace = THREE.SRGBColorSpace;
+          targetMesh.material.map = tex;
+          targetMesh.material.needsUpdate = true;
+        }
+      };
+
+      renderTimerFrame(remainingSeconds);
+
+      screenTimerIntervalRef.current = setInterval(() => {
+        remainingSeconds -= 1;
+        if (remainingSeconds <= 0) {
+          clearInterval(screenTimerIntervalRef.current);
+          screenTimerIntervalRef.current = null;
+          renderTimerFrame(0);
+          playSound('chime');
+          setToastMessage('⏱️ Presentation countdown completed!');
+          setTimeout(() => setToastMessage(null), 3500);
+        } else {
+          renderTimerFrame(remainingSeconds);
+        }
+      }, 1000);
+
+      setToastMessage(`Started ${totalMinutes}m countdown timer on screen! ⏱️`);
+      setTimeout(() => setToastMessage(null), 2500);
     } else if (contentType === 'kpi') {
       activeVideoTextureRef.current = null;
-      if (texSys?.kpiTexture) {
+      if (texSys?.kpiTexture && targetMesh.material) {
         targetMesh.material.map = texSys.kpiTexture;
         targetMesh.material.needsUpdate = true;
       }
     } else if (contentType === 'screenshare') {
-      if (screenShareVideoRef.current && screenStream) {
-        const vidTex = new THREE.VideoTexture(screenShareVideoRef.current);
-        vidTex.colorSpace = THREE.SRGBColorSpace;
-        vidTex.minFilter = THREE.LinearFilter;
-        vidTex.magFilter = THREE.LinearFilter;
-        targetMesh.material.map = vidTex;
-        targetMesh.material.needsUpdate = true;
-        activeVideoTextureRef.current = vidTex;
-      } else {
-        startScreenShare(screenId);
-      }
+      startScreenShare(screenId);
     } else if (contentType === 'webcam') {
-      if (videoRef.current) {
-        const camTex = new THREE.VideoTexture(videoRef.current);
-        camTex.colorSpace = THREE.SRGBColorSpace;
-        targetMesh.material.map = camTex;
-        targetMesh.material.needsUpdate = true;
-        activeVideoTextureRef.current = camTex;
-      } else {
-        const camCanvas = document.createElement('canvas');
-        camCanvas.width = 1024;
-        camCanvas.height = 512;
-        const cCtx = camCanvas.getContext('2d');
-        cCtx.fillStyle = '#0f172a';
-        cCtx.fillRect(0, 0, 1024, 512);
-        cCtx.fillStyle = '#10b981';
-        cCtx.font = 'bold 44px sans-serif';
-        cCtx.textAlign = 'center';
-        cCtx.fillText('📹 Live Avatar Camera Stream', 512, 220);
-        cCtx.fillStyle = '#94a3b8';
-        cCtx.font = '22px sans-serif';
-        cCtx.fillText('Camera feed active in ' + (currentRoom || 'Workspace'), 512, 280);
-        const camTex = new THREE.CanvasTexture(camCanvas);
-        camTex.colorSpace = THREE.SRGBColorSpace;
-        targetMesh.material.map = camTex;
-        targetMesh.material.needsUpdate = true;
-      }
+      startCameraStream(screenId);
     } else if (contentType === 'meeting') {
       activeVideoTextureRef.current = null;
       const stageTex = texSys?.createAuditoriumKeynoteTexture ? texSys.createAuditoriumKeynoteTexture() : null;
-      if (stageTex) {
+      if (stageTex && targetMesh.material) {
         stageTex.colorSpace = THREE.SRGBColorSpace;
         targetMesh.material.map = stageTex;
         targetMesh.material.needsUpdate = true;
@@ -1242,7 +1315,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     } else if (contentType === 'calendar') {
       activeVideoTextureRef.current = null;
       const calTex = texSys?.schedTexture;
-      if (calTex) {
+      if (calTex && targetMesh.material) {
         calTex.colorSpace = THREE.SRGBColorSpace;
         targetMesh.material.map = calTex;
         targetMesh.material.needsUpdate = true;
@@ -1281,17 +1354,52 @@ export default function WorkspacePlatform({ user, onExit }) {
 
       const wTex = new THREE.CanvasTexture(wCanvas);
       wTex.colorSpace = THREE.SRGBColorSpace;
-      targetMesh.material.map = wTex;
-      targetMesh.material.needsUpdate = true;
+      if (targetMesh.material) {
+        targetMesh.material.map = wTex;
+        targetMesh.material.needsUpdate = true;
+      }
     } else if (contentType === 'youtube') {
       activeVideoTextureRef.current = null;
-      const ytTex = texSys?.createYoutubePlayerTexture
-        ? texSys.createYoutubePlayerTexture(payload?.url, 'Spot Virtual Video Stream')
-        : null;
-      if (ytTex) {
-        ytTex.colorSpace = THREE.SRGBColorSpace;
-        targetMesh.material.map = ytTex;
-        targetMesh.material.needsUpdate = true;
+      const rawUrl = payload?.url || '';
+      const ytMatch = rawUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+      const videoId = ytMatch ? ytMatch[1] : null;
+
+      if (videoId) {
+        const thumbUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+        loader.load(
+          thumbUrl,
+          (loadedTex) => {
+            loadedTex.colorSpace = THREE.SRGBColorSpace;
+            if (targetMesh.material) {
+              targetMesh.material.map = loadedTex;
+              targetMesh.material.needsUpdate = true;
+            }
+            setToastMessage('YouTube video broadcast active on screen! ▶️');
+            setTimeout(() => setToastMessage(null), 2500);
+          },
+          undefined,
+          () => {
+            const ytTex = texSys?.createYoutubePlayerTexture
+              ? texSys.createYoutubePlayerTexture(rawUrl, 'Spot Virtual Stream')
+              : null;
+            if (ytTex && targetMesh.material) {
+              ytTex.colorSpace = THREE.SRGBColorSpace;
+              targetMesh.material.map = ytTex;
+              targetMesh.material.needsUpdate = true;
+            }
+          }
+        );
+      } else {
+        const ytTex = texSys?.createYoutubePlayerTexture
+          ? texSys.createYoutubePlayerTexture(rawUrl, 'Spot Virtual Video Stream')
+          : null;
+        if (ytTex && targetMesh.material) {
+          ytTex.colorSpace = THREE.SRGBColorSpace;
+          targetMesh.material.map = ytTex;
+          targetMesh.material.needsUpdate = true;
+        }
       }
     } else if (contentType === 'image') {
       activeVideoTextureRef.current = null;
@@ -1302,11 +1410,21 @@ export default function WorkspacePlatform({ user, onExit }) {
           payload.url,
           (loadedTex) => {
             loadedTex.colorSpace = THREE.SRGBColorSpace;
-            targetMesh.material.map = loadedTex;
-            targetMesh.material.needsUpdate = true;
+            loadedTex.minFilter = THREE.LinearFilter;
+            loadedTex.magFilter = THREE.LinearFilter;
+            if (targetMesh.material) {
+              targetMesh.material.map = loadedTex;
+              targetMesh.material.needsUpdate = true;
+            }
+            setToastMessage('Image presented on screen! 🖼️');
+            setTimeout(() => setToastMessage(null), 2500);
           },
           undefined,
-          (err) => console.warn('Image texture load err:', err)
+          (err) => {
+            console.warn('Image texture load err:', err);
+            setToastMessage('Failed to load image. Please upload a file from your device.');
+            setTimeout(() => setToastMessage(null), 3500);
+          }
         );
       }
     } else if (contentType === 'document') {
@@ -1385,6 +1503,39 @@ export default function WorkspacePlatform({ user, onExit }) {
       { sender: userName, text: `🖥️ Updated **${screenId}** to display **${contentType}**!`, time: 'Just now' }
     ]);
   };
+
+  // Expose test helper hooks for automated test verification
+  if (typeof window !== 'undefined') {
+    window.__spotSelectScreen = (screenId) => {
+      const targetMesh = screensRef.current?.[screenId] || screensRef.current?.[`screen_${screenId}`] || sceneRef.current?.getObjectByName(`screen_${screenId}`);
+      if (targetMesh) {
+        const targetData = {
+          id: screenId,
+          name: targetMesh.userData?.displayName || `Office Display (${screenId})`,
+          mesh: targetMesh
+        };
+        activeScreenTargetRef.current = targetData;
+        setActiveScreenTarget(targetData);
+        if (cameraRef.current && mountRef.current) {
+          const sPos = new THREE.Vector3();
+          targetMesh.getWorldPosition(sPos);
+          const sHeight = targetMesh.userData?.height || 2.7;
+          sPos.y += sHeight / 2 + 0.12;
+          sPos.project(cameraRef.current);
+          const cWidth = mountRef.current.clientWidth || window.innerWidth;
+          const cHeight = mountRef.current.clientHeight || window.innerHeight;
+          const sx = Math.round(((sPos.x + 1) * cWidth) / 2);
+          const sy = Math.round(((-sPos.y + 1) * cHeight) / 2);
+          setActiveScreenPos({ x: sx, y: sy });
+        }
+        return true;
+      }
+      return false;
+    };
+    window.__spotUpdateScreenContent = handleUpdateScreenContent;
+    window.__spotStartScreenShare = startScreenShare;
+    window.__spotStopScreenShare = stopScreenShare;
+  }
 
   // Trigger Canonical Spot Emote
   const triggerEmote = (emoteId, emoji) => {

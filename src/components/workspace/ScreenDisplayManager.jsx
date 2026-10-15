@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Monitor, Video, Image, Globe, Users, Disc, FileText,
   BarChart3, Play, Calendar, Clock, LayoutGrid, X, Check,
-  ExternalLink, Sparkles, AlertCircle, RefreshCw
+  ExternalLink, Sparkles, AlertCircle, RefreshCw, Upload
 } from 'lucide-react';
 
 /**
  * ScreenDisplayManager: Renders the 12-icon floating display toolbar matching media_1791967521142.png
- * and provides full interactive controls to display custom content (YouTube, images, web pages,
- * screen share, starry logo, KPI, timers, and documents) on any office screen.
+ * and provides full interactive controls to display authentic content (local image upload, real YouTube,
+ * live WebRTC screen share, camera stream, countdown timers, and markdown notes) on any office screen.
  */
 export default function ScreenDisplayManager({
   activeScreen,
@@ -17,12 +17,14 @@ export default function ScreenDisplayManager({
   onUpdateScreenContent,
   onStartScreenShare
 }) {
-  const [selectedTool, setSelectedTool] = useState(null); // 'youtube', 'image', 'web', 'timer', etc.
+  const [selectedTool, setSelectedTool] = useState(null); // 'youtube', 'image', 'webpage', 'timer', 'document'
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [fileName, setFileName] = useState('');
   const [webUrl, setWebUrl] = useState('');
   const [timerMinutes, setTimerMinutes] = useState(15);
   const [docContent, setDocContent] = useState('# Sprint 42 - Architectural Standup\n- Review Spot 3D virtual office rebuild\n- OpenClaw gateway v0.2.0 testing\n- P2P spatial audio verification');
+  const fileInputRef = useRef(null);
 
   // The 12 Canonical Spot Screen Toolbar Icons (Exact order from media_1791993853484.png)
   const screenTools = [
@@ -44,8 +46,11 @@ export default function ScreenDisplayManager({
     setSelectedTool(toolId);
 
     if (toolId === 'screenshare') {
-      if (onStartScreenShare) onStartScreenShare(activeScreen);
-      if (onUpdateScreenContent) onUpdateScreenContent(activeScreen, 'screenshare', {});
+      if (onStartScreenShare) {
+        onStartScreenShare(activeScreen);
+      } else if (onUpdateScreenContent) {
+        onUpdateScreenContent(activeScreen, 'screenshare', {});
+      }
       onClose();
     } else if (toolId === 'starry-logo') {
       onUpdateScreenContent(activeScreen, 'starry-logo', {});
@@ -68,13 +73,28 @@ export default function ScreenDisplayManager({
     }
   };
 
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileName(file.name);
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        setImageUrl(loadEvent.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleApplyContent = () => {
     if (selectedTool === 'youtube') {
-      onUpdateScreenContent(activeScreen, 'youtube', { url: youtubeUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
+      if (!youtubeUrl.trim()) return;
+      onUpdateScreenContent(activeScreen, 'youtube', { url: youtubeUrl.trim() });
     } else if (selectedTool === 'image') {
-      onUpdateScreenContent(activeScreen, 'image', { url: imageUrl || 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800' });
+      if (!imageUrl) return;
+      onUpdateScreenContent(activeScreen, 'image', { url: imageUrl });
     } else if (selectedTool === 'webpage') {
-      onUpdateScreenContent(activeScreen, 'webpage', { url: webUrl || 'https://spotvirtual.com' });
+      if (!webUrl.trim()) return;
+      onUpdateScreenContent(activeScreen, 'webpage', { url: webUrl.trim() });
     } else if (selectedTool === 'timer') {
       onUpdateScreenContent(activeScreen, 'timer', { minutes: timerMinutes });
     } else if (selectedTool === 'document') {
@@ -82,6 +102,11 @@ export default function ScreenDisplayManager({
     }
     onClose();
   };
+
+  const isApplyDisabled =
+    (selectedTool === 'image' && !imageUrl) ||
+    (selectedTool === 'youtube' && !youtubeUrl.trim()) ||
+    (selectedTool === 'webpage' && !webUrl.trim());
 
   return (
     <div style={{
@@ -163,7 +188,7 @@ export default function ScreenDisplayManager({
           <X size={14} />
         </button>
 
-        {/* Downward Pointer Arrow touching the top center of the screen frame (media_1791993853484.png) */}
+        {/* Downward Pointer Arrow touching the top center of the screen frame */}
         <div style={{
           position: 'absolute',
           bottom: '-5px',
@@ -178,12 +203,12 @@ export default function ScreenDisplayManager({
       </div>
 
       {/* 2. Interactive Content Selection Modal */}
-      {selectedTool && selectedTool !== 'screenshare' && selectedTool !== 'starry-logo' && selectedTool !== 'kpi' && (
+      {selectedTool && !['screenshare', 'starry-logo', 'kpi', 'webcam', 'meeting', 'calendar', 'widgets'].includes(selectedTool) && (
         <div style={{
           marginTop: '16px',
-          width: '440px',
+          width: '450px',
           background: '#ffffff',
-          borderRadius: '14px',
+          borderRadius: '12px',
           boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
           border: '1px solid #cbd5e1',
           overflow: 'hidden'
@@ -199,7 +224,7 @@ export default function ScreenDisplayManager({
           }}>
             <strong style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Sparkles size={16} color="#38bdf8" />
-              Display on {activeScreen?.replace('screen', 'Board ').replace('featBoard', 'Roadmap Board').replace('mobileSchedule', 'Mobile Easel') || 'Screen'}
+              Display on {activeScreen?.replace('screen_', '').replace('_', ' ').toUpperCase() || 'Screen'}
             </strong>
             <button onClick={() => setSelectedTool(null)} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
               <X size={16} />
@@ -211,7 +236,7 @@ export default function ScreenDisplayManager({
             {selectedTool === 'youtube' && (
               <div>
                 <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  YouTube Video URL or Video ID
+                  YouTube Video Link or URL
                 </label>
                 <input
                   type="text"
@@ -220,50 +245,111 @@ export default function ScreenDisplayManager({
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginBottom: '10px' }}
                 />
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '1rem' }}>
-                  {[
-                    { label: 'Spot Product Tour', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' },
-                    { label: 'Lofi Coding Music', url: 'https://www.youtube.com/watch?v=jfKfPfyJRdk' }
-                  ].map((preset) => (
-                    <button
-                      key={preset.label}
-                      onClick={() => setYoutubeUrl(preset.url)}
-                      style={{ fontSize: '11px', padding: '5px 8px', borderRadius: '4px', background: '#f1f5f9', border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
+                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '1rem' }}>
+                  Paste any YouTube URL to project the official video thumbnail and stream directly onto this 3D display.
+                </span>
               </div>
             )}
 
-            {/* Custom Image */}
+            {/* Custom Image with Real File Upload */}
             {selectedTool === 'image' && (
               <div>
-                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  Image URL (PNG, JPG, WebP)
+                <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '8px' }}>
+                  Upload Image from Device or Enter URL
                 </label>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={handleFileUpload}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: '100%',
+                    padding: '11px 16px',
+                    borderRadius: '8px',
+                    border: '1.5px dashed #3b82f6',
+                    background: '#eff6ff',
+                    color: '#1d4ed8',
+                    fontWeight: 600,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    marginBottom: '10px',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#dbeafe'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = '#eff6ff'}
+                >
+                  <Upload size={16} />
+                  <span>Choose Image File from Computer</span>
+                </button>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '10px 0' }}>
+                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                  <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>OR PASTE IMAGE URL</span>
+                  <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                </div>
+
                 <input
                   type="text"
-                  placeholder="https://images.unsplash.com/..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/slide.png"
+                  value={imageUrl.startsWith('data:') ? `[Local File: ${fileName || 'Selected Image'}]` : imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value);
+                    setFileName('');
+                  }}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginBottom: '10px' }}
                 />
-                <div style={{ display: 'flex', gap: '6px', marginBottom: '1rem' }}>
-                  {[
-                    { label: 'Architecture Blueprint', url: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800' },
-                    { label: 'City Skyline', url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800' }
-                  ].map((preset) => (
+
+                {imageUrl && (
+                  <div style={{ marginBottom: '12px', position: 'relative', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#0f172a' }}>
+                    <img
+                      src={imageUrl}
+                      alt="Screen Preview"
+                      style={{ width: '100%', height: '130px', objectFit: 'contain' }}
+                    />
+                    <div style={{ position: 'absolute', bottom: '6px', left: '8px', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '11px', padding: '2px 6px', borderRadius: '4px' }}>
+                      Ready to project to 3D screen
+                    </div>
                     <button
-                      key={preset.label}
-                      onClick={() => setImageUrl(preset.url)}
-                      style={{ fontSize: '11px', padding: '5px 8px', borderRadius: '4px', background: '#f1f5f9', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                      type="button"
+                      onClick={() => {
+                        setImageUrl('');
+                        setFileName('');
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                      }}
+                      title="Clear image"
+                      style={{
+                        position: 'absolute',
+                        top: '6px',
+                        right: '6px',
+                        background: 'rgba(239, 68, 68, 0.9)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '22px',
+                        height: '22px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '14px',
+                        fontWeight: 'bold'
+                      }}
                     >
-                      {preset.label}
+                      ×
                     </button>
-                  ))}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -281,29 +367,31 @@ export default function ScreenDisplayManager({
                   style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.85rem', marginBottom: '10px' }}
                 />
                 <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '1rem' }}>
-                  Embed interactive web apps directly onto the 3D surface for team collaboration.
+                  Embed interactive web apps and live dashboards directly on the 3D surface.
                 </span>
               </div>
             )}
 
-            {/* Presentation Timer */}
+            {/* Presentation Countdown Timer */}
             {selectedTool === 'timer' && (
               <div>
                 <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
                   Presentation Countdown Timer (Minutes)
                 </label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem' }}>
-                  {[5, 10, 15, 25, 45].map((mins) => (
+                  {[1, 5, 10, 15, 25, 45].map((mins) => (
                     <button
                       key={mins}
                       onClick={() => setTimerMinutes(mins)}
                       style={{
                         flex: 1,
-                        padding: '10px',
+                        padding: '10px 4px',
                         borderRadius: '6px',
                         fontWeight: 700,
+                        fontSize: '0.82rem',
                         border: timerMinutes === mins ? '2px solid #0284c7' : '1px solid #cbd5e1',
                         background: timerMinutes === mins ? '#e0f2fe' : '#f8fafc',
+                        color: timerMinutes === mins ? '#0369a1' : '#334155',
                         cursor: 'pointer'
                       }}
                     >
@@ -311,6 +399,9 @@ export default function ScreenDisplayManager({
                     </button>
                   ))}
                 </div>
+                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '1rem' }}>
+                  Starts an active live ticking countdown clock that counts down every second in real time on this 3D wall display.
+                </span>
               </div>
             )}
 
@@ -339,7 +430,17 @@ export default function ScreenDisplayManager({
               </button>
               <button
                 onClick={handleApplyContent}
-                style={{ padding: '8px 18px', borderRadius: '6px', background: '#0284c7', color: '#fff', border: 'none', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+                disabled={isApplyDisabled}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  background: isApplyDisabled ? '#94a3b8' : '#0284c7',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: '0.82rem',
+                  fontWeight: 700,
+                  cursor: isApplyDisabled ? 'not-allowed' : 'pointer'
+                }}
               >
                 Display on Screen
               </button>
