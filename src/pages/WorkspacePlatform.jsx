@@ -25,11 +25,14 @@ import SpotLinkModal from '../components/workspace/SpotLinkModal';
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
 
-  // User & Room state (defaults to Boardroom / Sunn Kesh HQ matching media_1791969444037.png)
+  // User & Space/Room state (support both @office and @ser-emY)
+  const isInitialSer = user?.spaceSlug?.includes('ser') || user?.spotUri?.includes('ser');
   const [userName, setUserName] = useState(user?.fullName || 'Ayush Kesharwani');
-  const [currentRoom, setCurrentRoom] = useState(user?.targetRoom || 'Boardroom');
-  const [currentRoomId, setCurrentRoomId] = useState('boardroom');
-  const [workspaceSlug, setWorkspaceSlug] = useState(user?.workspaceSlug || '@sunnkesh-4c24f4f3d747fffc');
+  const [currentSpace, setCurrentSpace] = useState(isInitialSer ? 'ser-emY' : (user?.spaceSlug || 'office'));
+  const [currentSpaceName, setCurrentSpaceName] = useState(isInitialSer ? 'ser' : (user?.spaceName || 'Office'));
+  const [currentRoom, setCurrentRoom] = useState(user?.targetRoom || (isInitialSer ? 'Office A' : 'Boardroom'));
+  const [currentRoomId, setCurrentRoomId] = useState(user?.targetRoomId || (isInitialSer ? 'office-a' : 'boardroom'));
+  const [workspaceSlug, setWorkspaceSlug] = useState(user?.workspaceSlug || 'sunnkesh-4c24f4f3d747fffc');
   const [inAudioRange, setInAudioRange] = useState(['Alex', 'Wes', 'Stefan', 'Steven', 'Phil']);
   const [activeTab, setActiveTab] = useState('none'); // 'none', 'ai', 'team', 'chat', 'whiteboard', 'settings'
   const [activeReaction, setActiveReaction] = useState(null);
@@ -134,7 +137,16 @@ export default function WorkspacePlatform({ user, onExit }) {
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
   const playerPartsRef = useRef(null);
-  const targetPosRef = useRef(new THREE.Vector3(-9, 0, 16));
+  const getInitialPlayerPosition = () => {
+    if (user?.targetRoom?.toLowerCase().includes('lobby') || user?.targetRoomId === 'lobby') {
+      return new THREE.Vector3(22, 0, -16);
+    }
+    if (user?.targetRoom?.toLowerCase().includes('office a') || user?.targetRoomId === 'office-a' || isInitialSer) {
+      return new THREE.Vector3(-8, 0, 8);
+    }
+    return new THREE.Vector3(-9, 0, 16);
+  };
+  const targetPosRef = useRef(getInitialPlayerPosition());
   const isSittingRef = useRef(false);
   const avatarsRef = useRef([]);
   const chairsRef = useRef([]);
@@ -591,9 +603,10 @@ export default function WorkspacePlatform({ user, onExit }) {
     // more so the office fills the viewport and the distant landscape stays secondary.
     const aspect = width / height;
     const camera = new THREE.PerspectiveCamera(34, aspect, 0.5, 600);
-    // Perspective view focusing on Boardroom (-9, 0, 16)
-    camera.position.set(-9.0, 15.0, 31.0);
-    camera.lookAt(-9.0, 1.8, 16.0);
+    // Perspective view focusing on initial target room
+    const initPos = targetPosRef.current;
+    camera.position.set(initPos.x, 15.0, initPos.z + 15.0);
+    camera.lookAt(initPos.x, 1.8, initPos.z);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -1140,7 +1153,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     };
   }, [spatialFalloff]);
 
-  // Jump camera/avatar to specific room across the 12 canonical Spot rooms
+  // Jump camera/avatar to specific room across both Office and ser spaces
   const jumpToRoom = (roomName) => {
     playSound('chime');
     const clean = (roomName || '').toLowerCase();
@@ -1148,7 +1161,27 @@ export default function WorkspacePlatform({ user, onExit }) {
     let slug = 'boardroom';
     let formattedName = 'Boardroom';
 
-    if (clean.includes('auditorium')) {
+    if (clean.includes('office-a') || clean.includes('office a')) {
+      target.set(-8, 0, 8);
+      slug = 'office-a';
+      formattedName = 'Office A';
+    } else if (clean.includes('focus-pod-1') || clean.includes('focus pod 1')) {
+      target.set(10, 0, -8);
+      slug = 'focus-pod-1';
+      formattedName = 'Focus Pod 1';
+    } else if (clean.includes('focus-pod-2') || clean.includes('focus pod 2')) {
+      target.set(10, 0, 8);
+      slug = 'focus-pod-2';
+      formattedName = 'Focus Pod 2';
+    } else if (clean.includes('team-suite') || clean.includes('team suite')) {
+      target.set(0, 0, 16);
+      slug = 'team-suite';
+      formattedName = 'Team Suite';
+    } else if (clean.includes('terrace')) {
+      target.set(-18, 0, -12);
+      slug = 'terrace';
+      formattedName = 'Terrace Lounge';
+    } else if (clean.includes('auditorium')) {
       target.set(-24, 0, 14);
       slug = 'auditorium';
       formattedName = 'Auditorium';
@@ -1217,8 +1250,34 @@ export default function WorkspacePlatform({ user, onExit }) {
     }
 
     try {
-      window.history.pushState({}, '', `/${workspaceSlug}/@office/@${slug}`);
+      const sp = (currentSpace === 'ser-emY' || currentSpace === 'ser') ? 'ser-emY' : 'office';
+      window.history.pushState({}, '', `/@${workspaceSlug.replace('@', '')}/@${sp}/@${slug}`);
     } catch (e) {}
+  };
+
+  // Switch between Spaces (@office vs @ser-emY)
+  const handleSelectSpace = (newSpaceSlug, newSpaceName) => {
+    playSound('chime');
+    const cleanSlug = (newSpaceSlug || '').replace('@', '');
+    const cleanName = newSpaceName || (cleanSlug.includes('ser') ? 'ser' : 'Office');
+    setCurrentSpace(cleanSlug);
+    setCurrentSpaceName(cleanName);
+
+    if (cleanSlug.includes('ser')) {
+      jumpToRoom('Office A');
+      setToastMessage('Switched to "ser" space (Office A & Focus Pods)! 🏢');
+      setTimeout(() => setToastMessage(null), 3000);
+      try {
+        window.history.pushState({}, '', `/@${workspaceSlug.replace('@', '')}/@ser-emY/@office-a`);
+      } catch (e) {}
+    } else {
+      jumpToRoom('Boardroom');
+      setToastMessage('Switched to "Office" space (12 rooms)! 🏢');
+      setTimeout(() => setToastMessage(null), 3000);
+      try {
+        window.history.pushState({}, '', `/@${workspaceSlug.replace('@', '')}/@office/@boardroom`);
+      } catch (e) {}
+    }
   };
 
   // Spot 3D Screen Content Switcher (media_1791967521142.png)
@@ -3139,9 +3198,12 @@ export default function WorkspacePlatform({ user, onExit }) {
         <SpacesSidebar
           isOpen={isSpacesSidebarOpen}
           onClose={() => setIsSpacesSidebarOpen(false)}
+          currentSpace={currentSpace}
+          onSelectSpace={handleSelectSpace}
           currentRoom={currentRoom}
           onSelectRoom={(rm) => jumpToRoom(rm)}
           userName={userName}
+          onOpenInvite={() => setIsSpotLinkModalOpen(true)}
         />
 
         {/* 10. Spot User Profile & Status Drawer (media_1791967544187.webp) */}

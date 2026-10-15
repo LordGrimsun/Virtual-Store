@@ -11,6 +11,8 @@ import {
 export default function SpacesSidebar({
   isOpen,
   onClose,
+  currentSpace = 'office',
+  onSelectSpace,
   currentRoom = 'Boardroom',
   onSelectRoom,
   userName = 'Ayush Kesharwani',
@@ -22,8 +24,11 @@ export default function SpacesSidebar({
 
   if (!isOpen) return null;
 
-  // The exact 12 canonical rooms from Spot Virtual floorplan blueprint (media_1791969443822.png)
-  const canonicalRooms = [
+  const isSerSpace = currentSpace === 'ser-emY' || currentSpace === '@ser-emY' || currentSpace === 'ser';
+  const spaceDisplayName = isSerSpace ? 'ser' : 'Office';
+
+  // The 12 canonical rooms for Office space matching Spot Virtual blueprint (media_1791969443822.png)
+  const officeRooms = [
     { id: 'auditorium', name: 'Auditorium', badge: '🏠', isHome: true },
     { id: 'boardroom', name: 'Boardroom', badge: null },
     { id: 'chat-a', name: 'Chat A', badge: null },
@@ -38,21 +43,43 @@ export default function SpacesSidebar({
     { id: 'workspace-a', name: 'Workspace A', badge: null }
   ];
 
-  // Teammates presence list
-  const teammates = [
-    { name: 'Sarah Chen', room: 'Conference A', role: 'Design Lead' },
-    { name: 'Wes Vance', room: 'Workspace A', role: 'Platform Architect' },
-    { name: 'Stefan M.', room: 'Lounge B', role: 'Audio Lead' },
-    { name: 'DevBot (AI)', room: 'Conference B', role: 'Autonomous Agent' }
+  // The dedicated rooms for ser-emY space reverse-engineered from live spotvirtual.com/@sunnkesh-4c24f4f3d747fffc/@ser-emY/@office-a
+  const serRooms = [
+    { id: 'office-a', name: 'Office A', badge: '🏠', isHome: true },
+    { id: 'focus-pod-1', name: 'Focus Pod 1', badge: null },
+    { id: 'focus-pod-2', name: 'Focus Pod 2', badge: null },
+    { id: 'team-suite', name: 'Team Suite', badge: '((•))', isBroadcast: true },
+    { id: 'terrace', name: 'Terrace Lounge', badge: '🌐', isGlobe: true }
   ];
+
+  const canonicalRooms = isSerSpace ? serRooms : officeRooms;
+
+  // Teammates presence list
+  const teammates = isSerSpace
+    ? [
+        { name: 'Stefan M.', room: 'Office A', role: 'Audio Lead' },
+        { name: 'Sarah Chen', room: 'Team Suite', role: 'Design Lead' },
+        { name: 'DevBot (AI)', room: 'Focus Pod 1', role: 'Autonomous Agent' }
+      ]
+    : [
+        { name: 'Sarah Chen', room: 'Conference A', role: 'Design Lead' },
+        { name: 'Wes Vance', room: 'Workspace A', role: 'Platform Architect' },
+        { name: 'Stefan M.', room: 'Lounge B', role: 'Audio Lead' },
+        { name: 'DevBot (AI)', room: 'Conference B', role: 'Autonomous Agent' }
+      ];
 
   const filteredRooms = canonicalRooms.filter((r) =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const normalizeRoomName = (name) => {
-    if (!name) return 'boardroom';
+    if (!name) return isSerSpace ? 'office-a' : 'boardroom';
     const clean = name.toLowerCase();
+    if (clean.includes('office-a') || clean.includes('office a')) return 'office-a';
+    if (clean.includes('focus-pod-1') || clean.includes('focus pod 1')) return 'focus-pod-1';
+    if (clean.includes('focus-pod-2') || clean.includes('focus pod 2')) return 'focus-pod-2';
+    if (clean.includes('team-suite') || clean.includes('team suite')) return 'team-suite';
+    if (clean.includes('terrace')) return 'terrace';
     if (clean.includes('auditorium')) return 'auditorium';
     if (clean.includes('boardroom')) return 'boardroom';
     if (clean.includes('chat a')) return 'chat-a';
@@ -88,7 +115,7 @@ export default function SpacesSidebar({
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
     >
-      {/* 1. Header: Office Dropdown & Close X */}
+      {/* 1. Header: Space Dropdown & Close X */}
       <div
         style={{
           height: '52px',
@@ -96,23 +123,25 @@ export default function SpacesSidebar({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid #f1f3f5'
+          borderBottom: '1px solid #f1f3f5',
+          position: 'relative'
         }}
       >
         <button
+          id="space_dropdown_trigger"
           onClick={() => setIsOfficeMenuOpen(!isOfficeMenuOpen)}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            background: 'transparent',
+            background: isOfficeMenuOpen ? '#f3f4f6' : 'transparent',
             border: 'none',
             cursor: 'pointer',
             padding: '4px 6px',
             borderRadius: '6px'
           }}
         >
-          {/* Green Spot Office Emblem */}
+          {/* Green Spot Space Emblem */}
           <div
             style={{
               width: '18px',
@@ -134,10 +163,96 @@ export default function SpacesSidebar({
             />
           </div>
           <span style={{ fontSize: '15px', fontWeight: 700, color: '#111827' }}>
-            Office
+            {spaceDisplayName}
           </span>
           <ChevronDown size={15} color="#6b7280" />
         </button>
+
+        {/* Space Selector Dropdown Menu */}
+        {isOfficeMenuOpen && (
+          <div
+            id="space_dropdown_menu"
+            style={{
+              position: 'absolute',
+              top: '52px',
+              left: '10px',
+              width: '220px',
+              background: '#ffffff',
+              borderRadius: '8px',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              border: '1px solid #e5e7eb',
+              padding: '6px',
+              zIndex: 100
+            }}
+          >
+            <div style={{ fontSize: '11px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', padding: '6px 8px 4px', letterSpacing: '0.05em' }}>
+              Spaces in Sunnkesh
+            </div>
+
+            {/* Space 1: Office */}
+            <button
+              id="space_option_office"
+              onClick={() => {
+                setIsOfficeMenuOpen(false);
+                if (onSelectSpace) onSelectSpace('office', 'Office');
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                background: !isSerSpace ? '#f0fdf4' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '13.5px', fontWeight: 600, color: !isSerSpace ? '#10b981' : '#111827' }}>
+                  Office
+                </div>
+                <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                  12 rooms (@lobby, @boardroom...)
+                </div>
+              </div>
+              {!isSerSpace && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />}
+            </button>
+
+            {/* Space 2: ser */}
+            <button
+              id="space_option_ser"
+              onClick={() => {
+                setIsOfficeMenuOpen(false);
+                if (onSelectSpace) onSelectSpace('ser-emY', 'ser');
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 10px',
+                borderRadius: '6px',
+                background: isSerSpace ? '#f0fdf4' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                marginTop: '2px'
+              }}
+            >
+              <div>
+                <div style={{ fontSize: '13.5px', fontWeight: 600, color: isSerSpace ? '#10b981' : '#111827' }}>
+                  ser
+                </div>
+                <div style={{ fontSize: '11px', color: '#6b7280' }}>
+                  Office A (@office-a, focus pods...)
+                </div>
+              </div>
+              {isSerSpace && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />}
+            </button>
+          </div>
+        )}
 
         <button
           onClick={onClose}
