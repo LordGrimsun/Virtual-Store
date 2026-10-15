@@ -44,8 +44,8 @@ export default function ScreenDisplayManager({
     setSelectedTool(toolId);
 
     if (toolId === 'screenshare') {
-      onStartScreenShare();
-      onUpdateScreenContent(activeScreen, 'screenshare', {});
+      if (onStartScreenShare) onStartScreenShare(activeScreen);
+      if (onUpdateScreenContent) onUpdateScreenContent(activeScreen, 'screenshare', {});
       onClose();
     } else if (toolId === 'starry-logo') {
       onUpdateScreenContent(activeScreen, 'starry-logo', {});

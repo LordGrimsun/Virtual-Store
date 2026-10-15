@@ -41,7 +41,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const screensMap = {};
 
   // Helper: Wall-Mounted Starry Spot Screen (matching media_1791993853484.png & media_1791969444037.png)
-  const createSpotWallScreen = (x, y, z, width = 4.8, height = 2.7, rotY = 0, screenKey = 'boardroom') => {
+  const createSpotWallScreen = (x, y, z, width = 4.8, height = 2.7, rotY = 0, screenKey = 'boardroom', defaultTex = null, displayName = '') => {
     const screenGrp = new THREE.Group();
     screenGrp.name = `screen_group_${screenKey}`;
 
@@ -51,20 +51,20 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     casing.name = `casing_screen_${screenKey}`;
     screenGrp.add(casing);
 
-    // Display face with starry Spot background (Exact match to media_1791993853484.png)
-    const defaultTexture = screenTextures?.createStarryLogoTexture ? screenTextures.createStarryLogoTexture() : (screenTextures?.starryLogoTexture || screenTextures?.logoTexture);
-    if (defaultTexture) defaultTexture.colorSpace = THREE.SRGBColorSpace;
+    // Display face with role-specific texture (Exact match to media_1791993853484.png & media_1792034444325.png)
+    const texture = defaultTex || (screenTextures?.createStarryLogoTexture ? screenTextures.createStarryLogoTexture() : (screenTextures?.starryLogoTexture || screenTextures?.logoTexture));
+    if (texture) texture.colorSpace = THREE.SRGBColorSpace;
     const displayMat = new THREE.MeshBasicMaterial({
-      map: defaultTexture,
+      map: texture,
       color: 0xffffff,
       side: THREE.DoubleSide
     });
     const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), displayMat);
     displayMesh.position.z = 0.07;
     displayMesh.name = `screen_${screenKey}`;
-    displayMesh.userData = { isSpotScreen: true, screenKey, width, height, displayMesh };
-    casing.userData = { isSpotScreen: true, screenKey, width, height, displayMesh };
-    screenGrp.userData = { isSpotScreen: true, screenKey, width, height, displayMesh };
+    displayMesh.userData = { isSpotScreen: true, screenKey, width, height, displayMesh, displayName };
+    casing.userData = { isSpotScreen: true, screenKey, width, height, displayMesh, displayName };
+    screenGrp.userData = { isSpotScreen: true, screenKey, width, height, displayMesh, displayName };
     screenGrp.add(displayMesh);
 
     // Subtle edge back-light
@@ -75,6 +75,53 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     screenGrp.position.set(x, y, z);
     screenGrp.rotation.y = rotY;
     furnitureGroup.add(screenGrp);
+
+    screensMap[screenKey] = displayMesh;
+    screensMap[`screen_${screenKey}`] = displayMesh;
+    return displayMesh;
+  };
+
+  // Helper: Modern Ergonomic Workstation Monitor (Exact match to media_1792034444310.png)
+  const createWorkstationMonitor = (mx, my, mz, rotY = 0, screenKey = 'workstation_mon', defaultTex = null, displayName = 'Workstation Monitor') => {
+    const monGrp = new THREE.Group();
+    monGrp.name = `screen_group_${screenKey}`;
+
+    // 1. Metal Stand Base (resting on desk at my)
+    const base = new THREE.Mesh(roundedBox(0.24, 0.015, 0.18, 0.02), chromeMat);
+    base.position.set(0, 0.008, 0);
+    monGrp.add(base);
+
+    // 2. Stand Vertical Riser / Neck
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.24, 12), blackMat);
+    neck.position.set(0, 0.13, -0.02);
+    monGrp.add(neck);
+
+    // 3. Monitor Bezel Casing (width: 0.72, height: 0.44, depth: 0.03)
+    const casing = new THREE.Mesh(roundedBox(0.72, 0.44, 0.03, 0.015), screenBezelMat);
+    casing.position.set(0, 0.26, 0);
+    casing.castShadow = true;
+    casing.name = `casing_screen_${screenKey}`;
+    monGrp.add(casing);
+
+    // 4. Display Screen Face with dedicated high-def texture
+    const texture = defaultTex || (screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture() : screenTextures?.starryLogoTexture);
+    if (texture) texture.colorSpace = THREE.SRGBColorSpace;
+    const displayMat = new THREE.MeshBasicMaterial({
+      map: texture,
+      color: 0xffffff,
+      side: THREE.DoubleSide
+    });
+    const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.40), displayMat);
+    displayMesh.position.set(0, 0.26, 0.018);
+    displayMesh.name = `screen_${screenKey}`;
+    displayMesh.userData = { isSpotScreen: true, screenKey, width: 0.68, height: 0.40, displayMesh, isDeskMonitor: true, displayName };
+    casing.userData = { isSpotScreen: true, screenKey, width: 0.68, height: 0.40, displayMesh, isDeskMonitor: true, displayName };
+    monGrp.userData = { isSpotScreen: true, screenKey, width: 0.68, height: 0.40, displayMesh, isDeskMonitor: true, displayName };
+    monGrp.add(displayMesh);
+
+    monGrp.position.set(mx, my, mz);
+    monGrp.rotation.y = rotY;
+    furnitureGroup.add(monGrp);
 
     screensMap[screenKey] = displayMesh;
     screensMap[`screen_${screenKey}`] = displayMesh;
@@ -279,7 +326,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Matching media_1791993853484.png & media_1791969444037.png
   // ==========================================
   // West wall starry Spot screen (matching authentic Spot layout in media_1791969444037.png)
-  createSpotWallScreen(-15.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'boardroom');
+  createSpotWallScreen(
+    -15.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'boardroom',
+    screenTextures?.starryLogoTexture,
+    'Boardroom Presentation Screen'
+  );
 
   // Facing Black Sofas
   createBlackSofa(-11.6, 16, Math.PI / 2, 'Boardroom West Sofa');
@@ -303,7 +354,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // 2. CONFERENCE B (x: 5, z: 16)
   // Matching media_1791969444037.png
   // ==========================================
-  createSpotWallScreen(-1.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'conference_b');
+  createSpotWallScreen(
+    -1.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'conference_b',
+    screenTextures?.createSprintBoardTexture ? screenTextures.createSprintBoardTexture() : screenTextures?.chartTexture,
+    'Conference Room B Sprint Standup Screen'
+  );
 
   // Long Dark Conference Table
   const confBTable = new THREE.Mesh(roundedBox(6.4, 0.1, 1.8, 0.05), darkTableMat);
@@ -327,7 +382,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // ==========================================
   // 3. CONFERENCE A (x: 19, z: 16)
   // ==========================================
-  createSpotWallScreen(12.2, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'conference_a');
+  createSpotWallScreen(
+    12.2, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'conference_a',
+    screenTextures?.kpiTexture,
+    'Conference Room A Telemetry Scoreboard'
+  );
 
   // 10-Seater Dark Conference Table
   const confATable = new THREE.Mesh(roundedBox(8.2, 0.1, 1.8, 0.05), darkTableMat);
@@ -352,7 +411,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Matching 7 tiers of stadium seating in blueprint
   // ==========================================
   // Giant vertical screen on west wall
-  createSpotWallScreen(-31.8, 3.6, 16, 7.2, 4.0, Math.PI / 2, 'auditorium');
+  createSpotWallScreen(
+    -31.8, 3.6, 16, 7.2, 4.0, Math.PI / 2, 'auditorium',
+    screenTextures?.createAuditoriumKeynoteTexture ? screenTextures.createAuditoriumKeynoteTexture() : screenTextures?.starryLogoTexture,
+    'Auditorium Main Stage Display'
+  );
 
   // 7 Tiers of black bench seating facing the stage (west)
   for (let tier = 0; tier < 7; tier++) {
@@ -434,7 +497,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // 6. WORKSPACE A (x: 0, z: -16)
   // 4 Engineering workstation desk clusters
   // ==========================================
-  const createDeskPod = (px, pz) => {
+  const createDeskPod = (px, pz, podId = 1) => {
     const pod = new THREE.Group();
 
     // Central 4-person shared desk
@@ -451,19 +514,37 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     divider.position.set(0, 0.98, 0);
     pod.add(divider);
 
-    // Dual monitors for each of the 4 stations
+    // 4 Modern Interactive Workstation Monitors (Exact match to media_1792034444310.png)
+    // North monitors (facing south, rotY = 0)
+    createWorkstationMonitor(
+      px - 0.9, 0.78, pz - 0.28, 0,
+      `desk_${podId}_n_left`,
+      screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('WorkspacePlatform.jsx') : screenTextures?.chartTexture,
+      `Engineering Pod ${podId} (IDE Display)`
+    );
+    createWorkstationMonitor(
+      px + 0.9, 0.78, pz - 0.28, 0,
+      `desk_${podId}_n_right`,
+      screenTextures?.createTerminalLogsTexture ? screenTextures.createTerminalLogsTexture() : screenTextures?.kpiTexture,
+      `Engineering Pod ${podId} (DevOps Terminal)`
+    );
+
+    // South monitors (facing north, rotY = Math.PI)
+    createWorkstationMonitor(
+      px - 0.9, 0.78, pz + 0.28, Math.PI,
+      `desk_${podId}_s_left`,
+      screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.featTexture,
+      `Engineering Pod ${podId} (Figma UI Canvas)`
+    );
+    createWorkstationMonitor(
+      px + 0.9, 0.78, pz + 0.28, Math.PI,
+      `desk_${podId}_s_right`,
+      screenTextures?.createTelecastLiveTexture ? screenTextures.createTelecastLiveTexture(`Pod ${podId} Station`, 'Ayush (you)') : screenTextures?.starryLogoTexture,
+      `Engineering Pod ${podId} (Workstation Telecast)`
+    );
+
+    // Task chairs
     [-0.9, 0.9].forEach((dx) => {
-      // North monitors
-      const monN = new THREE.Mesh(roundedBox(0.68, 0.42, 0.03, 0.02), screenBezelMat);
-      monN.position.set(dx, 1.02, -0.22);
-      pod.add(monN);
-
-      // South monitors
-      const monS = new THREE.Mesh(roundedBox(0.68, 0.42, 0.03, 0.02), screenBezelMat);
-      monS.position.set(dx, 1.02, 0.22);
-      pod.add(monS);
-
-      // Task chairs
       createCantileverChair(px + dx, pz - 1.4, Math.PI, 'Workstation Chair');
       createCantileverChair(px + dx, pz + 1.4, 0, 'Workstation Chair');
     });
@@ -472,10 +553,10 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(pod);
   };
 
-  createDeskPod(-6, -19);
-  createDeskPod(6, -19);
-  createDeskPod(-6, -13);
-  createDeskPod(6, -13);
+  createDeskPod(-6, -19, 1);
+  createDeskPod(6, -19, 2);
+  createDeskPod(-6, -13, 3);
+  createDeskPod(6, -13, 4);
 
   // ==========================================
   // 7. LOBBY 🌐 (x: 22, z: -16)
@@ -487,10 +568,13 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   recepDesk.castShadow = true;
   furnitureGroup.add(recepDesk);
 
-  // Reception monitors
-  const recepMon = new THREE.Mesh(roundedBox(0.72, 0.45, 0.04, 0.02), screenBezelMat);
-  recepMon.position.set(22.0, 1.25, -21.0);
-  furnitureGroup.add(recepMon);
+  // Interactive Reception Monitor
+  createWorkstationMonitor(
+    22.0, 1.05, -21.0, -Math.PI / 2,
+    'desk_reception',
+    screenTextures?.schedTexture,
+    'Lobby Reception Guest Monitor'
+  );
 
   createCantileverChair(22.0, -22.2, 0, 'Receptionist Chair');
 
@@ -568,24 +652,30 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   });
 
   // 2 4-person workstation pods on the right (x: 4, z: -4)
-  createDeskPod(4, -4);
+  createDeskPod(4, -4, 5);
 
   // ==========================================
   // 10. CHAT A & CHAT B (x: 12, z: -4 & +4)
   // Private 1-on-1 huddle booths
   // ==========================================
   [-4, 4].forEach((cz, idx) => {
+    const isChatA = idx === 0;
     const desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
     desk.position.set(12.0, 0.74, cz);
     desk.castShadow = true;
     furnitureGroup.add(desk);
 
-    // Wall screen
-    const mon = new THREE.Mesh(roundedBox(0.85, 0.52, 0.04, 0.02), screenBezelMat);
-    mon.position.set(12.0, 1.2, cz - 0.5);
-    furnitureGroup.add(mon);
+    // Interactive Desk Workstation Monitor
+    createWorkstationMonitor(
+      12.0, 0.78, cz - 0.25, 0,
+      isChatA ? 'desk_chat_a' : 'desk_chat_b',
+      isChatA
+        ? (screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('PairProgramming.tsx') : screenTextures?.codeEditorTexture)
+        : screenTextures?.archTexture,
+      isChatA ? 'Chat A Huddle Workstation' : 'Chat B Huddle Workstation'
+    );
 
-    createCantileverChair(12.0, cz + 0.6, 0, `Chat ${idx === 0 ? 'A' : 'B'} Chair`);
+    createCantileverChair(12.0, cz + 0.6, 0, `Chat ${isChatA ? 'A' : 'B'} Chair`);
   });
 
   // ==========================================
@@ -624,11 +714,27 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createCantileverChair(23.0, 4.3, 0, 'Lounge A North Chair 2');
   createCantileverChair(23.0, 6.1, Math.PI, 'Lounge A South Chair 2');
 
-  // Additional interactive screens across other rooms
-  createSpotWallScreen(0, 3.2, -23.8, 4.8, 2.7, 0, 'workspace_a');
-  createSpotWallScreen(13.8, 2.2, -4.0, 2.2, 1.4, -Math.PI / 2, 'chat_a');
-  createSpotWallScreen(13.8, 2.2, 4.0, 2.2, 1.4, -Math.PI / 2, 'chat_b');
-  createSpotWallScreen(23.0, 3.0, -8.8, 3.6, 2.2, 0, 'lounge_a');
+  // Dedicated interactive screens across other rooms with separate roles
+  createSpotWallScreen(
+    0, 3.2, -23.8, 4.8, 2.7, 0, 'workspace_a',
+    screenTextures?.createCiCdMonitorTexture ? screenTextures.createCiCdMonitorTexture() : screenTextures?.chartTexture,
+    'Workspace A Team CI/CD Monitor'
+  );
+  createSpotWallScreen(
+    13.8, 2.2, -4.0, 2.2, 1.4, -Math.PI / 2, 'chat_a',
+    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('WorkspacePlatform.jsx') : screenTextures?.codeEditorTexture,
+    'Chat A Pair Programming Monitor'
+  );
+  createSpotWallScreen(
+    13.8, 2.2, 4.0, 2.2, 1.4, -Math.PI / 2, 'chat_b',
+    screenTextures?.archTexture,
+    'Chat B System Architecture Monitor'
+  );
+  createSpotWallScreen(
+    23.0, 3.0, -8.8, 3.6, 2.2, 0, 'lounge_a',
+    screenTextures?.createSocialWallTexture ? screenTextures.createSocialWallTexture() : screenTextures?.featTexture,
+    'Lounge A Community Video Wall'
+  );
 
   return { ...screensMap, furnitureGroup };
 }
