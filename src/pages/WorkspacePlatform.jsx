@@ -60,6 +60,8 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Spot Dynamic Screen Displays & Sidebars
   const [activeScreenTarget, setActiveScreenTarget] = useState(null);
+  const [activeScreenPos, setActiveScreenPos] = useState(null);
+  const activeScreenTargetRef = useRef(null);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isSpacesSidebarOpen, setIsSpacesSidebarOpen] = useState(true); // Open by default matching reference
   const screensRef = useRef({});
@@ -138,6 +140,15 @@ export default function WorkspacePlatform({ user, onExit }) {
   const wavingHandMeshRef = useRef(null);
   const playerAnimStateRef = useRef({ emote: null, emoteTime: 0 });
   const keysPressedRef = useRef({});
+
+  // Dynamic Camera Orbit, Zoom & Performance Throttling
+  const cameraDistanceRef = useRef(20);
+  const cameraOrbitAngleRef = useRef(0.28);
+  const cameraPitchAngleRef = useRef(0.64);
+  const isDraggingOrbitRef = useRef(false);
+  const lastMousePosRef = useRef({ x: 0, y: 0 });
+  const lastUiUpdateRef = useRef(0);
+  const activeVideoTextureRef = useRef(null);
 
   // 1. Procedural Web Audio Sound Synthesizer
   const audioCtxRef = useRef(null);
@@ -222,11 +233,24 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (screenShareVideoRef.current) {
         screenShareVideoRef.current.srcObject = stream;
         screenShareVideoRef.current.play();
+
+        // Project real-time video texture directly onto the 3D wall display
+        const vidTex = new THREE.VideoTexture(screenShareVideoRef.current);
+        vidTex.colorSpace = THREE.SRGBColorSpace;
+        vidTex.minFilter = THREE.LinearFilter;
+        vidTex.magFilter = THREE.LinearFilter;
+        activeVideoTextureRef.current = vidTex;
+
+        const target = activeScreenTarget?.mesh || screensRef.current?.boardroom || sceneRef.current?.getObjectByName('screen_boardroom');
+        if (target && target.material) {
+          target.material.map = vidTex;
+          target.material.needsUpdate = true;
+        }
       }
       playSound('chime');
       setChatMessages((prev) => [
         ...prev,
-        { sender: userName, text: '🖥️ *started sharing screen in the workspace!*', time: 'Just now' }
+        { sender: userName, text: '🖥️ *started sharing screen onto the 3D office display!*', time: 'Just now' }
       ]);
       stream.getVideoTracks()[0].onended = () => {
         stopScreenShare();
@@ -243,6 +267,14 @@ export default function WorkspacePlatform({ user, onExit }) {
     setScreenStream(null);
     setIsScreenSharing(false);
     setIsScreenModalOpen(false);
+    activeVideoTextureRef.current = null;
+
+    // Reset screen to default Starry Logo
+    const target = activeScreenTarget?.mesh || screensRef.current?.boardroom || sceneRef.current?.getObjectByName('screen_boardroom');
+    if (target && target.material && screenTexturesRef.current?.starryLogoTexture) {
+      target.material.map = screenTexturesRef.current.starryLogoTexture;
+      target.material.needsUpdate = true;
+    }
     playSound('click');
   };
 
@@ -428,7 +460,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
@@ -457,6 +489,38 @@ export default function WorkspacePlatform({ user, onExit }) {
     if (playerObj) {
       playerMeshRef.current = playerObj.mesh;
       playerPartsRef.current = playerObj.parts;
+
+      // Spawn player at targetRoom if specified in user prop or URL
+      const initialRoom = user?.targetRoom || currentRoom;
+      if (initialRoom && !initialRoom.toLowerCase().includes('boardroom')) {
+        const clean = initialRoom.toLowerCase();
+        let target = new THREE.Vector3(-9, 0, 16);
+        let slug = 'boardroom';
+        let formattedName = 'Boardroom';
+        if (clean.includes('conference b') || clean.includes('conference')) {
+          target.set(5, 0, 16);
+          slug = 'conference-b';
+          formattedName = 'Conference B';
+        } else if (clean.includes('conference a')) {
+          target.set(19, 0, 16);
+          slug = 'conference-a';
+          formattedName = 'Conference A';
+        } else if (clean.includes('auditorium')) {
+          target.set(-24, 0, 14);
+          slug = 'auditorium';
+          formattedName = 'Auditorium';
+        } else if (clean.includes('workspace')) {
+          target.set(0, 0, -16);
+          slug = 'workspace-a';
+          formattedName = 'Workspace A';
+        }
+        playerObj.mesh.position.copy(target);
+        targetPosRef.current.copy(target);
+        setCurrentRoom(formattedName);
+        setCurrentRoomId(slug);
+        camera.position.set(target.x + 4.5, 12.0, target.z + 14.0);
+        camera.lookAt(target.x, 1.5, target.z);
+      }
     }
 
     const sarahObj = roster.find((a) => a.name === 'Sarah');
@@ -471,6 +535,13 @@ export default function WorkspacePlatform({ user, onExit }) {
     const handlePointerDown = (e) => {
       if (e.target.closest('header, aside, .Platform_uiDock, .Platform_toast, .Platform_modal, .Platform_minimap')) return;
 
+      // Right-click (button 2), middle-click (button 1), or Alt-click activates camera orbit drag
+      if (e.button === 2 || e.button === 1 || e.altKey) {
+        isDraggingOrbitRef.current = true;
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        return;
+      }
+
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -479,92 +550,134 @@ export default function WorkspacePlatform({ user, onExit }) {
       const intersects = raycaster.intersectObjects(scene.children, true);
 
       if (intersects.length > 0) {
-        let clickedObj = intersects[0].object;
+        // Priority 1: Check if ANY intersected object is a Screen (prioritize screen over doors, walls, floors)
+        for (let i = 0; i < Math.min(intersects.length, 12); i++) {
+          let obj = intersects[i].object;
+          while (obj && obj !== scene) {
+            if (obj.name?.startsWith('screen_') || obj.name?.startsWith('casing_screen_') || obj.userData?.isSpotScreen) {
+              playSound('chime');
+              const targetMesh = obj.userData?.displayMesh || (obj.isMesh && obj.name.startsWith('screen_') ? obj : null) || (obj.parent?.getObjectByName(obj.name.replace('casing_', '')));
+              const rawKey = obj.userData?.screenKey || obj.name.replace('casing_', '').replace('screen_', '');
+              const screenId = rawKey.replace('_north', '');
 
-        while (clickedObj && clickedObj !== scene) {
-          if (clickedObj.name === 'doughnutPlate') {
-            playSound('crunch');
-            setDonutToast('Stan grabbed a fresh glazed doughnut! 🍩');
-            setTimeout(() => setDonutToast(null), 3000);
-            return;
-          }
-          if (clickedObj.name === 'appleBowl') {
-            playSound('crunch');
-            setDonutToast('Stan grabbed a crisp red apple! 🍎');
-            setTimeout(() => setDonutToast(null), 3000);
-            return;
-          }
+              const screenDisplayNames = {
+                boardroom: 'Boardroom Presentation Screen',
+                conference_b: 'Conference Room B Presentation Screen',
+                conference_a: 'Conference Room A Presentation Screen',
+                auditorium: 'Auditorium Main Stage Display',
+                workspace_a: 'Workspace A Team Display',
+                chat_a: 'Chat A Monitor',
+                chat_b: 'Chat B Monitor',
+                lounge_a: 'Lounge A Video Wall'
+              };
 
-          // 12-Icon Screen Display Target Click (media_1791967521142.png)
-          if (['featBoard', 'mobileSchedule', 'screen1', 'screen2', 'screen3', 'theaterScreen', 'boardroomScreen'].includes(clickedObj.name)) {
-            playSound('chime');
-            const screenDisplayNames = {
-              theaterScreen: 'Main Auditorium Theater Screen',
-              featBoard: 'Roadmap & Sprints Feature Board',
-              mobileSchedule: 'Mobile Stand Schedule Whiteboard',
-              screen1: 'Telemetry Area Chart Display',
-              screen2: 'Digital LED KPI Scoreboard',
-              screen3: 'Architecture Blueprint Display',
-              boardroomScreen: 'Conference Room B Presentation Screen'
-            };
-            setActiveScreenTarget({
-              id: clickedObj.name,
-              name: screenDisplayNames[clickedObj.name] || 'Spot Office Screen',
-              mesh: clickedObj
-            });
-            return;
-          }
+              const targetData = {
+                id: screenId,
+                name: screenDisplayNames[screenId] || `Office Display (${screenId})`,
+                mesh: targetMesh || obj
+              };
+              activeScreenTargetRef.current = targetData;
+              setActiveScreenTarget(targetData);
 
-          // Conference Room B Tabletop Widgets & Audio Controls
-          if (clickedObj.name === 'widget_connectFour') {
-            playSound('chime');
-            setIsConnectFourOpen(true);
-            return;
-          }
-          if (clickedObj.name === 'widget_spinWheel') {
-            playSound('chime');
-            setIsSpinWheelOpen(true);
-            return;
-          }
-          if (clickedObj.name === 'widget_watercooler') {
-            playSound('chime');
-            setIsWatercoolerOpen(true);
-            return;
-          }
-          if (clickedObj.name === 'confAudioPuck') {
-            playSound('click');
-            setIsMuted((prev) => !prev);
-            setDonutToast(!isMuted ? 'Conference Room B: Muted 🔇' : 'Conference Room B: Unmuted 🎙️');
-            setTimeout(() => setDonutToast(null), 3000);
-            return;
-          }
-
-          if (clickedObj.name?.startsWith('avatar_')) {
-            const rawName = clickedObj.name.replace('avatar_head_', '').replace('avatar_', '');
-            const av = roster.find((a) => a.name === rawName && !a.isPlayer);
-            if (av) {
-              playSound('click');
-              setSelectedTeammate(av);
-              setActiveModal('teammate');
+              // Immediately compute initial 2D screenPos
+              if (targetData.mesh && camera && container) {
+                const sPos = new THREE.Vector3();
+                targetData.mesh.getWorldPosition(sPos);
+                const sHeight = targetData.mesh.userData?.height || 2.7;
+                sPos.y += sHeight / 2 + 0.12;
+                sPos.project(camera);
+                if (sPos.z < 1) {
+                  const cWidth = container.clientWidth || window.innerWidth;
+                  const cHeight = container.clientHeight || window.innerHeight;
+                  const sx = Math.round(((sPos.x + 1) * cWidth) / 2);
+                  const sy = Math.round(((-sPos.y + 1) * cHeight) / 2);
+                  setActiveScreenPos({ x: sx, y: sy });
+                }
+              }
               return;
             }
+            obj = obj.parent;
           }
+        }
 
-          if (clickedObj.name === 'clickable_chair' || clickedObj.name?.startsWith('chair_')) {
-            const nearestChair = chairsRef.current.reduce((closest, chair) => {
-              const d = chair.pos.distanceTo(intersects[0].point);
-              return !closest || d < closest.dist ? { chair, dist: d } : closest;
-            }, null);
-
-            if (nearestChair && nearestChair.dist < 3.5) {
-              playSound('click');
-              targetPosRef.current.copy(nearestChair.chair.pos);
-              isSittingRef.current = true;
+        // Priority 2: Check for interactive tabletop widgets, doughnuts, apples, avatars, or audio puck
+        for (let i = 0; i < Math.min(intersects.length, 8); i++) {
+          let clickedObj = intersects[i].object;
+          while (clickedObj && clickedObj !== scene) {
+            if (clickedObj.name === 'doughnutPlate') {
+              playSound('crunch');
+              setDonutToast('Stan grabbed a fresh glazed doughnut! 🍩');
+              setTimeout(() => setDonutToast(null), 3000);
               return;
             }
+            if (clickedObj.name === 'appleBowl') {
+              playSound('crunch');
+              setDonutToast('Stan grabbed a crisp red apple! 🍎');
+              setTimeout(() => setDonutToast(null), 3000);
+              return;
+            }
+            if (clickedObj.name === 'widget_connectFour') {
+              playSound('chime');
+              setIsConnectFourOpen(true);
+              return;
+            }
+            if (clickedObj.name === 'widget_spinWheel') {
+              playSound('chime');
+              setIsSpinWheelOpen(true);
+              return;
+            }
+            if (clickedObj.name === 'widget_watercooler') {
+              playSound('chime');
+              setIsWatercoolerOpen(true);
+              return;
+            }
+            if (clickedObj.name === 'confAudioPuck') {
+              playSound('click');
+              setIsMuted((prev) => !prev);
+              setDonutToast(!isMuted ? 'Conference Room B: Muted 🔇' : 'Conference Room B: Unmuted 🎙️');
+              setTimeout(() => setDonutToast(null), 3000);
+              return;
+            }
+            if (clickedObj.name?.startsWith('avatar_')) {
+              const rawName = clickedObj.name.replace('avatar_head_', '').replace('avatar_', '');
+              const av = roster.find((a) => a.name === rawName && !a.isPlayer);
+              if (av) {
+                playSound('click');
+                setSelectedTeammate(av);
+                setActiveModal('teammate');
+                return;
+              }
+            }
+            clickedObj = clickedObj.parent;
           }
+        }
 
-          clickedObj = clickedObj.parent;
+        // Priority 3: Responsive Click-to-Sit on chairs, armchairs, and sofas
+        for (let i = 0; i < Math.min(intersects.length, 6); i++) {
+          let chairObj = intersects[i].object;
+          while (chairObj && chairObj !== scene) {
+            if (chairObj.name === 'clickable_chair' || chairObj.userData?.isChair || chairObj.name?.startsWith('chair_') || chairObj.name?.startsWith('sofa_')) {
+              const chairPos = chairObj.userData?.chairPos;
+              if (chairPos) {
+                playSound('click');
+                targetPosRef.current.copy(chairPos);
+                isSittingRef.current = true;
+                return;
+              }
+              const nearestChair = chairsRef.current.reduce((closest, chair) => {
+                const d = chair.pos.distanceTo(intersects[i].point);
+                return !closest || d < closest.dist ? { chair, dist: d } : closest;
+              }, null);
+
+              if (nearestChair && nearestChair.dist < 5.0) {
+                playSound('click');
+                targetPosRef.current.copy(nearestChair.chair.pos);
+                isSittingRef.current = true;
+                return;
+              }
+            }
+            chairObj = chairObj.parent;
+          }
         }
 
         const point = intersects[0].point;
@@ -572,31 +685,65 @@ export default function WorkspacePlatform({ user, onExit }) {
         isSittingRef.current = false;
         playSound('click');
 
-        if (point.x < -10 && point.z < -8) {
-          setCurrentRoom('Presentation Hall');
-          setCurrentRoomId('presentation-hall');
-        } else if (point.x < -10) {
-          setCurrentRoom('Round Table Huddle');
-          setCurrentRoomId('round-table-huddle');
-        } else if (point.x > 8 && point.z < -4) {
-          setCurrentRoom('Engineering Desks');
-          setCurrentRoomId('engineering-desks');
+        // Authentic 12 canonical Spot rooms detection based on floor coordinates
+        let detectedRoom = 'Boardroom';
+        let detectedSlug = 'boardroom';
+
+        if (point.z > 8) {
+          // North wing (Auditorium, Boardroom, Conference B, Conference A)
+          if (point.x < -18) {
+            detectedRoom = 'Auditorium';
+            detectedSlug = 'auditorium';
+          } else if (point.x < -2) {
+            detectedRoom = 'Boardroom';
+            detectedSlug = 'boardroom';
+          } else if (point.x < 12) {
+            detectedRoom = 'Conference B';
+            detectedSlug = 'conference-b';
+          } else {
+            detectedRoom = 'Conference A';
+            detectedSlug = 'conference-a';
+          }
         } else if (point.z < -8) {
-          setCurrentRoom('Glass Boardroom');
-          setCurrentRoomId('glass-boardroom');
-        } else if (point.z > 8) {
-          setCurrentRoom('Foreground Lounge');
-          setCurrentRoomId('foreground-lounge');
+          // South wing (Patio, Workspace A, Lobby)
+          if (point.x < -12) {
+            detectedRoom = 'Patio';
+            detectedSlug = 'patio';
+          } else if (point.x < 10) {
+            detectedRoom = 'Workspace A';
+            detectedSlug = 'workspace-a';
+          } else {
+            detectedRoom = 'Lobby';
+            detectedSlug = 'lobby';
+          }
         } else {
-          setCurrentRoom('All-Hands Table');
-          setCurrentRoomId('all-hands-table');
+          // Central wing (Lounge C, Lounge B, Chat A, Chat B, Lounge A)
+          if (point.x < -10) {
+            detectedRoom = 'Lounge C';
+            detectedSlug = 'lounge-c';
+          } else if (point.x < 10) {
+            detectedRoom = 'Lounge B';
+            detectedSlug = 'lounge-b';
+          } else if (point.x < 18) {
+            if (point.z < 0) {
+              detectedRoom = 'Chat A';
+              detectedSlug = 'chat-a';
+            } else {
+              detectedRoom = 'Chat B';
+              detectedSlug = 'chat-b';
+            }
+          } else {
+            detectedRoom = 'Lounge A';
+            detectedSlug = 'lounge-a';
+          }
         }
+
+        setCurrentRoom(detectedRoom);
+        setCurrentRoomId(detectedSlug);
       }
     };
 
-    renderer.domElement.addEventListener('pointerdown', handlePointerDown);
-
-    // Animation Loop
+    // Animation Loop (Silky 60 FPS without React lag)
     let animId;
     let lastTime = performance.now();
     const startTime = performance.now();
@@ -608,6 +755,11 @@ export default function WorkspacePlatform({ user, onExit }) {
       const delta = Math.min((currentTime - lastTime) / 1000, 0.1);
       lastTime = currentTime;
       const elapsed = (currentTime - startTime) / 1000;
+
+      // Realtime video texture updates for screen sharing
+      if (activeVideoTextureRef.current) {
+        activeVideoTextureRef.current.needsUpdate = true;
+      }
 
       // Sarah's waving cartoon hand
       if (wavingHandMeshRef.current) {
@@ -660,8 +812,8 @@ export default function WorkspacePlatform({ user, onExit }) {
           // Natural vertical hip bobbing
           player.position.y = Math.abs(Math.sin(walkCycle * 2)) * 0.08;
         } else if (isSittingRef.current) {
-          // Seated pose on chair cushion
-          player.position.y = -0.15;
+          // Seated pose on chair cushion naturally (matches avatar system -0.18 height)
+          player.position.y = -0.18;
           if (parts.leftLegPivot) {
             parts.leftLegPivot.rotation.x = -Math.PI / 2;
             parts.rightLegPivot.rotation.x = -Math.PI / 2;
@@ -691,55 +843,92 @@ export default function WorkspacePlatform({ user, onExit }) {
             parts.torsoGroup.position.y = 1.15 + Math.sin(elapsed * 2.5) * 0.015;
           }
         }
-
-        setPlayerCoord({ x: player.position.x, z: player.position.z });
       }
 
-      // Project Avatar Names to 2D Screen Space
-      const projected = [];
-      avatarsRef.current.forEach((av) => {
-        const pos = new THREE.Vector3();
-        av.mesh.getWorldPosition(pos);
-        pos.y += 2.65;
-        pos.project(camera);
+      // Throttled UI & HUD projection updates (8 Hz instead of 60 Hz to eliminate React CPU lag)
+      if (currentTime - lastUiUpdateRef.current > 120) {
+        lastUiUpdateRef.current = currentTime;
 
-        const x = ((pos.x + 1) * width) / 2;
-        const y = ((-pos.y + 1) * height) / 2;
-
-        projected.push({
-          name: av.name,
-          x,
-          y,
-          isPlayer: av.isPlayer,
-          status: av.status
-        });
-      });
-      setScreenAvatars(projected);
-
-      // Proximity Detection
-      if (playerMeshRef.current) {
-        const pPos = playerMeshRef.current.position;
-        const nearby = [];
+        // Project Avatar Names to 2D Screen Space
+        const projected = [];
         avatarsRef.current.forEach((av) => {
-          if (!av.isPlayer) {
-            const d = pPos.distanceTo(av.mesh.position);
-            if (d < spatialFalloff) {
-              nearby.push(av.name.replace(' (AI)', ''));
-            }
-          }
+          const pos = new THREE.Vector3();
+          av.mesh.getWorldPosition(pos);
+          pos.y += 2.65;
+          pos.project(camera);
+
+          const x = ((pos.x + 1) * width) / 2;
+          const y = ((-pos.y + 1) * height) / 2;
+
+          projected.push({
+            name: av.name,
+            x,
+            y,
+            isPlayer: av.isPlayer,
+            status: av.status
+          });
         });
-        setInAudioRange(nearby);
+        setScreenAvatars(projected);
+
+        // Proximity Detection
+        if (playerMeshRef.current) {
+          const pPos = playerMeshRef.current.position;
+          const nearby = [];
+          avatarsRef.current.forEach((av) => {
+            if (!av.isPlayer) {
+              const d = pPos.distanceTo(av.mesh.position);
+              if (d < spatialFalloff) {
+                nearby.push(av.name.replace(' (AI)', ''));
+              }
+            }
+          });
+          setInAudioRange(nearby);
+          setPlayerCoord({ x: pPos.x, z: pPos.z });
+        }
+
+        // Project Active Screen Target to 2D Screen Space for floating tool pill
+        if (activeScreenTargetRef.current?.mesh && camera && container) {
+          const sPos = new THREE.Vector3();
+          activeScreenTargetRef.current.mesh.getWorldPosition(sPos);
+          const sHeight = activeScreenTargetRef.current.mesh.userData?.height || 2.7;
+          sPos.y += sHeight / 2 + 0.12;
+          sPos.project(camera);
+          if (sPos.z < 1) {
+            const cWidth = container.clientWidth || window.innerWidth;
+            const cHeight = container.clientHeight || window.innerHeight;
+            const sx = Math.round(((sPos.x + 1) * cWidth) / 2);
+            const sy = Math.round(((-sPos.y + 1) * cHeight) / 2);
+            setActiveScreenPos((prev) => {
+              if (!prev || Math.abs(prev.x - sx) > 1 || Math.abs(prev.y - sy) > 1) {
+                return { x: sx, y: sy };
+              }
+              return prev;
+            });
+          } else {
+            setActiveScreenPos(null);
+          }
+        } else if (!activeScreenTargetRef.current) {
+          setActiveScreenPos(null);
+        }
       }
 
-      // Smooth Camera Follow or Top-Down Blueprint View (media_1791969443822.png vs media_1791969444163.png)
+      // Smooth Dynamic Camera with Mouse Wheel Zoom & Orbit
       if (playerMeshRef.current && camera) {
         if (isTopDownBlueprint) {
           camera.position.lerp(new THREE.Vector3(0, 68, 0), 0.08);
           camera.lookAt(0, 0, 0);
         } else {
           const p = playerMeshRef.current.position;
-          camera.position.lerp(new THREE.Vector3(p.x, 15.0, p.z + 16.0), 0.06);
-          camera.lookAt(p.x, 1.8, p.z);
+          const dist = cameraDistanceRef.current;
+          const angle = cameraOrbitAngleRef.current;
+          const pitch = cameraPitchAngleRef.current;
+
+          const camX = p.x + Math.sin(angle) * dist * Math.cos(pitch);
+          const camY = Math.max(2.2, dist * Math.sin(pitch));
+          const camZ = p.z + Math.cos(angle) * dist * Math.cos(pitch);
+
+          camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
+          camera.lookAt(p.x, 1.5, p.z);
         }
       }
 
@@ -748,14 +937,42 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     animate();
 
+    // Mouse Wheel Zoom: Smooth distance adjustment between 6 and 65
     const handleWheel = (e) => {
       e.preventDefault();
-      const zoomFactor = e.deltaY * 0.02;
-      camera.position.z = Math.max(28, Math.min(58, camera.position.z + zoomFactor));
-      camera.position.y = Math.max(16, Math.min(34, camera.position.y + zoomFactor * 0.5));
+      const zoomFactor = e.deltaY * 0.025;
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 6, 65);
     };
 
+    // Mouse Orbit Dragging (Right-click or middle-click or Alt-click drag)
+    const handlePointerMove = (e) => {
+      if (isDraggingOrbitRef.current) {
+        const deltaX = e.clientX - lastMousePosRef.current.x;
+        const deltaY = e.clientY - lastMousePosRef.current.y;
+        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+
+        cameraOrbitAngleRef.current += deltaX * 0.006;
+        cameraPitchAngleRef.current = THREE.MathUtils.clamp(
+          cameraPitchAngleRef.current - deltaY * 0.005,
+          0.2,
+          1.4
+        );
+      }
+    };
+
+    const handlePointerUp = () => {
+      isDraggingOrbitRef.current = false;
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    renderer.domElement.addEventListener('pointerdown', handlePointerDown);
     renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
+    renderer.domElement.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
+    renderer.domElement.addEventListener('contextmenu', handleContextMenu);
 
     const handleResize = () => {
       if (!container) return;
@@ -770,8 +987,11 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      renderer.domElement.removeEventListener('wheel', handleWheel);
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
+      renderer.domElement.removeEventListener('wheel', handleWheel);
+      renderer.domElement.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+      renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
       cancelAnimationFrame(animId);
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -846,9 +1066,14 @@ export default function WorkspacePlatform({ user, onExit }) {
       playerMeshRef.current.position.copy(target);
     }
 
+    cameraDistanceRef.current = 20;
+    cameraOrbitAngleRef.current = 0.28;
+    cameraPitchAngleRef.current = 0.64;
+    isSittingRef.current = false;
+
     if (cameraRef.current && !isTopDownBlueprint) {
-      cameraRef.current.position.set(target.x, 15.0, target.z + 16.0);
-      cameraRef.current.lookAt(target.x, 1.8, target.z);
+      cameraRef.current.position.set(target.x, 14.0, target.z + 16.0);
+      cameraRef.current.lookAt(target.x, 1.6, target.z);
     }
 
     try {
@@ -861,10 +1086,14 @@ export default function WorkspacePlatform({ user, onExit }) {
     playSound('chime');
 
     let targetMesh = null;
-    if (screensRef.current && screensRef.current[screenId]) {
+    if (activeScreenTarget?.mesh) {
+      targetMesh = activeScreenTarget.mesh;
+    } else if (screensRef.current && screensRef.current[screenId]) {
       targetMesh = screensRef.current[screenId];
+    } else if (screensRef.current && screensRef.current[`screen_${screenId}`]) {
+      targetMesh = screensRef.current[`screen_${screenId}`];
     } else if (sceneRef.current) {
-      targetMesh = sceneRef.current.getObjectByName(screenId);
+      targetMesh = sceneRef.current.getObjectByName(`screen_${screenId}`) || sceneRef.current.getObjectByName(screenId);
     }
 
     if (!targetMesh) {
@@ -875,6 +1104,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     const texSys = screenTexturesRef.current;
 
     if (contentType === 'starry-logo') {
+      activeVideoTextureRef.current = null;
       const tex = texSys?.createStarryLogoTexture ? texSys.createStarryLogoTexture() : texSys?.starryLogoTexture;
       if (tex) {
         tex.colorSpace = THREE.SRGBColorSpace;
@@ -882,6 +1112,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         targetMesh.material.needsUpdate = true;
       }
     } else if (contentType === 'timer') {
+      activeVideoTextureRef.current = null;
       const minutes = payload?.minutes || 15;
       const tex = texSys?.createTimerTexture ? texSys.createTimerTexture(`${minutes}:00`, 'Session Countdown') : null;
       if (tex) {
@@ -890,6 +1121,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         targetMesh.material.needsUpdate = true;
       }
     } else if (contentType === 'kpi') {
+      activeVideoTextureRef.current = null;
       if (texSys?.kpiTexture) {
         targetMesh.material.map = texSys.kpiTexture;
         targetMesh.material.needsUpdate = true;
@@ -898,10 +1130,129 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (screenShareVideoRef.current && screenStream) {
         const vidTex = new THREE.VideoTexture(screenShareVideoRef.current);
         vidTex.colorSpace = THREE.SRGBColorSpace;
+        vidTex.minFilter = THREE.LinearFilter;
+        vidTex.magFilter = THREE.LinearFilter;
         targetMesh.material.map = vidTex;
         targetMesh.material.needsUpdate = true;
+        activeVideoTextureRef.current = vidTex;
       }
+    } else if (contentType === 'webcam') {
+      if (videoRef.current) {
+        const camTex = new THREE.VideoTexture(videoRef.current);
+        camTex.colorSpace = THREE.SRGBColorSpace;
+        targetMesh.material.map = camTex;
+        targetMesh.material.needsUpdate = true;
+        activeVideoTextureRef.current = camTex;
+      } else {
+        const camCanvas = document.createElement('canvas');
+        camCanvas.width = 1024;
+        camCanvas.height = 512;
+        const cCtx = camCanvas.getContext('2d');
+        cCtx.fillStyle = '#0f172a';
+        cCtx.fillRect(0, 0, 1024, 512);
+        cCtx.fillStyle = '#10b981';
+        cCtx.font = 'bold 44px sans-serif';
+        cCtx.textAlign = 'center';
+        cCtx.fillText('📹 Live Avatar Camera Stream', 512, 220);
+        cCtx.fillStyle = '#94a3b8';
+        cCtx.font = '22px sans-serif';
+        cCtx.fillText('Camera feed active in ' + (currentRoom || 'Workspace'), 512, 280);
+        const camTex = new THREE.CanvasTexture(camCanvas);
+        camTex.colorSpace = THREE.SRGBColorSpace;
+        targetMesh.material.map = camTex;
+        targetMesh.material.needsUpdate = true;
+      }
+    } else if (contentType === 'meeting') {
+      activeVideoTextureRef.current = null;
+      const stageCanvas = document.createElement('canvas');
+      stageCanvas.width = 1024;
+      stageCanvas.height = 512;
+      const sCtx = stageCanvas.getContext('2d');
+      sCtx.fillStyle = '#0f172a';
+      sCtx.fillRect(0, 0, 1024, 512);
+      sCtx.fillStyle = '#ec4899';
+      sCtx.font = 'bold 44px sans-serif';
+      sCtx.textAlign = 'center';
+      sCtx.fillText('🎤 Presentation Stage Mode', 512, 180);
+      sCtx.fillStyle = '#f8fafc';
+      sCtx.font = '24px sans-serif';
+      sCtx.fillText('Presenter: ' + userName + ' • Live Audio & Screen Sync', 512, 260);
+      sCtx.fillStyle = '#22c55e';
+      sCtx.font = 'bold 20px monospace';
+      sCtx.fillText('● 11 PARTICIPANTS CONNECTED', 512, 340);
+      const stageTex = new THREE.CanvasTexture(stageCanvas);
+      stageTex.colorSpace = THREE.SRGBColorSpace;
+      targetMesh.material.map = stageTex;
+      targetMesh.material.needsUpdate = true;
+    } else if (contentType === 'calendar') {
+      activeVideoTextureRef.current = null;
+      const calCanvas = document.createElement('canvas');
+      calCanvas.width = 1024;
+      calCanvas.height = 512;
+      const cCtx = calCanvas.getContext('2d');
+      cCtx.fillStyle = '#ffffff';
+      cCtx.fillRect(0, 0, 1024, 512);
+      cCtx.fillStyle = '#0f172a';
+      cCtx.font = 'bold 32px sans-serif';
+      cCtx.fillText('📅 Spot Sprint & Standup Schedule', 60, 60);
+
+      const days = [
+        '09:30 AM • Daily Standup (Conference B)',
+        '11:00 AM • Architecture Sync & Code Review (Auditorium)',
+        '02:00 PM • Product & Design Jam (Boardroom)',
+        '04:30 PM • Team Social / Watercooler Hour (Patio)'
+      ];
+      days.forEach((day, idx) => {
+        cCtx.fillStyle = '#f1f5f9';
+        cCtx.beginPath();
+        cCtx.roundRect(60, 95 + idx * 75, 904, 60, 8);
+        cCtx.fill();
+        cCtx.fillStyle = '#0284c7';
+        cCtx.font = 'bold 22px sans-serif';
+        cCtx.fillText(day, 85, 134 + idx * 75);
+      });
+      const calTex = new THREE.CanvasTexture(calCanvas);
+      calTex.colorSpace = THREE.SRGBColorSpace;
+      targetMesh.material.map = calTex;
+      targetMesh.material.needsUpdate = true;
+    } else if (contentType === 'widgets') {
+      activeVideoTextureRef.current = null;
+      const wCanvas = document.createElement('canvas');
+      wCanvas.width = 1024;
+      wCanvas.height = 512;
+      const wCtx = wCanvas.getContext('2d');
+      wCtx.fillStyle = '#f8fafc';
+      wCtx.fillRect(0, 0, 1024, 512);
+      wCtx.fillStyle = '#0f172a';
+      wCtx.font = 'bold 36px sans-serif';
+      wCtx.fillText('🎨 Interactive Team Whiteboard & Tabletop Apps', 60, 70);
+      wCtx.fillStyle = '#475569';
+      wCtx.font = '22px sans-serif';
+      wCtx.fillText('Launch games and collaborative tools from the bottom bar or tabletop objects!', 60, 130);
+
+      // Colorful widget cards
+      [
+        { name: 'Connect Four', color: '#3b82f6', x: 60 },
+        { name: 'Spin The Wheel', color: '#10b981', x: 370 },
+        { name: 'Watercooler Prompts', color: '#f59e0b', x: 680 }
+      ].forEach((w) => {
+        wCtx.fillStyle = w.color;
+        wCtx.beginPath();
+        wCtx.roundRect(w.x, 190, 280, 180, 12);
+        wCtx.fill();
+        wCtx.fillStyle = '#ffffff';
+        wCtx.font = 'bold 26px sans-serif';
+        wCtx.textAlign = 'center';
+        wCtx.fillText(w.name, w.x + 140, 290);
+      });
+      wCtx.textAlign = 'left';
+
+      const wTex = new THREE.CanvasTexture(wCanvas);
+      wTex.colorSpace = THREE.SRGBColorSpace;
+      targetMesh.material.map = wTex;
+      targetMesh.material.needsUpdate = true;
     } else if (contentType === 'youtube') {
+      activeVideoTextureRef.current = null;
       const ytCanvas = document.createElement('canvas');
       ytCanvas.width = 1024;
       ytCanvas.height = 512;
@@ -942,6 +1293,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       targetMesh.material.map = ytTex;
       targetMesh.material.needsUpdate = true;
     } else if (contentType === 'image') {
+      activeVideoTextureRef.current = null;
       if (payload?.url) {
         const loader = new THREE.TextureLoader();
         loader.crossOrigin = 'anonymous';
@@ -957,6 +1309,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         );
       }
     } else if (contentType === 'document') {
+      activeVideoTextureRef.current = null;
       const docCanvas = document.createElement('canvas');
       docCanvas.width = 1024;
       docCanvas.height = 512;
@@ -982,6 +1335,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       targetMesh.material.map = docTex;
       targetMesh.material.needsUpdate = true;
     } else if (contentType === 'webpage') {
+      activeVideoTextureRef.current = null;
       const webCanvas = document.createElement('canvas');
       webCanvas.width = 1024;
       webCanvas.height = 512;
@@ -1296,7 +1650,45 @@ export default function WorkspacePlatform({ user, onExit }) {
         </div>
       )}
 
-      {/* 3. Top-Right Floating Viewport Action Buttons (media_1791969444163.png) */}
+      {/* Spatial Audio Hearing & Microphone Status HUD (Top-Left) */}
+      <div style={{
+        position: 'absolute',
+        top: isTrialBannerOpen ? '48px' : '16px',
+        left: isSpacesSidebarOpen ? '256px' : '16px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        zIndex: 60,
+        transition: 'left 0.25s ease'
+      }}>
+        <div style={{
+          background: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid #334155',
+          borderRadius: '20px',
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.25)'
+        }}>
+          <div style={{
+            width: '8px',
+            height: '8px',
+            borderRadius: '50%',
+            background: isMuted ? '#ef4444' : '#22c55e',
+            boxShadow: isMuted ? '0 0 6px #ef4444' : '0 0 8px #22c55e'
+          }} />
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#f8fafc' }}>
+            {isMuted ? 'Spatial Audio Muted' : 'Spatial Audio Connected'}
+          </span>
+          <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+            • {inAudioRange.length} in hearing range
+          </span>
+        </div>
+      </div>
+
+      {/* 3. Top-Right Floating Viewport Action Buttons (Matching media_1791993853484.png) */}
       <div style={{
         position: 'absolute',
         top: isTrialBannerOpen ? '48px' : '16px',
@@ -1306,16 +1698,13 @@ export default function WorkspacePlatform({ user, onExit }) {
         zIndex: 60,
         transition: 'right 0.2s ease'
       }}>
-        {/* Blue Avatar / First Person View Toggle */}
+        {/* Zoom In Button */}
         <button
           onClick={() => {
-            if (playerMeshRef.current && cameraRef.current) {
-              const p = playerMeshRef.current.position;
-              cameraRef.current.position.set(p.x, 3.5, p.z + 4.5);
-              cameraRef.current.lookAt(p.x, 2.0, p.z - 6.0);
-            }
+            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current - 4, 6, 65);
+            playSound('click');
           }}
-          title="Avatar First-Person / Close Camera"
+          title="Zoom In (+)"
           style={{
             width: '40px',
             height: '40px',
@@ -1327,22 +1716,85 @@ export default function WorkspacePlatform({ user, onExit }) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#0091ff'
+            color: '#334155',
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+        >
+          <ZoomIn size={18} />
+        </button>
+
+        {/* Zoom Out Button */}
+        <button
+          onClick={() => {
+            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + 4, 6, 65);
+            playSound('click');
+          }}
+          title="Zoom Out (−)"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: '#ffffff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#334155',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
+        >
+          <ZoomOut size={18} />
+        </button>
+
+        {/* Blue Avatar / Focus Avatar View Toggle (media_1791993853484.png) */}
+        <button
+          onClick={() => {
+            if (playerMeshRef.current && cameraRef.current) {
+              const p = playerMeshRef.current.position;
+              cameraDistanceRef.current = 10;
+              cameraOrbitAngleRef.current = 0;
+              cameraPitchAngleRef.current = 0.45;
+              playSound('click');
+            }
+          }}
+          title="Avatar Close Focus / First-Person"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: '#ffffff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: '#0091ff',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
         >
           <UserCheck size={18} />
         </button>
 
-        {/* Recenter Camera on Avatar */}
+        {/* Recenter / Crosshair Target Button (media_1791993853484.png) */}
         <button
           onClick={() => {
             if (playerMeshRef.current && cameraRef.current) {
-              const p = playerMeshRef.current.position;
-              cameraRef.current.position.set(p.x, 15.0, p.z + 16.0);
-              cameraRef.current.lookAt(p.x, 1.8, p.z);
+              cameraDistanceRef.current = 20;
+              cameraOrbitAngleRef.current = 0;
+              cameraPitchAngleRef.current = 0.64;
+              playSound('click');
             }
           }}
-          title="Recenter Camera on Avatar"
+          title="Recenter Camera on Avatar (Target Icon)"
           style={{
             width: '40px',
             height: '40px',
@@ -1354,16 +1806,19 @@ export default function WorkspacePlatform({ user, onExit }) {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#4b5563'
+            color: '#4b5563',
+            transition: 'all 0.15s ease'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
         >
           <Compass size={18} />
         </button>
 
-        {/* 3x3 Grid Icon: Toggle Top-Down Floorplan Blueprint View */}
+        {/* 3x3 Grid Icon: Apps / Blueprint Toggle (media_1791993853484.png) */}
         <button
           onClick={() => setIsTopDownBlueprint(!isTopDownBlueprint)}
-          title={isTopDownBlueprint ? 'Switch to 3D Perspective View' : 'Switch to Floorplan Blueprint View (media_1791969443822.png)'}
+          title={isTopDownBlueprint ? 'Switch to 3D Perspective View' : 'Switch to Floorplan Blueprint View'}
           style={{
             width: '40px',
             height: '40px',
@@ -1377,6 +1832,12 @@ export default function WorkspacePlatform({ user, onExit }) {
             cursor: 'pointer',
             color: isTopDownBlueprint ? '#ffffff' : '#4b5563',
             transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (!isTopDownBlueprint) e.currentTarget.style.background = '#f8fafc';
+          }}
+          onMouseLeave={(e) => {
+            if (!isTopDownBlueprint) e.currentTarget.style.background = '#ffffff';
           }}
         >
           <Grid size={18} />
@@ -2499,11 +2960,16 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         </div>
 
-        {/* 8. Spot 12-Icon Screen Display Manager Toolbar (media_1791967521142.png) */}
+        {/* 8. Spot 12-Icon Screen Display Manager Toolbar (media_1791993853484.png) */}
         {activeScreenTarget && (
           <ScreenDisplayManager
             activeScreen={activeScreenTarget.id}
-            onClose={() => setActiveScreenTarget(null)}
+            screenPos={activeScreenPos}
+            onClose={() => {
+              activeScreenTargetRef.current = null;
+              setActiveScreenTarget(null);
+              setActiveScreenPos(null);
+            }}
             onUpdateScreenContent={handleUpdateScreenContent}
             onStartScreenShare={startScreenShare}
           />

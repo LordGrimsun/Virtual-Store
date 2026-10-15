@@ -94,11 +94,56 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     roughness: 0.85
   });
 
-  // Architectural Wall Material: #f8f8f8 matching Spot Virtual floorplan settings
+  // Architectural Wall Material: Vertical Brushed Acoustic Fabric Panel Texture (Matching media_1791993853484.png)
+  const wallCanvas = document.createElement('canvas');
+  wallCanvas.width = 1024;
+  wallCanvas.height = 1024;
+  const wCtx = wallCanvas.getContext('2d');
+
+  // Base acoustic silver-grey fabric tone
+  wCtx.fillStyle = '#dbdde2';
+  wCtx.fillRect(0, 0, 1024, 1024);
+
+  // Subtle vertical panel ribs / acoustic slats
+  for (let x = 0; x < 1024; x += 16) {
+    const toneVariation = Math.sin(x * 0.25) * 6;
+    wCtx.fillStyle = `rgba(255, 255, 255, ${0.04 + (toneVariation > 0 ? 0.03 : 0)})`;
+    wCtx.fillRect(x, 0, 8, 1024);
+    wCtx.fillStyle = 'rgba(0, 0, 0, 0.025)';
+    wCtx.fillRect(x + 8, 0, 8, 1024);
+  }
+
+  // Vertical brushed fabric striations / fibers
+  for (let i = 0; i < 2800; i++) {
+    const rx = Math.random() * 1024;
+    const ry = Math.random() * 1024;
+    const rh = 40 + Math.random() * 220;
+    const isLight = Math.random() > 0.45;
+    const alpha = Math.random() * 0.14 + 0.03;
+    wCtx.fillStyle = isLight ? `rgba(255, 255, 255, ${alpha})` : `rgba(115, 120, 130, ${alpha})`;
+    wCtx.fillRect(rx, ry, Math.random() * 1.6 + 0.6, rh);
+  }
+
+  // Fine vertical acoustic panel seam grooves every 128px
+  wCtx.strokeStyle = 'rgba(90, 95, 105, 0.25)';
+  wCtx.lineWidth = 1.2;
+  for (let x = 0; x < 1024; x += 128) {
+    wCtx.beginPath();
+    wCtx.moveTo(x, 0);
+    wCtx.lineTo(x, 1024);
+    wCtx.stroke();
+  }
+
+  const wallTexture = new THREE.CanvasTexture(wallCanvas);
+  wallTexture.colorSpace = THREE.SRGBColorSpace;
+  wallTexture.wrapS = THREE.RepeatWrapping;
+  wallTexture.wrapT = THREE.RepeatWrapping;
+  wallTexture.repeat.set(6, 2);
+
   materials.wallMat = new THREE.MeshStandardMaterial({
-    color: 0xf8f8f8,
-    roughness: 0.88,
-    metalness: 0.02
+    map: wallTexture,
+    roughness: 0.92,
+    metalness: 0.04
   });
 
   // Wall cap / trim material
@@ -212,29 +257,41 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   const createDoubleDoor = (x, z, rotY = 0) => {
     const doorGroup = new THREE.Group();
 
+    doorGroup.name = 'doorway_group';
+
     // Door frame
     const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.4, 0.36), materials.doorFrameMat);
     frameLeft.position.set(-1.45, 2.2, 0);
+    frameLeft.name = 'doorway_mesh';
+    frameLeft.userData = { isDoorway: true };
     doorGroup.add(frameLeft);
 
     const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.4, 0.36), materials.doorFrameMat);
     frameRight.position.set(1.45, 2.2, 0);
+    frameRight.name = 'doorway_mesh';
+    frameRight.userData = { isDoorway: true };
     doorGroup.add(frameRight);
 
     const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.12, 0.36), materials.doorFrameMat);
     frameTop.position.set(0, 4.46, 0);
+    frameTop.name = 'doorway_mesh';
+    frameTop.userData = { isDoorway: true };
     doorGroup.add(frameTop);
 
     // Left door leaf
     const doorL = new THREE.Mesh(new THREE.BoxGeometry(1.36, 4.34, 0.08), materials.doorMat);
     doorL.position.set(-0.7, 2.17, 0);
     doorL.castShadow = true;
+    doorL.name = 'doorway_mesh';
+    doorL.userData = { isDoorway: true };
     doorGroup.add(doorL);
 
     // Right door leaf
     const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 4.34, 0.08), materials.doorMat);
     doorR.position.set(0.7, 2.17, 0);
     doorR.castShadow = true;
+    doorR.name = 'doorway_mesh';
+    doorR.userData = { isDoorway: true };
     doorGroup.add(doorR);
 
     // Brass horizontal handles
@@ -245,6 +302,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
       );
       handle.rotation.z = Math.PI / 2;
       handle.position.set(side * 0.18, 2.1, 0.06);
+      handle.name = 'doorway_mesh';
+      handle.userData = { isDoorway: true };
       doorGroup.add(handle);
     });
 

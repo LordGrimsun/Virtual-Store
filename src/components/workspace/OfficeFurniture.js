@@ -38,23 +38,33 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return new RoundedBoxGeometry(width, height, depth, 3, safeRadius);
   };
 
-  // Helper: Wall-Mounted Starry Spot Screen (matching media_1791969444037.png)
+  const screensMap = {};
+
+  // Helper: Wall-Mounted Starry Spot Screen (matching media_1791993853484.png & media_1791969444037.png)
   const createSpotWallScreen = (x, y, z, width = 4.8, height = 2.7, rotY = 0, screenKey = 'boardroom') => {
     const screenGrp = new THREE.Group();
+    screenGrp.name = `screen_group_${screenKey}`;
 
     // Dark bezel casing
     const casing = new THREE.Mesh(roundedBox(width + 0.12, height + 0.12, 0.12, 0.04), screenBezelMat);
     casing.castShadow = true;
+    casing.name = `casing_screen_${screenKey}`;
     screenGrp.add(casing);
 
-    // Display face with starry Spot background
+    // Display face with starry Spot background (Exact match to media_1791993853484.png)
+    const defaultTexture = screenTextures?.createStarryLogoTexture ? screenTextures.createStarryLogoTexture() : (screenTextures?.starryLogoTexture || screenTextures?.logoTexture);
+    if (defaultTexture) defaultTexture.colorSpace = THREE.SRGBColorSpace;
     const displayMat = new THREE.MeshBasicMaterial({
-      map: screenTextures?.logoTexture || screenTextures?.codeTexture,
-      color: 0xffffff
+      map: defaultTexture,
+      color: 0xffffff,
+      side: THREE.DoubleSide
     });
     const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), displayMat);
     displayMesh.position.z = 0.07;
     displayMesh.name = `screen_${screenKey}`;
+    displayMesh.userData = { isSpotScreen: true, screenKey, width, height, displayMesh };
+    casing.userData = { isSpotScreen: true, screenKey, width, height, displayMesh };
+    screenGrp.userData = { isSpotScreen: true, screenKey, width, height, displayMesh };
     screenGrp.add(displayMesh);
 
     // Subtle edge back-light
@@ -65,7 +75,10 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     screenGrp.position.set(x, y, z);
     screenGrp.rotation.y = rotY;
     furnitureGroup.add(screenGrp);
-    return screenGrp;
+
+    screensMap[screenKey] = displayMesh;
+    screensMap[`screen_${screenKey}`] = displayMesh;
+    return displayMesh;
   };
 
   // Helper: Cantilever Sled-Base White Conference Chair (media_1791969444037.png)
@@ -95,6 +108,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     seat.position.set(0, 0.45, 0);
     seat.castShadow = true;
     seat.name = 'clickable_chair';
+    seat.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
     chair.add(seat);
 
     // White ribbed backrest
@@ -102,10 +116,13 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     back.position.set(0, 0.72, -0.23);
     back.castShadow = true;
     back.name = 'clickable_chair';
+    back.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
     chair.add(back);
 
     chair.position.set(cx, 0, cz);
     chair.rotation.y = crot;
+    chair.name = 'clickable_chair';
+    chair.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
     furnitureGroup.add(chair);
 
     if (chairsRef?.current) {
@@ -117,6 +134,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Helper: Black 3-Seater Sofa (media_1791969444037.png)
   const createBlackSofa = (cx, cz, crot, sofaName = 'Boardroom Sofa') => {
     const sofa = new THREE.Group();
+    sofa.name = 'clickable_chair';
+    sofa.userData = { isChair: true, name: sofaName, chairPos: new THREE.Vector3(cx, 0, cz) };
 
     // Base plinth
     const base = new THREE.Mesh(roundedBox(2.4, 0.22, 0.88, 0.06), blackMat);
@@ -129,6 +148,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       const cushion = new THREE.Mesh(roundedBox(0.68, 0.16, 0.62, 0.05), blackLeatherMat);
       cushion.position.set(sx, 0.38, 0.08);
       cushion.castShadow = true;
+      cushion.name = 'clickable_chair';
+      cushion.userData = { isChair: true, name: sofaName, chairPos: new THREE.Vector3(cx + (crot === 0 ? sx : 0), 0, cz + (crot !== 0 ? sx : 0)) };
       sofa.add(cushion);
     });
 
@@ -136,6 +157,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     const back = new THREE.Mesh(roundedBox(2.36, 0.52, 0.22, 0.06), blackLeatherMat);
     back.position.set(0, 0.64, -0.32);
     back.castShadow = true;
+    back.name = 'clickable_chair';
+    back.userData = { isChair: true, name: sofaName, chairPos: new THREE.Vector3(cx, 0, cz) };
     sofa.add(back);
 
     // Left and right armrests
@@ -159,16 +182,22 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Helper: White Tub Armchair with brass legs (media_1791969444037.png)
   const createTubArmchair = (cx, cz, crot, chairName = 'Boardroom Tub Chair') => {
     const chair = new THREE.Group();
+    chair.name = 'clickable_chair';
+    chair.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
 
     // Tub curved bucket seat
     const tub = new THREE.Mesh(roundedBox(0.82, 0.52, 0.78, 0.12), tubArmchairMat);
     tub.position.y = 0.42;
     tub.castShadow = true;
+    tub.name = 'clickable_chair';
+    tub.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
     chair.add(tub);
 
     // Deep seat cushion
     const cushion = new THREE.Mesh(roundedBox(0.64, 0.14, 0.58, 0.05), whiteMat);
     cushion.position.set(0, 0.42, 0.06);
+    cushion.name = 'clickable_chair';
+    cushion.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
     chair.add(cushion);
 
     // 4 Splayed Brass Legs
@@ -247,9 +276,9 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // ==========================================
   // 1. BOARDROOM (x: -9, z: 16)
-  // Matching media_1791969444037.png & media_1791969444163.png
+  // Matching media_1791993853484.png & media_1791969444037.png
   // ==========================================
-  // West wall starry Spot screen
+  // West wall starry Spot screen (matching authentic Spot layout in media_1791969444037.png)
   createSpotWallScreen(-15.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'boardroom');
 
   // Facing Black Sofas
@@ -595,5 +624,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createCantileverChair(23.0, 4.3, 0, 'Lounge A North Chair 2');
   createCantileverChair(23.0, 6.1, Math.PI, 'Lounge A South Chair 2');
 
-  return { furnitureGroup };
+  // Additional interactive screens across other rooms
+  createSpotWallScreen(0, 3.2, -23.8, 4.8, 2.7, 0, 'workspace_a');
+  createSpotWallScreen(13.8, 2.2, -4.0, 2.2, 1.4, -Math.PI / 2, 'chat_a');
+  createSpotWallScreen(13.8, 2.2, 4.0, 2.2, 1.4, -Math.PI / 2, 'chat_b');
+  createSpotWallScreen(23.0, 3.0, -8.8, 3.6, 2.2, 0, 'lounge_a');
+
+  return { ...screensMap, furnitureGroup };
 }

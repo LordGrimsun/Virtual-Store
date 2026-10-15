@@ -12,6 +12,7 @@ import {
  */
 export default function ScreenDisplayManager({
   activeScreen,
+  screenPos,
   onClose,
   onUpdateScreenContent,
   onStartScreenShare
@@ -23,20 +24,20 @@ export default function ScreenDisplayManager({
   const [timerMinutes, setTimerMinutes] = useState(15);
   const [docContent, setDocContent] = useState('# Sprint 42 - Architectural Standup\n- Review Spot 3D virtual office rebuild\n- OpenClaw gateway v0.2.0 testing\n- P2P spatial audio verification');
 
-  // The 12 Canonical Spot Screen Toolbar Icons (Left to Right from media_1791967521142.png)
+  // The 12 Canonical Spot Screen Toolbar Icons (Exact order from media_1791993853484.png)
   const screenTools = [
     { id: 'screenshare', label: 'Share Screen', icon: Monitor, color: '#38bdf8' },
     { id: 'webcam', label: 'Camera Stream', icon: Video, color: '#10b981' },
-    { id: 'image', label: 'Image / Slide', icon: Image, color: '#f59e0b' },
+    { id: 'image', label: 'Image Slide', icon: Image, color: '#f59e0b' },
     { id: 'webpage', label: 'Web Page / Embed', icon: Globe, color: '#6366f1' },
-    { id: 'meeting', label: 'Meeting Stage', icon: Users, color: '#ec4899' },
-    { id: 'starry-logo', label: 'Spot Starry Logo', icon: Disc, color: '#22c55e' },
-    { id: 'document', label: 'Document / Notes', icon: FileText, color: '#8b5cf6' },
-    { id: 'kpi', label: 'KPI & Dashboards', icon: BarChart3, color: '#06b6d4' },
+    { id: 'meeting', label: 'Presentation Stage', icon: Users, color: '#ec4899' },
+    { id: 'starry-logo', label: 'Spot Starry Galaxy (Default)', icon: Disc, color: '#22c55e' },
+    { id: 'document', label: 'Meeting Document / Notes', icon: FileText, color: '#8b5cf6' },
+    { id: 'kpi', label: 'KPI Dashboard & Telemetry', icon: BarChart3, color: '#06b6d4' },
     { id: 'youtube', label: 'YouTube Video', icon: Play, color: '#ef4444' },
     { id: 'calendar', label: 'Team Calendar', icon: Calendar, color: '#f97316' },
-    { id: 'timer', label: 'Clock & Timer', icon: Clock, color: '#eab308' },
-    { id: 'widgets', label: 'Widgets / Whiteboard', icon: LayoutGrid, color: '#14b8a6' }
+    { id: 'timer', label: 'Countdown Timer', icon: Clock, color: '#eab308' },
+    { id: 'widgets', label: 'Widgets & Whiteboard', icon: LayoutGrid, color: '#14b8a6' }
   ];
 
   const handleToolSelect = (toolId) => {
@@ -52,6 +53,18 @@ export default function ScreenDisplayManager({
     } else if (toolId === 'kpi') {
       onUpdateScreenContent(activeScreen, 'kpi', {});
       onClose();
+    } else if (toolId === 'webcam') {
+      onUpdateScreenContent(activeScreen, 'webcam', {});
+      onClose();
+    } else if (toolId === 'meeting') {
+      onUpdateScreenContent(activeScreen, 'meeting', {});
+      onClose();
+    } else if (toolId === 'calendar') {
+      onUpdateScreenContent(activeScreen, 'calendar', {});
+      onClose();
+    } else if (toolId === 'widgets') {
+      onUpdateScreenContent(activeScreen, 'widgets', {});
+      onClose();
     }
   };
 
@@ -59,9 +72,9 @@ export default function ScreenDisplayManager({
     if (selectedTool === 'youtube') {
       onUpdateScreenContent(activeScreen, 'youtube', { url: youtubeUrl || 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' });
     } else if (selectedTool === 'image') {
-      onUpdateScreenContent(activeScreen, 'image', { url: imageUrl });
+      onUpdateScreenContent(activeScreen, 'image', { url: imageUrl || 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800' });
     } else if (selectedTool === 'webpage') {
-      onUpdateScreenContent(activeScreen, 'webpage', { url: webUrl });
+      onUpdateScreenContent(activeScreen, 'webpage', { url: webUrl || 'https://spotvirtual.com' });
     } else if (selectedTool === 'timer') {
       onUpdateScreenContent(activeScreen, 'timer', { minutes: timerMinutes });
     } else if (selectedTool === 'document') {
@@ -73,25 +86,27 @@ export default function ScreenDisplayManager({
   return (
     <div style={{
       position: 'absolute',
-      top: '90px',
-      left: '50%',
-      transform: 'translateX(-50%)',
+      top: screenPos ? `${Math.max(50, screenPos.y - 10)}px` : '78px',
+      left: screenPos ? `${screenPos.x}px` : '50%',
+      transform: screenPos ? 'translate(-50%, -100%)' : 'translateX(-50%)',
       zIndex: 120,
       display: 'flex',
       flexDirection: 'column',
-      alignItems: 'center'
+      alignItems: 'center',
+      animation: 'fadeIn 0.15s ease-out',
+      pointerEvents: 'auto',
+      transition: 'left 0.05s linear, top 0.05s linear'
     }}>
-      {/* 1. The 12-Icon Floating Toolbar (Exact Match to media_1791967521142.png) */}
+      {/* 1. The 12-Icon Floating Toolbar (Exact Match to media_1791993853484.png) */}
       <div style={{
-        background: 'rgba(255, 255, 255, 0.98)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid #cbd5e1',
-        borderRadius: '10px',
-        padding: '6px 10px',
-        boxShadow: '0 8px 30px rgba(0,0,0,0.18)',
+        background: '#ffffff',
+        border: '1px solid #d1d5db',
+        borderRadius: '6px',
+        padding: '3px 6px',
+        boxShadow: '0 4px 18px rgba(0,0,0,0.18)',
         display: 'flex',
         alignItems: 'center',
-        gap: '4px',
+        gap: '2px',
         position: 'relative'
       }}>
         {screenTools.map((tool) => {
@@ -103,57 +118,62 @@ export default function ScreenDisplayManager({
               onClick={() => handleToolSelect(tool.id)}
               title={tool.label}
               style={{
-                background: isSelected ? '#0f172a' : 'transparent',
-                color: isSelected ? '#ffffff' : '#334155',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '6px 8px',
+                background: isSelected ? '#f1f5f9' : 'transparent',
+                color: isSelected ? '#0f172a' : '#374151',
+                border: isSelected ? '1px solid #cbd5e1' : '1px solid transparent',
+                borderRadius: '4px',
+                padding: '5px 7px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.12s ease'
               }}
               onMouseEnter={(e) => {
-                if (!isSelected) e.currentTarget.style.background = '#f1f5f9';
+                if (!isSelected) e.currentTarget.style.background = '#f8fafc';
               }}
               onMouseLeave={(e) => {
                 if (!isSelected) e.currentTarget.style.background = 'transparent';
               }}
             >
-              <IconComp size={18} color={isSelected ? '#38bdf8' : tool.color} />
+              <IconComp size={16} color={tool.id === 'starry-logo' ? '#22c55e' : (tool.id === 'youtube' ? '#ef4444' : '#374151')} />
             </button>
           );
         })}
 
-        <div style={{ width: '1px', height: '22px', background: '#e2e8f0', margin: '0 4px' }} />
+        <div style={{ width: '1px', height: '18px', background: '#e5e7eb', margin: '0 2px' }} />
 
         <button
           onClick={onClose}
-          title="Close Screen Toolbar"
+          title="Close Toolbar"
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#64748b',
+            color: '#9ca3af',
             cursor: 'pointer',
-            padding: '4px',
-            borderRadius: '4px'
+            padding: '3px',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#9ca3af'}
         >
-          <X size={16} />
+          <X size={14} />
         </button>
 
-        {/* Pointer Arrow pointing to the screen below */}
+        {/* Downward Pointer Arrow touching the top center of the screen frame (media_1791993853484.png) */}
         <div style={{
           position: 'absolute',
-          bottom: '-6px',
+          bottom: '-5px',
           left: '50%',
           transform: 'translateX(-50%) rotate(45deg)',
-          width: '12px',
-          height: '12px',
+          width: '10px',
+          height: '10px',
           background: '#ffffff',
-          borderRight: '1px solid #cbd5e1',
-          borderBottom: '1px solid #cbd5e1'
+          borderRight: '1px solid #d1d5db',
+          borderBottom: '1px solid #d1d5db'
         }} />
       </div>
 
