@@ -27,7 +27,7 @@ export default function GuestOnboardingModal({
   const [fullName, setFullName] = useState('');
   const [skinToneIndex, setSkinToneIndex] = useState(2);
   const [customSkinColor, setCustomSkinColor] = useState('');
-  const [avatarGender, setAvatarGender] = useState('female');
+  const [avatarGender, setAvatarGender] = useState('male');
   const [avatarRotation, setAvatarRotation] = useState(0);
 
   // AV settings
@@ -138,7 +138,7 @@ export default function GuestOnboardingModal({
         fullName: fullName || 'Guest',
         skinTone: activeSkin,
         gender: avatarGender,
-        hairType: avatarGender === 'male' ? 'pompadour' : 'spot_wavy_bob',
+        hairType: avatarGender === 'male' ? 'black_waves' : 'long_waves_headphones',
         isMicOn,
         isVideoOn: isCameraOn,
         spaceSlug,

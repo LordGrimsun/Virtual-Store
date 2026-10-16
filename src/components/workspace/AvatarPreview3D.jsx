@@ -14,9 +14,9 @@ import { createAvatarSystem } from './AvatarSystem';
  */
 export default function AvatarPreview3D({
   skinColor = '#ba8659',
-  gender = 'female',
+  gender = 'male',
   hairType = null,
-  shirtColor = 0x93c5fd,
+  shirtColor = null,
   rotationAngle = 0, // external angle in degrees
   onRotationChange
 }) {
@@ -110,7 +110,7 @@ export default function AvatarPreview3D({
 
     // 5. Build Initial 3D Avatar
     const avatarSys = createAvatarSystem();
-    const effectiveHair = hairType || (gender === 'male' ? 'pompadour' : 'spot_wavy_bob');
+    const effectiveHair = hairType || (gender === 'female' ? 'long_waves_headphones' : 'black_waves');
     const parsedSkin = typeof skinColor === 'string'
       ? parseInt(skinColor.replace('#', '0x'), 16)
       : skinColor;
@@ -119,11 +119,11 @@ export default function AvatarPreview3D({
       isPlayer: true,
       skinColor: parsedSkin,
       hairType: effectiveHair,
-      hairColor: 0x1c1917,
-      eyeColor: 0x10b981,
-      clothing: 'oxford_shirt',
-      shirtColor: shirtColor || 0xa0b5cc,
-      pantsColor: 'indigo',
+      hairColor: gender === 'female' ? 0x3e2723 : 0x1c1917,
+      clothing: gender === 'female' ? 'pink_jacket' : 'red_hoodie',
+      faceType: gender === 'female' ? 'wink' : 'happy',
+      shirtColor: shirtColor || (gender === 'female' ? 0xf472b6 : 0xdc2626),
+      gender: gender,
       initialRot: targetRotationYRef.current
     });
     scene.add(av.mesh);
@@ -256,7 +256,7 @@ export default function AvatarPreview3D({
     }
 
     const avatarSys = createAvatarSystem();
-    const effectiveHair = hairType || (gender === 'male' ? 'pompadour' : 'spot_wavy_bob');
+    const effectiveHair = hairType || (gender === 'female' ? 'long_waves_headphones' : 'black_waves');
     const parsedSkin = typeof skinColor === 'string'
       ? parseInt(skinColor.replace('#', '0x'), 16)
       : skinColor;
@@ -265,16 +265,16 @@ export default function AvatarPreview3D({
       isPlayer: true,
       skinColor: parsedSkin,
       hairType: effectiveHair,
-      hairColor: 0x1c1917,
-      eyeColor: 0x10b981,
-      clothing: 'oxford_shirt',
-      shirtColor: shirtColor || 0xa0b5cc,
-      pantsColor: 'indigo',
+      hairColor: gender === 'female' ? 0x3e2723 : 0x1c1917,
+      clothing: gender === 'female' ? 'pink_jacket' : 'red_hoodie',
+      faceType: gender === 'female' ? 'wink' : 'happy',
+      shirtColor: shirtColor || (gender === 'female' ? 0xf472b6 : 0xdc2626),
+      gender: gender,
       initialRot: currentRotationYRef.current
     });
     scene.add(av.mesh);
     avatarObjRef.current = av;
-  }, [gender, hairType]);
+  }, [gender, hairType, skinColor]);
 
   return (
     <div
