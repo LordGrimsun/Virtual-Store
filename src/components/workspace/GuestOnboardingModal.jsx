@@ -25,10 +25,24 @@ export default function GuestOnboardingModal({
 }) {
   const [step, setStep] = useState('join'); // 'join' | 'customize-avatar' | 'setup-audio-video' | 'waiting-room'
   const [fullName, setFullName] = useState('');
-  const [skinToneIndex, setSkinToneIndex] = useState(2);
+  const [skinToneIndex, setSkinToneIndex] = useState(0); // Default peach skin (#f6d5be) matching reference image!
   const [customSkinColor, setCustomSkinColor] = useState('');
   const [avatarGender, setAvatarGender] = useState('male');
   const [avatarRotation, setAvatarRotation] = useState(0);
+
+  // Granular customization states
+  const [activeTab, setActiveTab] = useState('presets'); // 'presets' | 'face' | 'hair' | 'tops' | 'pants' | 'shoes'
+  const [hairType, setHairType] = useState('black_waves');
+  const [hairColor, setHairColor] = useState('#1c1917');
+  const [faceType, setFaceType] = useState('happy');
+  const [mouthType, setMouthType] = useState('smile_teeth');
+  const [noseType, setNoseType] = useState('clean');
+  const [clothing, setClothing] = useState('red_hoodie');
+  const [shirtColor, setShirtColor] = useState('#dc2626');
+  const [pantsType, setPantsType] = useState('cargo_pants');
+  const [pantsColor, setPantsColor] = useState('#18181b');
+  const [shoesType, setShoesType] = useState('platform_sneakers');
+  const [shoesColor, setShoesColor] = useState('#dc2626');
 
   // AV settings
   const [isMicOn, setIsMicOn] = useState(false);
@@ -43,7 +57,11 @@ export default function GuestOnboardingModal({
 
   const videoPreviewRef = useRef(null);
   const mediaStreamRef = useRef(null);
-  const colorPickerRef = useRef(null);
+  const skinColorPickerRef = useRef(null);
+  const hairColorPickerRef = useRef(null);
+  const shirtColorPickerRef = useRef(null);
+  const pantsColorPickerRef = useRef(null);
+  const shoesColorPickerRef = useRef(null);
 
   // Available skin tones matching Spot Virtual palette (real_spot_after_continue.png)
   const skinTones = ['#f6d5be', '#dfb18e', '#ba8659', '#8a5836', '#453328'];
@@ -133,12 +151,22 @@ export default function GuestOnboardingModal({
 
   const handleEnterSpace = () => {
     if (onComplete) {
-      const activeSkin = skinToneIndex === -1 ? (customSkinColor || '#ba8659') : skinTones[skinToneIndex];
+      const activeSkin = skinToneIndex === -1 ? (customSkinColor || '#f6d5be') : skinTones[skinToneIndex];
       onComplete({
         fullName: fullName || 'Guest',
         skinTone: activeSkin,
         gender: avatarGender,
-        hairType: avatarGender === 'male' ? 'black_waves' : 'long_waves_headphones',
+        hairType,
+        hairColor,
+        faceType,
+        mouthType,
+        noseType,
+        clothing,
+        shirtColor,
+        pantsType,
+        pantsColor,
+        shoesType,
+        shoesColor,
         isMicOn,
         isVideoOn: isCameraOn,
         spaceSlug,
@@ -356,279 +384,1042 @@ export default function GuestOnboardingModal({
         </div>
       )}
 
-      {/* ================= STEP 2: CUSTOMIZE AVATAR ================= */}
-      {step === 'customize-avatar' && (
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '540px',
-            padding: '40px 32px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center'
-          }}
-        >
-          <SpotBrandHeader marginBottom="20px" />
+      {/* ================= STEP 2: CUSTOMIZE AVATAR STUDIO ================= */}
+      {step === 'customize-avatar' && (() => {
+        // Presets based on reference archetypes
+        const presets = [
+          {
+            id: 'ayush',
+            name: 'Ayush',
+            tag: 'Red Hoodie & Waves',
+            gender: 'male',
+            hairType: 'black_waves',
+            hairColor: '#1c1917',
+            faceType: 'happy',
+            mouthType: 'smile_teeth',
+            noseType: 'clean',
+            clothing: 'red_hoodie',
+            shirtColor: '#dc2626',
+            pantsType: 'cargo_pants',
+            pantsColor: '#18181b',
+            shoesType: 'platform_sneakers',
+            shoesColor: '#dc2626'
+          },
+          {
+            id: 'sarah',
+            name: 'Sarah',
+            tag: 'Pink Waves & Headphones',
+            gender: 'female',
+            hairType: 'long_waves_headphones',
+            hairColor: '#3e2723',
+            faceType: 'wink',
+            mouthType: 'smile_teeth',
+            noseType: 'blush',
+            clothing: 'pink_jacket',
+            shirtColor: '#f472b6',
+            pantsType: 'jeans',
+            pantsColor: '#38bdf8',
+            shoesType: 'platform_sneakers',
+            shoesColor: '#f472b6'
+          },
+          {
+            id: 'stefan',
+            name: 'Stefan',
+            tag: 'Cyber Techwear',
+            gender: 'male',
+            hairType: 'cyber_spikes',
+            hairColor: '#0284c7',
+            faceType: 'smirk',
+            mouthType: 'smirk',
+            noseType: 'clean',
+            clothing: 'cyber_jacket',
+            shirtColor: '#18181b',
+            pantsType: 'cyber_pants',
+            pantsColor: '#18181b',
+            shoesType: 'cyber_sneakers',
+            shoesColor: '#00f0ff'
+          },
+          {
+            id: 'wes',
+            name: 'Wes',
+            tag: 'Moto Biker & Shades',
+            gender: 'male',
+            hairType: 'swept_brown',
+            hairColor: '#6b4226',
+            faceType: 'sunglasses',
+            mouthType: 'smirk',
+            noseType: 'clean',
+            clothing: 'moto_jacket',
+            shirtColor: '#18181b',
+            pantsType: 'cargo_pants',
+            pantsColor: '#27272a',
+            shoesType: 'platform_sneakers',
+            shoesColor: '#18181b'
+          },
+          {
+            id: 'phil',
+            name: 'Phil',
+            tag: 'Safari Explorer Fedora',
+            gender: 'male',
+            hairType: 'safari_hat',
+            hairColor: '#4a2c1d',
+            faceType: 'happy',
+            mouthType: 'smile_teeth',
+            noseType: 'clean',
+            clothing: 'safari_khaki',
+            shirtColor: '#d4b996',
+            pantsType: 'shorts',
+            pantsColor: '#c4a480',
+            shoesType: 'boots',
+            shoesColor: '#5c3d2e'
+          },
+          {
+            id: 'chloe',
+            name: 'Chloe',
+            tag: 'Artist Topknot Overalls',
+            gender: 'female',
+            hairType: 'topknot_waves',
+            hairColor: '#4a2c1d',
+            faceType: 'happy',
+            mouthType: 'smile_teeth',
+            noseType: 'freckles',
+            clothing: 'overalls',
+            shirtColor: '#d97706',
+            pantsType: 'overalls_bottom',
+            pantsColor: '#d97706',
+            shoesType: 'platform_sneakers',
+            shoesColor: '#ffffff'
+          },
+          {
+            id: 'devbot',
+            name: 'DevBot',
+            tag: 'Emerald AI Mascot',
+            gender: 'male',
+            hairType: 'black_waves',
+            hairColor: '#10b981',
+            faceType: 'cyber_visor',
+            mouthType: 'smile_teeth',
+            noseType: 'clean',
+            clothing: 'cyber_jacket',
+            shirtColor: '#059669',
+            pantsType: 'cyber_pants',
+            pantsColor: '#18181b',
+            shoesType: 'cyber_sneakers',
+            shoesColor: '#10b981'
+          }
+        ];
 
-          <h2
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontSize: '28px',
-              fontWeight: 700,
-              color: '#111827',
-              margin: '0 0 10px 0'
-            }}
-          >
-            Customize your avatar
-          </h2>
-          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#6b7280', margin: '0 0 32px 0', maxWidth: '380px', lineHeight: 1.5 }}>
-            Choose an avatar that fits your personality! You can further customize your avatar later.
-          </p>
+        const eyeOptions = [
+          { id: 'happy', label: 'Anime Eyes', desc: 'Big sparkling catchlights' },
+          { id: 'wink', label: 'Playful Wink', desc: 'Cute wink with flutter lashes' },
+          { id: 'sunglasses', label: 'Wayfarers', desc: 'Dark sleek sunglasses' },
+          { id: 'glasses', label: 'Smart Glasses', desc: 'Round wire frames' },
+          { id: 'smirk', label: 'Focused Eyes', desc: 'Confident anime gaze' },
+          { id: 'cyber_visor', label: 'Cyber Visor', desc: 'Digital glow scanlines' }
+        ];
 
-          {/* Avatar Preview Box matching real_spot_after_continue.png */}
+        const mouthOptions = [
+          { id: 'smile_teeth', label: 'Teeth Smile', desc: 'Cheerful open smile with white teeth' },
+          { id: 'gentle_smile', label: 'Gentle Smile', desc: 'Sweet curved smile line' },
+          { id: 'smirk', label: 'Side Smirk', desc: 'Confident anime grin' },
+          { id: 'open_laugh', label: 'Joyful Laugh', desc: 'Big open joyful laugh' }
+        ];
+
+        const noseOptions = [
+          { id: 'clean', label: 'Clean', desc: 'Smooth classic face' },
+          { id: 'cute_nose', label: 'Cute Nose', desc: 'Subtle anime nose dash' },
+          { id: 'blush', label: 'Rosy Blush', desc: 'Soft pink cheek blush' },
+          { id: 'freckles', label: 'Freckles', desc: 'Sun-kissed cheek freckles' }
+        ];
+
+        const hairOptions = [
+          { id: 'black_waves', label: 'Wavy Locks', category: 'all' },
+          { id: 'swept_brown', label: 'Side Sweep', category: 'all' },
+          { id: 'cyber_spikes', label: 'Cyber Spikes', category: 'all' },
+          { id: 'pompadour', label: 'Pompadour', category: 'male' },
+          { id: 'afro_short', label: 'Textured Fade', category: 'male' },
+          { id: 'long_waves_headphones', label: 'Waves + Headphones', category: 'female' },
+          { id: 'topknot_waves', label: 'Topknot Half-Bun', category: 'female' },
+          { id: 'twin_buns', label: 'Twin Space Buns', category: 'female' },
+          { id: 'bob_cut', label: 'French Bob', category: 'female' },
+          { id: 'high_ponytail', label: 'High Ponytail', category: 'female' },
+          { id: 'beanie', label: 'Knit Beanie', category: 'all' },
+          { id: 'safari_hat', label: 'Safari Fedora', category: 'all' }
+        ];
+
+        const hairColorPalette = [
+          { hex: '#1c1917', label: 'Espresso Black' },
+          { hex: '#5c3826', label: 'Chestnut Brown' },
+          { hex: '#3e2723', label: 'Soft Brunette' },
+          { hex: '#eab308', label: 'Honey Blonde' },
+          { hex: '#0284c7', label: 'Electric Blue' },
+          { hex: '#b91c1c', label: 'Ruby Red' },
+          { hex: '#94a3b8', label: 'Platinum Silver' },
+          { hex: '#f472b6', label: 'Pastel Pink' }
+        ];
+
+        const topOptions = [
+          { id: 'red_hoodie', label: 'Open Hoodie', desc: 'Drawstrings, white tee & straps' },
+          { id: 'pink_jacket', label: 'Streetwear Jacket', desc: 'Zip jacket over crop tee' },
+          { id: 'cyber_jacket', label: 'Cyber Techwear', desc: 'Neon circuits & reactor' },
+          { id: 'moto_jacket', label: 'Biker Moto Jacket', desc: 'Leather jacket with sling strap' },
+          { id: 'safari_khaki', label: 'Safari Explorer', desc: 'Utility pockets & gold compass' },
+          { id: 'overalls', label: 'Workwear Dungarees', desc: 'Cozy sweater + denim bib' },
+          { id: 'casual_tee', label: 'Minimal Tee', desc: 'Casual crewneck t-shirt' },
+          { id: 'formal_shirt', label: 'Dress Shirt + Tie', desc: 'Collared shirt with necktie' }
+        ];
+
+        const topColorPalette = [
+          { hex: '#dc2626', label: 'Crimson' },
+          { hex: '#f472b6', label: 'Rose' },
+          { hex: '#00f0ff', label: 'Cyber Cyan' },
+          { hex: '#18181b', label: 'Midnight' },
+          { hex: '#d4b996', label: 'Khaki' },
+          { hex: '#d97706', label: 'Mustard' },
+          { hex: '#16a34a', label: 'Forest' },
+          { hex: '#2563eb', label: 'Royal Navy' },
+          { hex: '#ffffff', label: 'White' }
+        ];
+
+        const pantsOptions = [
+          { id: 'cargo_pants', label: '3D Cargo Pants', desc: 'Outer flap pockets on thighs' },
+          { id: 'jeans', label: 'Denim Jeans', desc: 'Classic blue jean wash' },
+          { id: 'trousers', label: 'Tailored Chinos', desc: 'Clean straight-leg dress pants' },
+          { id: 'shorts', label: 'Adventure Shorts', desc: 'Cargo shorts with bare knees' },
+          { id: 'cyber_pants', label: 'Cyber Pants', desc: 'Techwear with neon stripes' }
+        ];
+
+        const pantsColorPalette = [
+          { hex: '#18181b', label: 'Midnight Black' },
+          { hex: '#38bdf8', label: 'Denim Blue' },
+          { hex: '#1e3a8a', label: 'Dark Indigo' },
+          { hex: '#c4a480', label: 'Safari Khaki' },
+          { hex: '#3f6212', label: 'Olive Army' },
+          { hex: '#e2d7c5', label: 'Warm Beige' },
+          { hex: '#f8fafc', label: 'Crisp White' }
+        ];
+
+        const shoesOptions = [
+          { id: 'platform_sneakers', label: 'Platform Sneakers', desc: 'Two-tone chunky rubber soles' },
+          { id: 'high_tops', label: 'Skate High-Tops', desc: 'White collar & side emblem' },
+          { id: 'boots', label: 'Adventure Boots', desc: 'Rugged lug soles' },
+          { id: 'cyber_sneakers', label: 'Cyber Kicks', desc: 'Glowing neon LED soles' }
+        ];
+
+        const shoesColorPalette = [
+          { hex: '#dc2626', label: 'Red' },
+          { hex: '#f472b6', label: 'Pink' },
+          { hex: '#00f0ff', label: 'Cyan' },
+          { hex: '#18181b', label: 'Black' },
+          { hex: '#c4a480', label: 'Tan' },
+          { hex: '#ffffff', label: 'White' }
+        ];
+
+        const applyPreset = (p) => {
+          setAvatarGender(p.gender);
+          setHairType(p.hairType);
+          setHairColor(p.hairColor);
+          setFaceType(p.faceType);
+          setMouthType(p.mouthType);
+          setNoseType(p.noseType);
+          setClothing(p.clothing);
+          setShirtColor(p.shirtColor);
+          setPantsType(p.pantsType);
+          setPantsColor(p.pantsColor);
+          setShoesType(p.shoesType);
+          setShoesColor(p.shoesColor);
+        };
+
+        const activeSkinHex = skinToneIndex === -1 ? (customSkinColor || '#f6d5be') : skinTones[skinToneIndex];
+
+        return (
           <div
             style={{
-              position: 'relative',
-              width: '360px',
-              height: '340px',
+              width: '100%',
+              maxWidth: '860px',
+              padding: '32px 24px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: '32px'
+              fontFamily: 'Inter, sans-serif'
             }}
           >
-            {/* Left Skin Tone Palette Circles matching real_spot_after_continue.png */}
-            <div
+            <SpotBrandHeader marginBottom="14px" />
+
+            <h2
               style={{
-                position: 'absolute',
-                left: 10,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                zIndex: 10
+                fontSize: '26px',
+                fontWeight: 700,
+                color: '#111827',
+                margin: '0 0 6px 0',
+                letterSpacing: '-0.02em'
               }}
             >
-              {skinTones.map((tone, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => {
-                    setSkinToneIndex(idx);
-                    setCustomSkinColor('');
-                  }}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: tone,
-                    border: skinToneIndex === idx ? '3px solid #ffffff' : '2px solid #ffffff',
-                    boxShadow: skinToneIndex === idx ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
-                    cursor: 'pointer',
-                    padding: 0,
-                    outline: 'none',
-                    transition: 'transform 0.15s ease'
-                  }}
-                />
-              ))}
+              Customize your avatar
+            </h2>
+            <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 20px 0', maxWidth: '520px', textAlign: 'center', lineHeight: 1.5 }}>
+              Fine-tune hair, facial expression, clothing, pants, shoes, and colors to create your authentic look.
+            </p>
 
-              {/* 6th Dotted Custom Color Button */}
-              <button
-                title="Custom Skin Color"
-                onClick={() => colorPickerRef.current?.click()}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: customSkinColor || '#fafafa',
-                  border: skinToneIndex === -1 ? '2px solid #0091ff' : '1.5px dashed #9ca3af',
-                  boxShadow: skinToneIndex === -1 ? '0 0 0 2px #0091ff' : 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: 0,
-                  outline: 'none'
-                }}
-              >
-                {!customSkinColor && <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>}
-                <input
-                  ref={colorPickerRef}
-                  type="color"
-                  value={customSkinColor || skinTones[skinToneIndex] || '#ba8659'}
-                  onChange={(e) => {
-                    setCustomSkinColor(e.target.value);
-                    setSkinToneIndex(-1);
-                  }}
-                  style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
-                />
-              </button>
-            </div>
-
-            {/* Center Interactive 3D Avatar WebGL Canvas */}
+            {/* Customizer Navigation Tabs */}
             <div
               style={{
-                width: '260px',
-                height: '340px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative'
+                gap: '8px',
+                background: '#f3f4f6',
+                padding: '4px',
+                borderRadius: '10px',
+                marginBottom: '20px',
+                flexWrap: 'wrap',
+                justifyContent: 'center'
               }}
             >
-              <AvatarPreview3D
-                skinColor={skinToneIndex === -1 ? (customSkinColor || '#ba8659') : skinTones[skinToneIndex]}
-                gender={avatarGender}
-                rotationAngle={avatarRotation}
-                onRotationChange={(deg) => setAvatarRotation(deg)}
-              />
+              {[
+                { id: 'presets', label: 'Presets', emoji: '✨' },
+                { id: 'face', label: 'Face', emoji: '😊' },
+                { id: 'hair', label: 'Hair', emoji: '💇' },
+                { id: 'tops', label: 'Tops', emoji: '👕' },
+                { id: 'pants', label: 'Pants', emoji: '👖' },
+                { id: 'shoes', label: 'Shoes', emoji: '👟' }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: activeTab === tab.id ? 600 : 500,
+                    color: activeTab === tab.id ? '#111827' : '#6b7280',
+                    background: activeTab === tab.id ? '#ffffff' : 'transparent',
+                    border: 'none',
+                    boxShadow: activeTab === tab.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <span>{tab.emoji}</span>
+                  <span>{tab.label}</span>
+                </button>
+              ))}
             </div>
 
-            {/* Right Controls matching real_spot_after_continue.png */}
+            {/* Two-Column Studio Workspace */}
             <div
               style={{
-                position: 'absolute',
-                right: 10,
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '12px',
-                zIndex: 10
+                gap: '24px',
+                width: '100%',
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                marginBottom: '24px',
+                flexWrap: 'wrap'
               }}
             >
-              {/* Female Figure Silhouette Button */}
-              <button
-                onClick={() => setAvatarGender('female')}
-                title="Feminine Style"
+              {/* Left Column: Interactive 3D WebGL Avatar Viewport */}
+              <div
                 style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  background: '#ffffff',
-                  border: avatarGender === 'female' ? '2px solid #0091ff' : '1px solid #e5e7eb',
-                  boxShadow: avatarGender === 'female' ? '0 0 0 1px #0091ff' : '0 1px 2px rgba(0,0,0,0.05)',
-                  cursor: 'pointer',
+                  width: '320px',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={avatarGender === 'female' ? '#111827' : '#9ca3af'}>
-                  <circle cx="12" cy="6" r="3.2" />
-                  <path d="M12 10.5C9 10.5 7 12.8 7 15.5V22H17V15.5C17 12.8 15 10.5 12 10.5Z" />
-                  <path d="M7 6C6.5 7.5 6.5 9 7.2 10.5C7.8 9.5 8.5 8.8 9 8.5C8 7.5 7.5 6.8 7 6Z" />
-                  <path d="M17 6C17.5 7.5 17.5 9 16.8 10.5C16.2 9.5 15.5 8.8 15 8.5C16 7.5 16.5 6.8 17 6Z" />
-                </svg>
-              </button>
-
-              {/* Male Figure Silhouette Button */}
-              <button
-                onClick={() => setAvatarGender('male')}
-                title="Masculine Style"
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  background: '#ffffff',
-                  border: avatarGender === 'male' ? '2px solid #0091ff' : '1px solid #e5e7eb',
-                  boxShadow: avatarGender === 'male' ? '0 0 0 1px #0091ff' : '0 1px 2px rgba(0,0,0,0.05)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill={avatarGender === 'male' ? '#111827' : '#9ca3af'}>
-                  <circle cx="12" cy="5.8" r="3.2" />
-                  <path d="M12 10.5C8.8 10.5 6.2 13 6.2 16.2V22H17.8V16.2C17.8 13 15.2 10.5 12 10.5Z" />
-                </svg>
-              </button>
-
-              {/* Rotate Right 45° */}
-              <button
-                onClick={() => setAvatarRotation((r) => (r + 45) % 360)}
-                title="Rotate Right"
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  background: '#ffffff',
+                  background: '#f9fafb',
+                  borderRadius: '14px',
                   border: '1px solid #e5e7eb',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
+                  padding: '16px',
+                  position: 'relative'
                 }}
               >
-                <ArrowRight size={18} color="#4b5563" />
-              </button>
+                <div
+                  style={{
+                    width: '288px',
+                    height: '330px',
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <AvatarPreview3D
+                    skinColor={activeSkinHex}
+                    gender={avatarGender}
+                    hairType={hairType}
+                    hairColor={hairColor}
+                    faceType={faceType}
+                    mouthType={mouthType}
+                    noseType={noseType}
+                    clothing={clothing}
+                    shirtColor={shirtColor}
+                    pantsType={pantsType}
+                    pantsColor={pantsColor}
+                    shoesType={shoesType}
+                    shoesColor={shoesColor}
+                    rotationAngle={avatarRotation}
+                    onRotationChange={(deg) => setAvatarRotation(deg)}
+                  />
+                </div>
 
-              {/* Rotate Left 45° */}
-              <button
-                onClick={() => setAvatarRotation((r) => (r - 45 + 360) % 360)}
-                title="Rotate Left"
+                {/* Sub-viewport Quick Controls: Rotate & Gender */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    marginTop: '8px'
+                  }}
+                >
+                  <button
+                    onClick={() => setAvatarRotation((r) => (r - 45 + 360) % 360)}
+                    title="Rotate Left 45°"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #d1d5db',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <ArrowLeft size={16} color="#4b5563" />
+                  </button>
+
+                  {/* Gender Toggle Pills */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      background: '#e5e7eb',
+                      borderRadius: '8px',
+                      padding: '2px'
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        setAvatarGender('male');
+                        if (hairType === 'long_waves_headphones') setHairType('black_waves');
+                        if (clothing === 'pink_jacket') setClothing('red_hoodie');
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: avatarGender === 'male' ? '#ffffff' : 'transparent',
+                        color: avatarGender === 'male' ? '#111827' : '#6b7280',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: avatarGender === 'male' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                      }}
+                    >
+                      👦 Male
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAvatarGender('female');
+                        if (hairType === 'black_waves') setHairType('long_waves_headphones');
+                        if (clothing === 'red_hoodie') setClothing('pink_jacket');
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: avatarGender === 'female' ? '#ffffff' : 'transparent',
+                        color: avatarGender === 'female' ? '#111827' : '#6b7280',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: avatarGender === 'female' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none'
+                      }}
+                    >
+                      👧 Female
+                    </button>
+                  </div>
+
+                  <button
+                    onClick={() => setAvatarRotation((r) => (r + 45) % 360)}
+                    title="Rotate Right 45°"
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      background: '#ffffff',
+                      border: '1px solid #d1d5db',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <ArrowRight size={16} color="#4b5563" />
+                  </button>
+                </div>
+                <span style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>
+                  Drag avatar to spin 360°
+                </span>
+              </div>
+
+              {/* Right Column: Customization Controls Panel */}
+              <div
                 style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
+                  flex: '1 1 420px',
+                  minWidth: '320px',
+                  maxHeight: '390px',
+                  overflowY: 'auto',
                   background: '#ffffff',
+                  borderRadius: '14px',
                   border: '1px solid #e5e7eb',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.15s ease'
+                  padding: '20px',
+                  textAlign: 'left'
                 }}
               >
-                <ArrowLeft size={18} color="#4b5563" />
-              </button>
+                {/* ================= TAB: PRESETS ================= */}
+                {activeTab === 'presets' && (
+                  <div>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: '0 0 4px 0' }}>
+                      Ready-to-Wear Archetypes
+                    </h3>
+                    <p style={{ fontSize: '13px', color: '#6b7280', margin: '0 0 16px 0' }}>
+                      Select a complete character style inspired by the user reference, or mix-and-match in other tabs.
+                    </p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '10px' }}>
+                      {presets.map((p) => {
+                        const isSelected = clothing === p.clothing && hairType === p.hairType;
+                        return (
+                          <div
+                            key={p.id}
+                            data-preset-id={p.id}
+                            onClick={() => applyPreset(p)}
+                            style={{
+                              padding: '12px',
+                              borderRadius: '10px',
+                              border: isSelected ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: isSelected ? '#eff6ff' : '#f9fafb',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '14px', fontWeight: 700, color: '#111827' }}>{p.name}</span>
+                              <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', background: p.gender === 'female' ? '#fce7f3' : '#e0f2fe', color: p.gender === 'female' ? '#be185d' : '#0369a1' }}>
+                                {p.gender === 'female' ? 'Female' : 'Male'}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '12px', color: '#4b5563', display: 'block' }}>{p.tag}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ================= TAB: FACE ================= */}
+                {activeTab === 'face' && (
+                  <div>
+                    {/* A. Eyes / Eyewear */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Eyes & Eyewear
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '8px' }}>
+                        {eyeOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setFaceType(opt.id)}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: faceType === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: faceType === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280' }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* B. Mouth Expression */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Mouth Expression
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '8px' }}>
+                        {mouthOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setMouthType(opt.id)}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: mouthType === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: mouthType === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280' }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* C. Nose & Cheeks */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Nose & Cheeks
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '8px' }}>
+                        {noseOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setNoseType(opt.id)}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              border: noseType === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: noseType === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280' }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* D. Skin Tone Palette */}
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Skin Tone
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        {skinTones.map((tone, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              setSkinToneIndex(idx);
+                              setCustomSkinColor('');
+                            }}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: tone,
+                              border: skinToneIndex === idx ? '3px solid #ffffff' : '2px solid #ffffff',
+                              boxShadow: skinToneIndex === idx ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
+                              cursor: 'pointer',
+                              outline: 'none'
+                            }}
+                          />
+                        ))}
+                        <button
+                          title="Custom Skin Color"
+                          onClick={() => skinColorPickerRef.current?.click()}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: customSkinColor || '#fafafa',
+                            border: skinToneIndex === -1 ? '2px solid #0091ff' : '1.5px dashed #9ca3af',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          {!customSkinColor && <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>}
+                          <input
+                            ref={skinColorPickerRef}
+                            type="color"
+                            value={customSkinColor || skinTones[skinToneIndex] || '#f6d5be'}
+                            onChange={(e) => {
+                              setCustomSkinColor(e.target.value);
+                              setSkinToneIndex(-1);
+                            }}
+                            style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ================= TAB: HAIR ================= */}
+                {activeTab === 'hair' && (
+                  <div>
+                    {/* A. Hair Styles */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Hairstyle (12 Styles)
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                        {hairOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setHairType(opt.id)}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: hairType === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: hairType === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* B. Hair Colors */}
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Hair Color
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {hairColorPalette.map((c) => (
+                          <button
+                            key={c.hex}
+                            onClick={() => setHairColor(c.hex)}
+                            title={c.label}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: c.hex,
+                              border: hairColor === c.hex ? '3px solid #ffffff' : '2px solid #ffffff',
+                              boxShadow: hairColor === c.hex ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        ))}
+                        <button
+                          title="Custom Hair Color"
+                          onClick={() => hairColorPickerRef.current?.click()}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: '#fafafa',
+                            border: '1.5px dashed #9ca3af',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>
+                          <input
+                            ref={hairColorPickerRef}
+                            type="color"
+                            value={hairColor || '#1c1917'}
+                            onChange={(e) => setHairColor(e.target.value)}
+                            style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ================= TAB: TOPS (CLOTHES) ================= */}
+                {activeTab === 'tops' && (
+                  <div>
+                    {/* A. Top Styles */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Tops & Jackets (8 Styles)
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                        {topOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setClothing(opt.id)}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: clothing === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: clothing === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280' }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* B. Top Colors */}
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Top Color
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {topColorPalette.map((c) => (
+                          <button
+                            key={c.hex}
+                            onClick={() => setShirtColor(c.hex)}
+                            title={c.label}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: c.hex,
+                              border: shirtColor === c.hex ? '3px solid #ffffff' : '2px solid #ffffff',
+                              boxShadow: shirtColor === c.hex ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        ))}
+                        <button
+                          title="Custom Shirt Color"
+                          onClick={() => shirtColorPickerRef.current?.click()}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: '#fafafa',
+                            border: '1.5px dashed #9ca3af',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>
+                          <input
+                            ref={shirtColorPickerRef}
+                            type="color"
+                            value={shirtColor || '#dc2626'}
+                            onChange={(e) => setShirtColor(e.target.value)}
+                            style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ================= TAB: PANTS ================= */}
+                {activeTab === 'pants' && (
+                  <div>
+                    {/* A. Bottom Styles */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Pants & Bottoms (5 Styles)
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                        {pantsOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setPantsType(opt.id)}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: pantsType === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: pantsType === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280' }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* B. Pants Colors */}
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Pants Color
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {pantsColorPalette.map((c) => (
+                          <button
+                            key={c.hex}
+                            onClick={() => setPantsColor(c.hex)}
+                            title={c.label}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: c.hex,
+                              border: pantsColor === c.hex ? '3px solid #ffffff' : '2px solid #ffffff',
+                              boxShadow: pantsColor === c.hex ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        ))}
+                        <button
+                          title="Custom Pants Color"
+                          onClick={() => pantsColorPickerRef.current?.click()}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: '#fafafa',
+                            border: '1.5px dashed #9ca3af',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>
+                          <input
+                            ref={pantsColorPickerRef}
+                            type="color"
+                            value={pantsColor || '#18181b'}
+                            onChange={(e) => setPantsColor(e.target.value)}
+                            style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* ================= TAB: SHOES ================= */}
+                {activeTab === 'shoes' && (
+                  <div>
+                    {/* A. Footwear Styles */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Shoes & Footwear
+                      </span>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+                        {shoesOptions.map((opt) => (
+                          <button
+                            key={opt.id}
+                            onClick={() => setShoesType(opt.id)}
+                            style={{
+                              padding: '10px',
+                              borderRadius: '8px',
+                              border: shoesType === opt.id ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                              background: shoesType === opt.id ? '#eff6ff' : '#ffffff',
+                              cursor: 'pointer',
+                              textAlign: 'left'
+                            }}
+                          >
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: '#111827' }}>{opt.label}</div>
+                            <div style={{ fontSize: '10px', color: '#6b7280' }}>{opt.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* B. Footwear Colors */}
+                    <div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#111827', display: 'block', marginBottom: '8px' }}>
+                        Shoe Accent Color
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {shoesColorPalette.map((c) => (
+                          <button
+                            key={c.hex}
+                            onClick={() => setShoesColor(c.hex)}
+                            title={c.label}
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: c.hex,
+                              border: shoesColor === c.hex ? '3px solid #ffffff' : '2px solid #ffffff',
+                              boxShadow: shoesColor === c.hex ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
+                              cursor: 'pointer'
+                            }}
+                          />
+                        ))}
+                        <button
+                          title="Custom Shoe Color"
+                          onClick={() => shoesColorPickerRef.current?.click()}
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: '#fafafa',
+                            border: '1.5px dashed #9ca3af',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>
+                          <input
+                            ref={shoesColorPickerRef}
+                            type="color"
+                            value={shoesColor || '#dc2626'}
+                            onChange={(e) => setShoesColor(e.target.value)}
+                            style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Bottom Actions */}
+            <button
+              onClick={handleAvatarContinue}
+              style={{
+                width: '100%',
+                maxWidth: '420px',
+                height: '48px',
+                background: '#14C939',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '15px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                marginBottom: '14px',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = '#0ea82d')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = '#14C939')}
+            >
+              Continue
+            </button>
+
+            <button
+              onClick={() => setStep('join')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#0091ff',
+                fontSize: '14px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
           </div>
-
-          {/* Continue button */}
-          <button
-            onClick={handleAvatarContinue}
-            style={{
-              width: '100%',
-              maxWidth: '380px',
-              height: '48px',
-              background: '#14C939',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '15px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              marginBottom: '16px',
-              fontFamily: 'Inter, sans-serif'
-            }}
-          >
-            Continue
-          </button>
-
-          {/* Back button */}
-          <button
-            onClick={() => setStep('join')}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#0091ff',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontFamily: 'Inter, sans-serif'
-            }}
-          >
-            <ArrowLeft size={14} /> Back
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ================= STEP 3: AUDIO & VIDEO SETUP ================= */}
       {step === 'setup-audio-video' && (

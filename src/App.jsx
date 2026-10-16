@@ -245,6 +245,16 @@ export default function App() {
             skinTone: guestData.skinTone,
             avatarGender: guestData.gender,
             hairType: guestData.hairType,
+            hairColor: guestData.hairColor,
+            faceType: guestData.faceType,
+            mouthType: guestData.mouthType,
+            noseType: guestData.noseType,
+            clothing: guestData.clothing,
+            shirtColor: guestData.shirtColor,
+            pantsType: guestData.pantsType,
+            pantsColor: guestData.pantsColor,
+            shoesType: guestData.shoesType,
+            shoesColor: guestData.shoesColor,
             isMicOn: guestData.isMicOn,
             isVideoOn: guestData.isVideoOn
           });

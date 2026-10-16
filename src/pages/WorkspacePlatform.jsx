@@ -804,10 +804,19 @@ export default function WorkspacePlatform({ user, onExit }) {
     const avatarSystem = createAvatarSystem();
     const playerConfig = {
       name: userName || user?.fullName || 'Ayush (you)',
-      skinColor: user?.skinTone || 0xf5d0b5,
+      skinColor: user?.skinTone || 0xf6d5be,
       gender: user?.avatarGender || 'male',
       hairType: user?.hairType || (user?.avatarGender === 'female' ? 'long_waves_headphones' : 'black_waves'),
-      shirtColor: user?.shirtColor || 0xdc2626
+      hairColor: user?.hairColor,
+      faceType: user?.faceType,
+      mouthType: user?.mouthType,
+      noseType: user?.noseType,
+      clothing: user?.clothing,
+      shirtColor: user?.shirtColor || 0xdc2626,
+      pantsType: user?.pantsType,
+      pantsColor: user?.pantsColor,
+      shoesType: user?.shoesType,
+      shoesColor: user?.shoesColor
     };
     const roster = avatarSystem.createRoster(scene, playerConfig);
     avatarsRef.current = roster;

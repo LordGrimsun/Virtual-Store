@@ -13,10 +13,19 @@ import { createAvatarSystem } from './AvatarSystem';
  * - Idle breathing animation
  */
 export default function AvatarPreview3D({
-  skinColor = '#ba8659',
+  skinColor = '#f6d5be',
   gender = 'male',
   hairType = null,
+  hairColor = null,
+  faceType = null,
+  mouthType = null,
+  noseType = null,
+  clothing = null,
   shirtColor = null,
+  pantsType = null,
+  pantsColor = null,
+  shoesType = null,
+  shoesColor = null,
   rotationAngle = 0, // external angle in degrees
   onRotationChange
 }) {
@@ -60,16 +69,16 @@ export default function AvatarPreview3D({
     rendererRef.current = renderer;
     container.appendChild(renderer.domElement);
 
-    // 2. Camera: Framed head-to-toe with comfortable headroom & ground plinth padding
-    const camera = new THREE.PerspectiveCamera(33, width / height, 0.1, 50);
-    camera.position.set(0, 1.22, 4.30);
-    camera.lookAt(0, 1.08, 0);
+    // 2. Camera: Framed head-to-toe with elegant headroom & ground shadow padding
+    const camera = new THREE.PerspectiveCamera(30, width / height, 0.1, 50);
+    camera.position.set(0, 0.68, 2.50);
+    camera.lookAt(0, 0.60, 0);
 
     // 3. Studio Lighting Setup
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.10);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.15);
     keyLight.position.set(2.0, 3.5, 3.0);
     keyLight.castShadow = true;
     keyLight.shadow.bias = -0.0005;
@@ -77,11 +86,11 @@ export default function AvatarPreview3D({
     keyLight.shadow.mapSize.height = 1024;
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.65);
+    const fillLight = new THREE.DirectionalLight(0xdbeafe, 0.70);
     fillLight.position.set(-2.5, 2.0, 2.0);
     scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.40);
+    const rimLight = new THREE.DirectionalLight(0xffffff, 0.45);
     rimLight.position.set(0, 2.0, -3.0);
     scene.add(rimLight);
 
@@ -103,9 +112,9 @@ export default function AvatarPreview3D({
       transparent: true,
       depthWrite: false
     });
-    const shadowMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.4), shadowMat);
+    const shadowMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.3), shadowMat);
     shadowMesh.rotation.x = -Math.PI / 2;
-    shadowMesh.position.set(0, 0.005, 0);
+    shadowMesh.position.set(0, 0.002, 0);
     scene.add(shadowMesh);
 
     // 5. Build Initial 3D Avatar
@@ -119,10 +128,16 @@ export default function AvatarPreview3D({
       isPlayer: true,
       skinColor: parsedSkin,
       hairType: effectiveHair,
-      hairColor: gender === 'female' ? 0x3e2723 : 0x1c1917,
-      clothing: gender === 'female' ? 'pink_jacket' : 'red_hoodie',
-      faceType: gender === 'female' ? 'wink' : 'happy',
+      hairColor: hairColor || (gender === 'female' ? 0x3e2723 : 0x1c1917),
+      clothing: clothing || (gender === 'female' ? 'pink_jacket' : 'red_hoodie'),
+      faceType: faceType || (gender === 'female' ? 'wink' : 'happy'),
+      mouthType: mouthType || 'smile_teeth',
+      noseType: noseType || 'clean',
       shirtColor: shirtColor || (gender === 'female' ? 0xf472b6 : 0xdc2626),
+      pantsType: pantsType || (gender === 'female' ? 'jeans' : 'cargo_pants'),
+      pantsColor: pantsColor,
+      shoesType: shoesType || 'platform_sneakers',
+      shoesColor: shoesColor,
       gender: gender,
       initialRot: targetRotationYRef.current
     });
@@ -188,7 +203,7 @@ export default function AvatarPreview3D({
 
       // Idle breathing sway
       if (avatarObjRef.current?.parts?.torsoGroup) {
-        avatarObjRef.current.parts.torsoGroup.position.y = 1.20 + Math.sin(elapsed * 2.5) * 0.010;
+        avatarObjRef.current.parts.torsoGroup.position.y = 0.74 + Math.sin(elapsed * 2.5) * 0.005;
       }
 
       renderer.render(scene, camera);
@@ -226,27 +241,7 @@ export default function AvatarPreview3D({
     };
   }, []);
 
-  // Update Skin Color in Real-Time without Scene Rebuilding
-  useEffect(() => {
-    if (avatarObjRef.current?.materials?.skinMat) {
-      const parsedSkin = typeof skinColor === 'string'
-        ? parseInt(skinColor.replace('#', '0x'), 16)
-        : skinColor;
-      avatarObjRef.current.materials.skinMat.color.setHex(parsedSkin);
-    }
-  }, [skinColor]);
-
-  // Update Shirt Color in Real-Time
-  useEffect(() => {
-    if (avatarObjRef.current?.materials?.torsoMat && shirtColor) {
-      const parsedShirt = typeof shirtColor === 'string'
-        ? parseInt(shirtColor.replace('#', '0x'), 16)
-        : shirtColor;
-      avatarObjRef.current.materials.torsoMat.color.setHex(parsedShirt);
-    }
-  }, [shirtColor]);
-
-  // Rebuild Avatar Mesh when Gender or Hairstyle changes
+  // Live Rebuild Avatar Mesh on any customization prop change
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
@@ -265,16 +260,36 @@ export default function AvatarPreview3D({
       isPlayer: true,
       skinColor: parsedSkin,
       hairType: effectiveHair,
-      hairColor: gender === 'female' ? 0x3e2723 : 0x1c1917,
-      clothing: gender === 'female' ? 'pink_jacket' : 'red_hoodie',
-      faceType: gender === 'female' ? 'wink' : 'happy',
+      hairColor: hairColor || (gender === 'female' ? 0x3e2723 : 0x1c1917),
+      clothing: clothing || (gender === 'female' ? 'pink_jacket' : 'red_hoodie'),
+      faceType: faceType || (gender === 'female' ? 'wink' : 'happy'),
+      mouthType: mouthType || 'smile_teeth',
+      noseType: noseType || 'clean',
       shirtColor: shirtColor || (gender === 'female' ? 0xf472b6 : 0xdc2626),
+      pantsType: pantsType || (gender === 'female' ? 'jeans' : 'cargo_pants'),
+      pantsColor: pantsColor,
+      shoesType: shoesType || 'platform_sneakers',
+      shoesColor: shoesColor,
       gender: gender,
       initialRot: currentRotationYRef.current
     });
     scene.add(av.mesh);
     avatarObjRef.current = av;
-  }, [gender, hairType, skinColor]);
+  }, [
+    skinColor,
+    gender,
+    hairType,
+    hairColor,
+    faceType,
+    mouthType,
+    noseType,
+    clothing,
+    shirtColor,
+    pantsType,
+    pantsColor,
+    shoesType,
+    shoesColor
+  ]);
 
   return (
     <div
