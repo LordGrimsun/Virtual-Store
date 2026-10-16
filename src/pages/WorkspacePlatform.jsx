@@ -262,127 +262,186 @@ export default function WorkspacePlatform({ user, onExit }) {
     playSound('click');
   };
 
-  // Helper: Generates a 60 FPS live animated presentation stream so screen share is never black
-  const createActiveKeynoteStream = () => {
+  // Helper: Generates an unmistakable, high-energy 60 FPS live presentation stream with live timecode,
+  // animated audio spectrum equalizer, presenter cards, and dynamic laser pointer so telecast is never static or blank
+  const createActiveKeynoteStream = (streamTitle = 'Auditorium Cinema Keynote Broadcast', presenter = 'Ayush', mode = 'telecast') => {
     const canvas = document.createElement('canvas');
     canvas.width = 1280;
     canvas.height = 720;
     const ctx = canvas.getContext('2d');
     let frame = 0;
+    const startTime = Date.now();
 
     const render = () => {
       frame++;
       const w = 1280;
       const h = 720;
+      const elapsedMs = Date.now() - startTime;
+      const elapsedSec = Math.floor(elapsedMs / 1000);
+      const ms = Math.floor((elapsedMs % 1000) / 10);
+      const timecode = `${String(Math.floor(elapsedSec / 60)).padStart(2, '0')}:${String(elapsedSec % 60).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
 
-      // Dark studio presentation gradient
+      // 1. Dark high-tech cyber gradient background
       const bgGrad = ctx.createLinearGradient(0, 0, w, h);
-      bgGrad.addColorStop(0, '#0b0f19');
-      bgGrad.addColorStop(1, '#1e293b');
+      bgGrad.addColorStop(0, '#020617');
+      bgGrad.addColorStop(0.5, '#0f172a');
+      bgGrad.addColorStop(1, '#1e1b4b');
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // Fine grid texture
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      // 2. Animated grid background
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < w; x += 40) {
+      const gridOffset = (frame * 0.6) % 40;
+      for (let x = gridOffset; x < w; x += 40) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
         ctx.lineTo(x, h);
         ctx.stroke();
       }
-      for (let y = 0; y < h; y += 40) {
+      for (let y = gridOffset; y < h; y += 40) {
         ctx.beginPath();
         ctx.moveTo(0, y);
         ctx.lineTo(w, y);
         ctx.stroke();
       }
 
-      // Top brand header
+      // 3. Top Header with Spot Branding & Flashing LIVE Badge
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      ctx.fillRect(0, 0, w, 80);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, 80);
+      ctx.lineTo(w, 80);
+      ctx.stroke();
+
+      // Spot logo dot
       ctx.fillStyle = '#22c55e';
       ctx.beginPath();
-      ctx.arc(60, 50, 16, 0, Math.PI * 2);
+      ctx.arc(55, 40, 14, 0, Math.PI * 2);
       ctx.fill();
 
+      // Brand text
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('spot virtual', 90, 58);
+      ctx.fillText('spot virtual', 80, 48);
 
+      // Screen location badge
       ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 14px monospace';
-      ctx.textAlign = 'right';
-      ctx.fillText(`● LIVE PRESENTATION STREAM  •  FPS: 60  •  ${new Date().toLocaleTimeString()}`, w - 50, 55);
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText('● AUDITORIUM CINEMA SCREEN  •  CHANNEL #01 LIVE', 245, 48);
 
-      // Main Slide Card
-      ctx.fillStyle = '#0f172a';
-      ctx.strokeStyle = '#334155';
+      // Flashing LIVE badge
+      const pulse = (Math.sin(frame * 0.12) + 1) / 2;
+      ctx.fillStyle = `rgba(239, 68, 68, ${0.4 + pulse * 0.6})`;
+      ctx.beginPath();
+      ctx.roundRect(w - 380, 22, 130, 36, 18);
+      ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(w - 362, 40, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('LIVE TELECAST', w - 348, 45);
+
+      // Timecode
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`REC ${timecode}`, w - 40, 46);
+
+      // 4. Main Slide Canvas Card
+      ctx.fillStyle = '#090d16';
+      ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.roundRect(50, 95, w - 100, h - 145, 16);
+      ctx.roundRect(40, 100, w - 80, h - 140, 16);
       ctx.fill();
       ctx.stroke();
 
-      // Slide Title & Subtitle
+      // Slide Title
       ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 36px sans-serif';
+      ctx.font = 'bold 32px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Spot Virtual Workspace Platform Keynote', 90, 165);
+      ctx.fillText(streamTitle || 'Spot Virtual All-Hands Keynote: 3D Coworking & Live Telecast', 75, 155);
 
+      // Presenter Info
       ctx.fillStyle = '#94a3b8';
-      ctx.font = '18px sans-serif';
-      ctx.fillText('Real-time 3D spatial collaboration, WebRTC audio/video mesh, and interactive office blueprints', 90, 205);
+      ctx.font = '15px sans-serif';
+      ctx.fillText(`Broadcasting live from ${presenter || 'Ayush'} • 1080p 60 FPS • Stereo Audio Sync`, 75, 188);
 
-      // 3 KPI / Architecture Metrics
+      // 3 Live Architectural & Telecast Status Cards
       const cards = [
-        { title: 'Spatial Audio Nodes', val: '48 kHz Opus', sub: 'Low-latency P2P mesh', color: '#10b981', x: 90 },
-        { title: 'Room Blueprints', val: '12 Active Zones', sub: 'Dollhouse cutaway mode', color: '#3b82f6', x: 470 },
-        { title: 'Screen Broadcast', val: '1080p 60 FPS', sub: 'Interactive zero-lag', color: '#a855f7', x: 850 }
+        { title: 'Auditorium Stage', val: 'IMAX Cinema', sub: '4-Tier Theater Seating', col: '#10b981', x: 75 },
+        { title: 'Screen Broadcast', val: '60 FPS 1080p', sub: 'Zero-Lag Canvas Sync', col: '#38bdf8', x: 460 },
+        { title: 'Spatial Audio Nodes', val: '48 kHz Opus', sub: 'Zone Sound Isolation', col: '#a855f7', x: 845 }
       ];
 
       cards.forEach((c) => {
-        ctx.fillStyle = '#1e293b';
-        ctx.strokeStyle = c.color;
+        ctx.fillStyle = '#111827';
+        ctx.strokeStyle = c.col;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(c.x, 245, 340, 160, 12);
+        ctx.roundRect(c.x, 218, 355, 140, 12);
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '14px sans-serif';
-        ctx.fillText(c.title, c.x + 22, 285);
+        ctx.fillText(c.title, c.x + 20, 255);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText(c.val, c.x + 22, 332);
+        ctx.font = 'bold 28px sans-serif';
+        ctx.fillText(c.val, c.x + 20, 300);
 
-        ctx.fillStyle = c.color;
-        ctx.font = '13px sans-serif';
-        ctx.fillText(`✓ ${c.sub}`, c.x + 22, 372);
+        ctx.fillStyle = c.col;
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(`✓ ${c.sub}`, c.x + 20, 335);
       });
 
-      // Animated telemetry wave
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 3;
+      // Animated Sound / Telemetry Visualizer Waveform at the bottom
+      ctx.fillStyle = '#111827';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      for (let gx = 90; gx < w - 90; gx += 12) {
-        const gy = 540 + Math.sin((gx + frame * 4) * 0.03) * 32 + Math.cos((gx - frame * 2) * 0.05) * 14;
-        if (gx === 90) ctx.moveTo(gx, gy);
-        else ctx.lineTo(gx, gy);
-      }
+      ctx.roundRect(75, 385, w - 150, 195, 12);
+      ctx.fill();
       ctx.stroke();
 
+      // Title above visualizer
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 12px monospace';
+      ctx.fillText('REALTIME AUDIO / VIDEO TELEMETRY STREAM SPECTRUM', 95, 412);
+
+      // Waveform bars
+      const barCount = 46;
+      const barWidth = 19;
+      const barSpacing = 5;
+      const startX = 95;
+      for (let b = 0; b < barCount; b++) {
+        const barHeight = Math.abs(Math.sin((b * 0.22) + frame * 0.09) * 95) + Math.abs(Math.cos((b * 0.38) - frame * 0.06) * 45) + 12;
+        const barY = 560 - barHeight;
+        const grad = ctx.createLinearGradient(0, barY, 0, 560);
+        grad.addColorStop(0, '#38bdf8');
+        grad.addColorStop(0.6, '#6366f1');
+        grad.addColorStop(1, '#a855f7');
+        ctx.fillStyle = grad;
+        ctx.fillRect(startX + b * (barWidth + barSpacing), barY, barWidth, barHeight);
+      }
+
       // Moving presenter laser pointer
-      const cursorX = 280 + Math.sin(frame * 0.04) * 220;
-      const cursorY = 460 + Math.cos(frame * 0.06) * 45;
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+      const cursorX = 260 + Math.sin(frame * 0.035) * 360;
+      const cursorY = 300 + Math.cos(frame * 0.055) * 55;
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.28)';
       ctx.beginPath();
-      ctx.arc(cursorX, cursorY, 14, 0, Math.PI * 2);
+      ctx.arc(cursorX, cursorY, 16, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = '#ef4444';
       ctx.beginPath();
-      ctx.arc(cursorX, cursorY, 5, 0, Math.PI * 2);
+      ctx.arc(cursorX, cursorY, 6, 0, Math.PI * 2);
       ctx.fill();
     };
 
@@ -393,11 +452,19 @@ export default function WorkspacePlatform({ user, onExit }) {
     return stream;
   };
 
-  // 3. Real Screen Sharing & Telecast Engine (Never renders a black screen)
+  // 3. Robust Real Screen Sharing & Telecast Engine
   const startScreenShare = async (specificScreenId) => {
-    const targetScreenId = specificScreenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
+    // Intelligently resolve the target screen
+    const targetScreenId = specificScreenId ||
+      activeScreenTargetRef.current?.id ||
+      activeScreenTarget?.id ||
+      (currentRoomId && currentRoomId.includes('auditorium') ? 'auditorium' : currentRoomId?.replace('-', '_')) ||
+      'auditorium';
+
     let target = null;
-    if (activeScreenTarget?.id === targetScreenId && activeScreenTarget?.mesh) {
+    if (activeScreenTargetRef.current?.id === targetScreenId && activeScreenTargetRef.current?.mesh) {
+      target = activeScreenTargetRef.current.mesh;
+    } else if (activeScreenTarget?.id === targetScreenId && activeScreenTarget?.mesh) {
       target = activeScreenTarget.mesh;
     } else if (screensRef.current?.[targetScreenId]) {
       target = screensRef.current[targetScreenId];
@@ -407,27 +474,37 @@ export default function WorkspacePlatform({ user, onExit }) {
       target = sceneRef.current.getObjectByName(`screen_${targetScreenId}`) || sceneRef.current.getObjectByName(targetScreenId);
     }
 
+    if (target?.userData?.displayMesh) {
+      target = target.userData.displayMesh;
+    }
+
     const screenName = target?.userData?.displayName || activeScreenTarget?.name || `Office Screen (${targetScreenId})`;
 
     let stream = null;
+    let isLiveCapture = false;
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-        const capturePromise = navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: 'always', displaySurface: 'monitor' },
+        // No artificial timeout: allow the user to comfortably choose Entire Screen / Window / Chrome Tab
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            cursor: 'always',
+            displaySurface: 'monitor',
+            frameRate: { ideal: 60, max: 60 }
+          },
           audio: false
         });
-        const timeoutPromise = new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('getDisplayMedia timeout')), 1000)
-        );
-        stream = await Promise.race([capturePromise, timeoutPromise]);
+        isLiveCapture = true;
       }
     } catch (err) {
-      console.log('Real screen capture unavailable or cancelled, launching interactive keynote feed:', err);
+      console.log('Real screen capture unavailable or cancelled by user, falling back to live presentation broadcast:', err);
+      if (err.name !== 'NotAllowedError' && err.name !== 'AbortError') {
+        setToastMessage('Display capture note: Launching high-res interactive telecast feed.');
+      }
     }
 
-    // If real hardware capture was cancelled or unsupported, use high-res active presentation stream
+    // If real hardware capture was cancelled or unsupported, use vibrant 60 FPS presentation telecast
     if (!stream) {
-      stream = createActiveKeynoteStream();
+      stream = createActiveKeynoteStream('Auditorium Cinema Keynote Broadcast', userName, 'telecast');
     }
 
     setScreenStream(stream);
@@ -439,16 +516,39 @@ export default function WorkspacePlatform({ user, onExit }) {
       try {
         activeVideoElementRef.current.pause();
         activeVideoElementRef.current.srcObject = null;
+        if (activeVideoElementRef.current.parentNode) {
+          activeVideoElementRef.current.parentNode.removeChild(activeVideoElementRef.current);
+        }
       } catch (e) {}
     }
 
-    // In-memory HTML5 video element for Three.js texture projection
-    const video = document.createElement('video');
-    video.autoplay = true;
-    video.muted = true;
-    video.playsInline = true;
+    // Attach to offscreen DOM container so Chromium decodes frames continuously without suspension
+    let video = document.getElementById('spot-screen-telecast-sink');
+    if (!video) {
+      video = document.createElement('video');
+      video.id = 'spot-screen-telecast-sink';
+      video.setAttribute('playsinline', 'true');
+      video.setAttribute('webkit-playsinline', 'true');
+      video.muted = true;
+      video.autoplay = true;
+      video.style.position = 'fixed';
+      video.style.top = '-9999px';
+      video.style.left = '-9999px';
+      video.style.width = '32px';
+      video.style.height = '32px';
+      video.style.opacity = '0.001';
+      video.style.pointerEvents = 'none';
+      video.style.zIndex = '-9999';
+      document.body.appendChild(video);
+    }
+
     video.srcObject = stream;
-    video.play().catch(() => {});
+    video.muted = true;
+    try {
+      await video.play();
+    } catch (e) {
+      console.warn('Video play error:', e);
+    }
 
     activeVideoElementRef.current = video;
 
@@ -463,6 +563,16 @@ export default function WorkspacePlatform({ user, onExit }) {
     if (target && target.material) {
       target.material.map = vidTex;
       target.material.needsUpdate = true;
+    }
+
+    // Light up screen bezel / casing back-light
+    if (target?.parent?.children) {
+      target.parent.children.forEach((c) => {
+        if (c.isPointLight) {
+          c.color.setHex(0x38bdf8);
+          c.intensity = 1.6;
+        }
+      });
     }
 
     playSound('chime');
@@ -509,15 +619,21 @@ export default function WorkspacePlatform({ user, onExit }) {
     }
     activeVideoTextureRef.current = null;
 
-    const targetScreenId = screenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
+    const targetScreenId = screenId ||
+      activeScreenTargetRef.current?.id ||
+      activeScreenTarget?.id ||
+      (currentRoomId && currentRoomId.includes('auditorium') ? 'auditorium' : currentRoomId?.replace('-', '_')) ||
+      'auditorium';
+
     let target = null;
     if (screensRef.current?.[targetScreenId]) {
       target = screensRef.current[targetScreenId];
     } else if (screensRef.current?.[`screen_${targetScreenId}`]) {
       target = screensRef.current[`screen_${targetScreenId}`];
     } else if (sceneRef.current) {
-      target = sceneRef.current.getObjectByName(`screen_${targetScreenId}`);
+      target = sceneRef.current.getObjectByName(`screen_${targetScreenId}`) || sceneRef.current.getObjectByName(targetScreenId);
     }
+    if (target?.userData?.displayMesh) target = target.userData.displayMesh;
 
     if (target && target.material) {
       // Restore authentic role-specific texture
@@ -539,6 +655,16 @@ export default function WorkspacePlatform({ user, onExit }) {
         target.material.map = defaultTex;
         target.material.needsUpdate = true;
       }
+
+      // Reset casing glow
+      if (target?.parent?.children) {
+        target.parent.children.forEach((c) => {
+          if (c.isPointLight) {
+            c.color.setHex(0x22c55e);
+            c.intensity = 0.4;
+          }
+        });
+      }
     }
     playSound('click');
     setToastMessage('Stopped screen telecast.');
@@ -547,17 +673,25 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Real Camera Streaming directly to screen
   const startCameraStream = async (specificScreenId) => {
-    const targetScreenId = specificScreenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
+    const targetScreenId = specificScreenId ||
+      activeScreenTargetRef.current?.id ||
+      activeScreenTarget?.id ||
+      (currentRoomId && currentRoomId.includes('auditorium') ? 'auditorium' : currentRoomId?.replace('-', '_')) ||
+      'auditorium';
+
     let target = null;
-    if (activeScreenTarget?.id === targetScreenId && activeScreenTarget?.mesh) {
+    if (activeScreenTargetRef.current?.id === targetScreenId && activeScreenTargetRef.current?.mesh) {
+      target = activeScreenTargetRef.current.mesh;
+    } else if (activeScreenTarget?.id === targetScreenId && activeScreenTarget?.mesh) {
       target = activeScreenTarget.mesh;
     } else if (screensRef.current?.[targetScreenId]) {
       target = screensRef.current[targetScreenId];
     } else if (screensRef.current?.[`screen_${targetScreenId}`]) {
       target = screensRef.current[`screen_${targetScreenId}`];
     } else if (sceneRef.current) {
-      target = sceneRef.current.getObjectByName(`screen_${targetScreenId}`);
+      target = sceneRef.current.getObjectByName(`screen_${targetScreenId}`) || sceneRef.current.getObjectByName(targetScreenId);
     }
+    if (target?.userData?.displayMesh) target = target.userData.displayMesh;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -566,14 +700,33 @@ export default function WorkspacePlatform({ user, onExit }) {
         try {
           activeVideoElementRef.current.pause();
           activeVideoElementRef.current.srcObject = null;
+          if (activeVideoElementRef.current.parentNode) {
+            activeVideoElementRef.current.parentNode.removeChild(activeVideoElementRef.current);
+          }
         } catch (e) {}
       }
 
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
+      let video = document.getElementById('spot-screen-telecast-sink');
+      if (!video) {
+        video = document.createElement('video');
+        video.id = 'spot-screen-telecast-sink';
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+        video.muted = true;
+        video.autoplay = true;
+        video.style.position = 'fixed';
+        video.style.top = '-9999px';
+        video.style.left = '-9999px';
+        video.style.width = '32px';
+        video.style.height = '32px';
+        video.style.opacity = '0.001';
+        video.style.pointerEvents = 'none';
+        video.style.zIndex = '-9999';
+        document.body.appendChild(video);
+      }
+
       video.srcObject = stream;
+      video.muted = true;
       await video.play();
 
       activeVideoElementRef.current = video;
@@ -590,12 +743,22 @@ export default function WorkspacePlatform({ user, onExit }) {
         target.material.needsUpdate = true;
       }
 
+      if (target?.parent?.children) {
+        target.parent.children.forEach((c) => {
+          if (c.isPointLight) {
+            c.color.setHex(0x10b981);
+            c.intensity = 1.6;
+          }
+        });
+      }
+
       playSound('chime');
       setToastMessage('Live camera stream broadcast on screen! 📹');
       setTimeout(() => setToastMessage(null), 3000);
     } catch (err) {
       console.warn('Camera access denied:', err);
-      alert('Camera permission denied or camera device not found.');
+      setToastMessage('Camera permission denied or camera device not found.');
+      setTimeout(() => setToastMessage(null), 3500);
     }
   };
 
@@ -1853,19 +2016,31 @@ export default function WorkspacePlatform({ user, onExit }) {
   const handleUpdateScreenContent = (screenId, contentType, payload) => {
     playSound('chime');
 
+    const targetKey = screenId ||
+      activeScreenTargetRef.current?.id ||
+      activeScreenTarget?.id ||
+      (currentRoomId && currentRoomId.includes('auditorium') ? 'auditorium' : currentRoomId?.replace('-', '_')) ||
+      'auditorium';
+
     let targetMesh = null;
-    if (activeScreenTarget?.mesh) {
+    if (activeScreenTargetRef.current?.id === targetKey && activeScreenTargetRef.current?.mesh) {
+      targetMesh = activeScreenTargetRef.current.mesh;
+    } else if (activeScreenTarget?.id === targetKey && activeScreenTarget?.mesh) {
       targetMesh = activeScreenTarget.mesh;
-    } else if (screensRef.current && screensRef.current[screenId]) {
-      targetMesh = screensRef.current[screenId];
-    } else if (screensRef.current && screensRef.current[`screen_${screenId}`]) {
-      targetMesh = screensRef.current[`screen_${screenId}`];
+    } else if (screensRef.current && screensRef.current[targetKey]) {
+      targetMesh = screensRef.current[targetKey];
+    } else if (screensRef.current && screensRef.current[`screen_${targetKey}`]) {
+      targetMesh = screensRef.current[`screen_${targetKey}`];
     } else if (sceneRef.current) {
-      targetMesh = sceneRef.current.getObjectByName(`screen_${screenId}`) || sceneRef.current.getObjectByName(screenId);
+      targetMesh = sceneRef.current.getObjectByName(`screen_${targetKey}`) || sceneRef.current.getObjectByName(targetKey);
+    }
+
+    if (targetMesh?.userData?.displayMesh) {
+      targetMesh = targetMesh.userData.displayMesh;
     }
 
     if (!targetMesh) {
-      console.warn(`Screen mesh "${screenId}" not found in scene.`);
+      console.warn(`Screen mesh "${targetKey}" not found in scene.`);
       return;
     }
 
@@ -1928,18 +2103,17 @@ export default function WorkspacePlatform({ user, onExit }) {
         targetMesh.material.map = texSys.kpiTexture;
         targetMesh.material.needsUpdate = true;
       }
+      setToastMessage('KPI Telemetry Dashboard active on screen! 📊');
+      setTimeout(() => setToastMessage(null), 2500);
     } else if (contentType === 'screenshare') {
-      startScreenShare(screenId);
+      startScreenShare(targetKey);
+      return;
     } else if (contentType === 'webcam') {
-      startCameraStream(screenId);
+      startCameraStream(targetKey);
+      return;
     } else if (contentType === 'meeting') {
-      activeVideoTextureRef.current = null;
-      const stageTex = texSys?.createAuditoriumKeynoteTexture ? texSys.createAuditoriumKeynoteTexture() : null;
-      if (stageTex && targetMesh.material) {
-        stageTex.colorSpace = THREE.SRGBColorSpace;
-        targetMesh.material.map = stageTex;
-        targetMesh.material.needsUpdate = true;
-      }
+      startScreenShare(targetKey);
+      return;
     } else if (contentType === 'calendar') {
       activeVideoTextureRef.current = null;
       const calTex = texSys?.schedTexture;
@@ -3846,21 +4020,6 @@ export default function WorkspacePlatform({ user, onExit }) {
             </div>
           </div>
         </div>
-
-        {/* 8. Spot 12-Icon Screen Display Manager Toolbar (media_1791993853484.png) */}
-        {activeScreenTarget && (
-          <ScreenDisplayManager
-            activeScreen={activeScreenTarget.id}
-            screenPos={activeScreenPos}
-            onClose={() => {
-              activeScreenTargetRef.current = null;
-              setActiveScreenTarget(null);
-              setActiveScreenPos(null);
-            }}
-            onUpdateScreenContent={handleUpdateScreenContent}
-            onStartScreenShare={startScreenShare}
-          />
-        )}
 
         {/* 9. Spot Spaces & Team Presence Sidebar (media_1791967544265.webp) */}
         <SpacesSidebar
