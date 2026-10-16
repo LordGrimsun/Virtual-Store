@@ -139,14 +139,23 @@ export default function WorkspacePlatform({ user, onExit }) {
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
   const playerPartsRef = useRef(null);
+  const [hoveredSitPill, setHoveredSitPill] = useState(null); // { x: number, y: number, name: string }
+
   const getInitialPlayerPosition = () => {
-    if (user?.targetRoom?.toLowerCase().includes('lobby') || user?.targetRoomId === 'lobby') {
-      return new THREE.Vector3(22, 0, -16);
+    const tr = user?.targetRoom?.toLowerCase() || user?.targetRoomId?.toLowerCase() || '';
+    if (tr.includes('auditorium')) {
+      return new THREE.Vector3(18, 0, -10);
     }
-    if (user?.targetRoom?.toLowerCase().includes('office a') || user?.targetRoomId === 'office-a' || isInitialSer) {
-      return new THREE.Vector3(-8, 0, 14);
+    if (tr.includes('lounge c') || tr.includes('lounge-c') || tr.includes('concourse')) {
+      return new THREE.Vector3(-10, 0, 4);
     }
-    return new THREE.Vector3(-9, 0, 16);
+    if (tr.includes('lobby')) {
+      return new THREE.Vector3(16, 0, 18);
+    }
+    if (tr.includes('office a') || tr.includes('office-a') || isInitialSer) {
+      return new THREE.Vector3(-4, 0, 16);
+    }
+    return new THREE.Vector3(-23, 0, -12.5); // Boardroom open walkway south of conference table
   };
   const targetPosRef = useRef(getInitialPlayerPosition());
   const isSittingRef = useRef(false);
@@ -172,6 +181,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const screenTimerIntervalRef = useRef(null);
   const showcaseScreenRef = useRef(null);
   const [showcaseScreenTarget, setShowcaseScreenTarget] = useState(null);
+  const cameraOverrideRef = useRef(null);
 
   // 1. Procedural Web Audio Sound Synthesizer
   const audioCtxRef = useRef(null);
@@ -999,63 +1009,47 @@ export default function WorkspacePlatform({ user, onExit }) {
 
       // Spawn player at targetRoom if specified in user prop or URL
       const initialRoom = user?.targetRoom || currentRoom;
-      if (initialRoom && !initialRoom.toLowerCase().includes('boardroom')) {
+      if (initialRoom) {
         const clean = initialRoom.toLowerCase();
-        let target = new THREE.Vector3(-9, 0, 16);
+        let target = new THREE.Vector3(-23, 0, -12.5);
         let slug = 'boardroom';
         let formattedName = 'Boardroom';
-        if (clean.includes('office-a') || clean.includes('office a')) {
-          target.set(-8, 0, 14);
-          slug = 'office-a';
-          formattedName = 'Office A';
-        } else if (clean.includes('focus-pod-1') || clean.includes('focus pod 1')) {
-          target.set(10, 0, -8);
-          slug = 'focus-pod-1';
-          formattedName = 'Focus Pod 1';
-        } else if (clean.includes('focus-pod-2') || clean.includes('focus pod 2')) {
-          target.set(10, 0, 8);
-          slug = 'focus-pod-2';
-          formattedName = 'Focus Pod 2';
-        } else if (clean.includes('team-suite') || clean.includes('team suite')) {
-          target.set(0, 0, 16);
-          slug = 'team-suite';
-          formattedName = 'Team Suite';
-        } else if (clean.includes('terrace')) {
-          target.set(-18, 0, -12);
-          slug = 'terrace';
-          formattedName = 'Terrace Lounge';
-        } else if (clean.includes('lobby')) {
-          target.set(22, 0, -16);
-          slug = 'lobby';
-          formattedName = 'Lobby';
-        } else if (clean.includes('conference b') || clean.includes('conference')) {
-          target.set(5, 0, 16);
-          slug = 'conference-b';
-          formattedName = 'Conference B';
-        } else if (clean.includes('conference a')) {
-          target.set(19, 0, 16);
-          slug = 'conference-a';
-          formattedName = 'Conference A';
-        } else if (clean.includes('auditorium')) {
-          target.set(-24, 0, 14);
+        if (clean.includes('auditorium')) {
+          target.set(18, 0, -10);
           slug = 'auditorium';
           formattedName = 'Auditorium';
-        } else if (clean.includes('patio')) {
-          target.set(-23, 0, -16);
+        } else if (clean.includes('conference b') || clean.includes('cabin') || clean.includes('conference')) {
+          target.set(-4, 0, -11.5);
+          slug = 'conference-b';
+          formattedName = 'Meeting Cabin';
+        } else if (clean.includes('conference a') || clean.includes('promenade')) {
+          target.set(29.4, 0, 12);
+          slug = 'conference-a';
+          formattedName = 'Window Promenade';
+        } else if (clean.includes('lounge c') || clean.includes('concourse')) {
+          target.set(-10, 0, 4);
+          slug = 'lounge-c';
+          formattedName = 'Lounge C';
+        } else if (clean.includes('patio') || clean.includes('terrace')) {
+          target.set(-23, 0, 19);
           slug = 'patio';
           formattedName = 'Patio';
         } else if (clean.includes('cubicle-1') || clean.includes('cubicle 1')) {
-          target.set(-12, 0, -3.4);
+          target.set(-22.5, 0, 11);
           slug = 'cubicle-1';
           formattedName = 'Focus Cubicle 1';
         } else if (clean.includes('cubicle-2') || clean.includes('cubicle 2')) {
-          target.set(-12, 0, 3.4);
+          target.set(-16.5, 0, 11);
           slug = 'cubicle-2';
           formattedName = 'Focus Cubicle 2';
         } else if (clean.includes('workspace')) {
-          target.set(0, 0, -16);
+          target.set(0, 0, 16);
           slug = 'workspace-a';
           formattedName = 'Workspace A';
+        } else if (clean.includes('lobby')) {
+          target.set(16, 0, 18);
+          slug = 'lobby';
+          formattedName = 'Lobby';
         }
         playerObj.mesh.position.copy(target);
         targetPosRef.current.copy(target);
@@ -1268,65 +1262,54 @@ export default function WorkspacePlatform({ user, onExit }) {
         isSittingRef.current = false;
         playSound('click');
 
-        // Authentic 12 canonical Spot rooms + Focus Cubicles detection based on floor coordinates
-        let detectedRoom = 'Boardroom';
-        let detectedSlug = 'boardroom';
+        // Authentic Spot Virtual rooms detection based on floor coordinates (media_1792165933867.png)
+        let detectedRoom = 'Lounge C';
+        let detectedSlug = 'lounge-c';
 
-        if (point.z > 8) {
-          // North wing (Auditorium, Boardroom, Conference B, Conference A)
-          if (point.x < -18) {
-            detectedRoom = 'Auditorium';
-            detectedSlug = 'auditorium';
-          } else if (point.x < -2) {
+        if (point.z < -8) {
+          // North wing (Boardroom, Meeting Cabin, Auditorium)
+          if (point.x < -14) {
             detectedRoom = 'Boardroom';
             detectedSlug = 'boardroom';
-          } else if (point.x < 12) {
-            detectedRoom = 'Conference B';
+          } else if (point.x < 6) {
+            detectedRoom = 'Meeting Cabin';
             detectedSlug = 'conference-b';
           } else {
-            detectedRoom = 'Conference A';
-            detectedSlug = 'conference-a';
+            detectedRoom = 'Auditorium';
+            detectedSlug = 'auditorium';
           }
-        } else if (point.z < -8) {
-          // South wing (Patio, Workspace A, Lobby)
-          if (point.x < -12) {
-            detectedRoom = 'Patio';
-            detectedSlug = 'patio';
-          } else if (point.x < 10) {
-            detectedRoom = 'Workspace A';
-            detectedSlug = 'workspace-a';
-          } else {
-            detectedRoom = 'Lobby';
-            detectedSlug = 'lobby';
-          }
-        } else {
-          // Central wing (Focus Cubicles, Lounge C, Lounge B, Chat A, Chat B, Lounge A)
-          if (point.x < -10) {
-            if (point.x >= -14.6 && point.x <= -9.4 && point.z >= -5.6 && point.z <= -1.2) {
+        } else if (point.x >= 6 && point.z < 4) {
+          // Auditorium open atrium stage and tiered seating
+          detectedRoom = 'Auditorium';
+          detectedSlug = 'auditorium';
+        } else if (point.x >= 22 && point.z >= 4) {
+          // East Window Promenade
+          detectedRoom = 'Window Promenade';
+          detectedSlug = 'conference-a';
+        } else if (point.z > 8) {
+          // South wing
+          if (point.x < -14) {
+            if (point.z > 14) {
+              detectedRoom = 'Patio';
+              detectedSlug = 'patio';
+            } else if (point.x < -19.5) {
               detectedRoom = 'Focus Cubicle 1';
               detectedSlug = 'cubicle-1';
-            } else if (point.x >= -14.6 && point.x <= -9.4 && point.z >= 1.2 && point.z <= 5.6) {
+            } else {
               detectedRoom = 'Focus Cubicle 2';
               detectedSlug = 'cubicle-2';
-            } else {
-              detectedRoom = 'Lounge C';
-              detectedSlug = 'lounge-c';
             }
-          } else if (point.x < 10) {
-            detectedRoom = 'Lounge B';
-            detectedSlug = 'lounge-b';
-          } else if (point.x < 18) {
-            if (point.z < 0) {
-              detectedRoom = 'Chat A';
-              detectedSlug = 'chat-a';
-            } else {
-              detectedRoom = 'Chat B';
-              detectedSlug = 'chat-b';
-            }
+          } else if (point.x > 12) {
+            detectedRoom = 'Lobby';
+            detectedSlug = 'lobby';
           } else {
-            detectedRoom = 'Lounge A';
-            detectedSlug = 'lounge-a';
+            detectedRoom = 'Workspace A';
+            detectedSlug = 'workspace-a';
           }
+        } else {
+          // Central concourse
+          detectedRoom = 'Lounge C';
+          detectedSlug = 'lounge-c';
         }
 
         setCurrentRoom(detectedRoom);
@@ -1551,28 +1534,25 @@ export default function WorkspacePlatform({ user, onExit }) {
 
           const getAcousticZone = (pos) => {
             const { x, z } = pos;
-            if (x >= -14.6 && x <= -9.4 && z >= -5.6 && z <= -1.2) return 'cubicle-1';
-            if (x >= -14.6 && x <= -9.4 && z >= 1.2 && z <= 5.6) return 'cubicle-2';
-            if (z > 8) {
-              if (x < -18) return 'auditorium';
-              if (x < -2) return 'boardroom';
-              if (x < 12) return 'conference-b';
-              return 'conference-a';
-            }
-            if (x >= 4 && x <= 16) {
-              if (z >= -7 && z <= -1) return 'chat-a';
-              if (z >= 1 && z <= 7) return 'chat-b';
+            if (x >= -26 && x <= -14 && z >= 8 && z <= 14) {
+              return x < -19.5 ? 'cubicle-1' : 'cubicle-2';
             }
             if (z < -8) {
-              if (x < -12) return 'patio';
-              if (x < 10) return 'workspace-a';
-              return 'lobby';
+              if (x < -14) return 'boardroom';
+              if (x < 6) return 'conference-b';
+              return 'auditorium';
+            }
+            if (x >= 6 && z < 4) return 'auditorium';
+            if (x >= 22 && z >= 4) return 'conference-a';
+            if (z > 8) {
+              if (x < -14 && z > 14) return 'patio';
+              return 'workspace-a';
             }
             return 'open-floor';
           };
 
           const playerZone = getAcousticZone(pPos);
-          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'conference-a', 'chat-a', 'chat-b'];
+          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b'];
           const isPlayerInPrivateRoom = privateZones.includes(playerZone);
 
           const nearby = [];
@@ -1627,7 +1607,11 @@ export default function WorkspacePlatform({ user, onExit }) {
 
       // Smooth Dynamic Camera with Mouse Wheel Zoom & Orbit / Showcase Screen View
       if (camera) {
-        if (showcaseScreenRef.current?.mesh) {
+        if (cameraOverrideRef.current) {
+          const { pos, lookAt } = cameraOverrideRef.current;
+          camera.position.set(pos.x, pos.y, pos.z);
+          camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
+        } else if (showcaseScreenRef.current?.mesh) {
           const screenMesh = showcaseScreenRef.current.mesh;
           const sPos = new THREE.Vector3();
           screenMesh.getWorldPosition(sPos);
@@ -1635,9 +1619,10 @@ export default function WorkspacePlatform({ user, onExit }) {
           const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(screenRot);
           const sWidth = screenMesh.userData?.width || 4.8;
           const sHeight = screenMesh.userData?.height || 2.7;
-          const viewDist = Math.max(2.6, Math.min(sWidth * 1.05, 11.5));
+          const maxDist = sWidth > 10 ? 16.5 : 11.5;
+          const viewDist = Math.max(2.6, Math.min(sWidth * 1.12, maxDist));
           const camTargetPos = sPos.clone().addScaledVector(normal, viewDist);
-          camTargetPos.y = sPos.y + Math.max(1.1, sHeight * 0.22);
+          camTargetPos.y = sPos.y + Math.max(0.6, sHeight * 0.12);
 
           camera.position.lerp(camTargetPos, 0.08);
           camera.lookAt(sPos.x, sPos.y, sPos.z);
@@ -1803,7 +1788,8 @@ export default function WorkspacePlatform({ user, onExit }) {
       cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 2.5, 38);
     };
 
-    // Mouse Orbit Dragging (Primary Left-Click Drag, Middle, Right, or Trackpad)
+    // Mouse Orbit Dragging and Chair Hover Detection (media_1792165947435.png)
+    let lastHoverCheck = 0;
     const handlePointerMove = (e) => {
       if (isDraggingOrbitRef.current) {
         const dx = e.clientX - pointerDownPosRef.current.x;
@@ -1827,6 +1813,43 @@ export default function WorkspacePlatform({ user, onExit }) {
             0.45,
             1.22
           );
+        }
+      } else {
+        // Throttled hover check for chairs/sofas (media_1792165947435.png)
+        const now = performance.now();
+        if (now - lastHoverCheck > 40) {
+          lastHoverCheck = now;
+          const rect = renderer.domElement.getBoundingClientRect();
+          mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(mouse, camera);
+          const hits = raycaster.intersectObjects(scene.children, true);
+          let foundChair = null;
+          for (let i = 0; i < Math.min(hits.length, 6); i++) {
+            let obj = hits[i].object;
+            while (obj && obj !== scene) {
+              if (obj.name === 'clickable_chair' || obj.userData?.isChair || obj.name?.startsWith('chair_') || obj.name?.startsWith('sofa_')) {
+                foundChair = obj;
+                break;
+              }
+              obj = obj.parent;
+            }
+            if (foundChair) break;
+          }
+
+          if (foundChair && !isSittingRef.current) {
+            renderer.domElement.style.cursor = 'pointer';
+            const cp = new THREE.Vector3();
+            foundChair.getWorldPosition(cp);
+            cp.y += (foundChair.userData?.seatHeight || 0.46) + 0.25;
+            cp.project(camera);
+            const px = ((cp.x + 1) * width) / 2;
+            const py = ((-cp.y + 1) * height) / 2;
+            setHoveredSitPill({ x: px, y: py, name: foundChair.userData?.name || 'Chair' });
+          } else {
+            renderer.domElement.style.cursor = 'crosshair';
+            setHoveredSitPill(null);
+          }
         }
       }
     };
@@ -1881,7 +1904,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const jumpToRoom = (roomName) => {
     playSound('chime');
     const clean = (roomName || '').toLowerCase();
-    let target = new THREE.Vector3(-9, 0, 16);
+    let target = new THREE.Vector3(-23, 0, -12.5);
     let slug = 'boardroom';
     let formattedName = 'Boardroom';
 
@@ -1906,61 +1929,45 @@ export default function WorkspacePlatform({ user, onExit }) {
       slug = 'terrace';
       formattedName = 'Terrace Lounge';
     } else if (clean.includes('auditorium')) {
-      target.set(-24, 0, 14);
+      target.set(18, 0, -10);
       slug = 'auditorium';
       formattedName = 'Auditorium';
     } else if (clean.includes('boardroom')) {
-      target.set(-9, 0, 16);
+      target.set(-23, 0, -12.5);
       slug = 'boardroom';
       formattedName = 'Boardroom';
-    } else if (clean.includes('chat a')) {
-      target.set(12, 0, -4);
-      slug = 'chat-a';
-      formattedName = 'Chat A';
-    } else if (clean.includes('chat b')) {
-      target.set(12, 0, 4);
-      slug = 'chat-b';
-      formattedName = 'Chat B';
-    } else if (clean.includes('conference a')) {
-      target.set(19, 0, 16);
-      slug = 'conference-a';
-      formattedName = 'Conference A';
-    } else if (clean.includes('conference b') || clean.includes('conference')) {
-      target.set(5, 0, 16);
+    } else if (clean.includes('conference b') || clean.includes('cabin') || clean.includes('conference')) {
+      target.set(-4, 0, -11.5);
       slug = 'conference-b';
-      formattedName = 'Conference B';
-    } else if (clean.includes('lobby')) {
-      target.set(22, 0, -16);
-      slug = 'lobby';
-      formattedName = 'Lobby';
-    } else if (clean.includes('lounge a')) {
-      target.set(23, 0, 0);
-      slug = 'lounge-a';
-      formattedName = 'Lounge A';
-    } else if (clean.includes('lounge b')) {
-      target.set(-1, 0, 2);
-      slug = 'lounge-b';
-      formattedName = 'Lounge B';
-    } else if (clean.includes('lounge c')) {
-      target.set(-21, 0, 0);
+      formattedName = 'Meeting Cabin';
+    } else if (clean.includes('conference a') || clean.includes('promenade')) {
+      target.set(29.4, 0, 12);
+      slug = 'conference-a';
+      formattedName = 'Window Promenade';
+    } else if (clean.includes('lounge c') || clean.includes('concourse')) {
+      target.set(-10, 0, 4);
       slug = 'lounge-c';
       formattedName = 'Lounge C';
-    } else if (clean.includes('patio')) {
-      target.set(-23, 0, -16);
+    } else if (clean.includes('patio') || clean.includes('terrace')) {
+      target.set(-23, 0, 19);
       slug = 'patio';
       formattedName = 'Patio';
     } else if (clean.includes('cubicle-1') || clean.includes('cubicle 1')) {
-      target.set(-12, 0, -3.4);
+      target.set(-22.5, 0, 11);
       slug = 'cubicle-1';
       formattedName = 'Focus Cubicle 1';
     } else if (clean.includes('cubicle-2') || clean.includes('cubicle 2')) {
-      target.set(-12, 0, 3.4);
+      target.set(-16.5, 0, 11);
       slug = 'cubicle-2';
       formattedName = 'Focus Cubicle 2';
     } else if (clean.includes('workspace')) {
-      target.set(0, 0, -16);
+      target.set(0, 0, 16);
       slug = 'workspace-a';
       formattedName = 'Workspace A';
+    } else if (clean.includes('lobby')) {
+      target.set(16, 0, 18);
+      slug = 'lobby';
+      formattedName = 'Lobby';
     }
 
     targetPosRef.current.copy(target);
@@ -2337,6 +2344,18 @@ export default function WorkspacePlatform({ user, onExit }) {
     window.__spotUpdateScreenContent = handleUpdateScreenContent;
     window.__spotStartScreenShare = startScreenShare;
     window.__spotStopScreenShare = stopScreenShare;
+    window.__spotSetCamera = (pos, lookAt) => {
+      cameraOverrideRef.current = { pos, lookAt };
+    };
+    window.__spotClearCameraOverride = () => {
+      cameraOverrideRef.current = null;
+    };
+    window.__spotTeleportPlayer = (x, z) => {
+      if (playerMeshRef.current) {
+        playerMeshRef.current.position.set(x, 0, z);
+        targetPosRef.current.set(x, 0, z);
+      }
+    };
   }
 
   // Trigger Canonical Spot Emote
@@ -3153,6 +3172,47 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>{av.name}</span>
           </div>
         ))}
+
+        {/* Authentic Hover-to-Sit Tooltip (media_1792165947435.png) */}
+        {hoveredSitPill && !isSittingRef.current && (
+          <div
+            style={{
+              position: 'absolute',
+              left: `${hoveredSitPill.x}px`,
+              top: `${hoveredSitPill.y}px`,
+              transform: 'translate(-50%, -100%)',
+              background: '#0f172a',
+              color: '#ffffff',
+              padding: '7px 15px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 700,
+              pointerEvents: 'none',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              border: '1px solid #334155',
+              zIndex: 75,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              userSelect: 'none'
+            }}
+          >
+            <span>Sit down</span>
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '-6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 0,
+                height: 0,
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderTop: '6px solid #0f172a'
+              }}
+            />
+          </div>
+        )}
 
         {/* Floating Screen Toolbar for Interactive Display Configuration & Showcase */}
         {activeScreenTarget && (

@@ -347,206 +347,614 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(table);
   };
 
-  // ==========================================
-  // 1. BOARDROOM (x: -9, z: 16)
-  // Matching media_1791993853484.png & media_1791969444037.png
-  // ==========================================
-  // West wall starry Spot screen (matching authentic Spot layout in media_1791969444037.png)
+  // Helper: Flower Vase with purple/lavender flower (media_1792165933956.png & media_1792165933914.png)
+  const createFlowerVase = (cx, cy, cz) => {
+    const vaseGrp = new THREE.Group();
+    const vaseMesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.08, 0.22, 16),
+      whiteMat
+    );
+    vaseMesh.position.y = 0.11;
+    vaseMesh.castShadow = true;
+    vaseGrp.add(vaseMesh);
+
+    // Green stem & lavender flower buds
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.008, 0.008, 0.28, 8),
+      new THREE.MeshStandardMaterial({ color: 0x15803d })
+    );
+    stem.position.set(0, 0.25, 0);
+    vaseGrp.add(stem);
+
+    const bloom = new THREE.Mesh(
+      new THREE.SphereGeometry(0.065, 8, 8),
+      new THREE.MeshStandardMaterial({ color: 0xa855f7, roughness: 0.5 })
+    );
+    bloom.position.set(0, 0.38, 0);
+    bloom.scale.set(1.0, 1.4, 1.0);
+    vaseGrp.add(bloom);
+
+    vaseGrp.position.set(cx, cy, cz);
+    furnitureGroup.add(vaseGrp);
+    return vaseGrp;
+  };
+
+  // Helper: Stylized Potted Ficus Tree (media_1792165933956.png & media_1792165947435.png)
+  const createPottedPlant = (cx, cz, plantName = 'Ficus Plant') => {
+    const plant = new THREE.Group();
+    // Ceramic cylindrical pot
+    const pot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.26, 0.58, 20),
+      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 })
+    );
+    pot.position.y = 0.29;
+    pot.castShadow = true;
+    plant.add(pot);
+
+    // Soil
+    const soil = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.30, 0.30, 0.05, 16),
+      new THREE.MeshStandardMaterial({ color: 0x271c19, roughness: 0.95 })
+    );
+    soil.position.y = 0.56;
+    plant.add(soil);
+
+    // Branches & vibrant green leaves
+    const branchMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, roughness: 0.9 });
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.65 });
+
+    const stem1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.2, 8), branchMat);
+    stem1.position.set(0, 0.95, 0);
+    plant.add(stem1);
+
+    const leaves = [
+      { x: 0, y: 1.5, z: 0, s: 0.45 },
+      { x: 0.22, y: 1.3, z: 0.15, s: 0.35 },
+      { x: -0.20, y: 1.25, z: -0.15, s: 0.36 },
+      { x: 0.15, y: 1.05, z: -0.22, s: 0.32 },
+      { x: -0.18, y: 0.95, z: 0.20, s: 0.32 }
+    ];
+
+    leaves.forEach((lf) => {
+      const leaf = new THREE.Mesh(new THREE.SphereGeometry(lf.s, 7, 7), leafMat);
+      leaf.position.set(lf.x, lf.y, lf.z);
+      leaf.scale.set(1.2, 0.7, 1.1);
+      leaf.castShadow = true;
+      plant.add(leaf);
+    });
+
+    plant.position.set(cx, 0, cz);
+    furnitureGroup.add(plant);
+    return plant;
+  };
+
+  // Helper: Curved Pillowy Cream Sofa (media_1792165933956.png)
+  const createCreamCurvedSofa = (cx, cz, crot, sofaName = 'Meeting Cabin Curved Sofa') => {
+    const sofa = new THREE.Group();
+    const defaultCenterPos = new THREE.Vector3(
+      cx + 0.12 * Math.sin(crot),
+      0,
+      cz + 0.12 * Math.cos(crot)
+    );
+    sofa.name = 'clickable_chair';
+    sofa.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
+
+    const creamLeatherMat = new THREE.MeshStandardMaterial({ color: 0xf3f0ea, roughness: 0.72 });
+    const creamDarkMat = new THREE.MeshStandardMaterial({ color: 0xe2ded7, roughness: 0.8 });
+
+    // Rounded tubular base plinth
+    const base = new THREE.Mesh(roundedBox(2.8, 0.22, 1.05, 0.10), creamDarkMat);
+    base.position.y = 0.18;
+    base.castShadow = true;
+    sofa.add(base);
+
+    // Pillowy curved seat cushion
+    const cushion = new THREE.Mesh(roundedBox(2.6, 0.24, 0.92, 0.12), creamLeatherMat);
+    cushion.position.set(0, 0.34, 0.06);
+    cushion.castShadow = true;
+    cushion.name = 'clickable_chair';
+    cushion.userData = sofa.userData;
+    sofa.add(cushion);
+
+    // Rounded pillowy backrest
+    const back = new THREE.Mesh(roundedBox(2.7, 0.48, 0.30, 0.14), creamLeatherMat);
+    back.position.set(0, 0.58, -0.36);
+    back.castShadow = true;
+    back.name = 'clickable_chair';
+    back.userData = sofa.userData;
+    sofa.add(back);
+
+    sofa.position.set(cx, 0, cz);
+    sofa.rotation.y = crot;
+    furnitureGroup.add(sofa);
+
+    if (chairsRef?.current) {
+      chairsRef.current.push({
+        name: sofaName,
+        pos: defaultCenterPos,
+        rot: crot,
+        seatHeight: 0.46
+      });
+    }
+    return sofa;
+  };
+
+  // Helper: Cream Bench Armchair with Black Base (media_1792165947435.png)
+  const createBenchArmchair = (cx, cz, crot, chairName = 'Lounge Bench Armchair') => {
+    const chair = new THREE.Group();
+    const benchPos = new THREE.Vector3(cx, 0, cz);
+    chair.name = 'clickable_chair';
+    chair.userData = { isChair: true, name: chairName, chairPos: benchPos, chairRotY: crot, seatHeight: 0.44 };
+
+    // Dark base frame
+    const base = new THREE.Mesh(roundedBox(1.3, 0.14, 0.72, 0.04), blackMat);
+    base.position.y = 0.12;
+    chair.add(base);
+
+    // Thick ribbed cream seat cushion
+    const cushion = new THREE.Mesh(
+      roundedBox(1.24, 0.22, 0.68, 0.08),
+      new THREE.MeshStandardMaterial({ color: 0xf5f3ee, roughness: 0.68 })
+    );
+    cushion.position.y = 0.30;
+    cushion.castShadow = true;
+    cushion.name = 'clickable_chair';
+    cushion.userData = chair.userData;
+    chair.add(cushion);
+
+    // Low backrest
+    const back = new THREE.Mesh(
+      roundedBox(1.24, 0.26, 0.16, 0.06),
+      new THREE.MeshStandardMaterial({ color: 0xf5f3ee, roughness: 0.68 })
+    );
+    back.position.set(0, 0.44, -0.26);
+    back.castShadow = true;
+    back.name = 'clickable_chair';
+    back.userData = chair.userData;
+    chair.add(back);
+
+    chair.position.set(cx, 0, cz);
+    chair.rotation.y = crot;
+    furnitureGroup.add(chair);
+
+    if (chairsRef?.current) {
+      chairsRef.current.push({ name: chairName, pos: benchPos, rot: crot, seatHeight: 0.44 });
+    }
+    return chair;
+  };
+
+  // Helper: Curved Black Armchair with Gold Trim for Window Promenade (media_1792165933914.png)
+  const createWindowArmchair = (cx, cz, crot, chairName = 'Window Armchair') => {
+    const chair = new THREE.Group();
+    const chairPos = new THREE.Vector3(cx, 0, cz);
+    chair.name = 'clickable_chair';
+    chair.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
+
+    // Gold circular base trim
+    const goldRing = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.44, 0.44, 0.04, 24),
+      brassGoldMat
+    );
+    goldRing.position.y = 0.02;
+    chair.add(goldRing);
+
+    // Curved black bucket body
+    const body = new THREE.Mesh(
+      roundedBox(0.84, 0.54, 0.82, 0.14),
+      blackLeatherMat
+    );
+    body.position.y = 0.38;
+    body.castShadow = true;
+    body.name = 'clickable_chair';
+    body.userData = chair.userData;
+    chair.add(body);
+
+    // Black cushion
+    const cushion = new THREE.Mesh(
+      roundedBox(0.68, 0.12, 0.64, 0.06),
+      blackMat
+    );
+    cushion.position.set(0, 0.42, 0.06);
+    cushion.name = 'clickable_chair';
+    cushion.userData = chair.userData;
+    chair.add(cushion);
+
+    chair.position.set(cx, 0, cz);
+    chair.rotation.y = crot;
+    furnitureGroup.add(chair);
+
+    if (chairsRef?.current) {
+      chairsRef.current.push({ name: chairName, pos: chairPos, rot: crot, seatHeight: 0.46 });
+    }
+    return chair;
+  };
+
+  // =========================================================================
+  // 1. BOARDROOM (Northwest: X: -32 to -14, Z: -24 to -8)
+  // Exact match to media_1792165933867.png (top-left) & media_1792165933406.png
+  // =========================================================================
+  // West wall starry Spot screen
   createSpotWallScreen(
-    -15.8, 1.55, 16, 3.2, 1.8, Math.PI / 2, 'boardroom',
+    -31.7, 1.55, -16.0, 3.8, 2.1, Math.PI / 2, 'boardroom',
     screenTextures?.starryLogoTexture,
     'Boardroom Presentation Screen'
   );
 
-  // Facing Black Sofas
-  createBlackSofa(-11.6, 16, Math.PI / 2, 'Boardroom West Sofa');
-  createBlackSofa(-6.4, 16, -Math.PI / 2, 'Boardroom East Sofa');
-
-  // 2 Circular Coffee Tables in the middle
-  createRoundCoffeeTable(-9.0, 14.8, 0.65, 0.38);
-  createRoundCoffeeTable(-9.0, 17.2, 0.65, 0.38);
-
-  // 4 White Tub Armchairs
-  createTubArmchair(-10.2, 13.0, 0, 'Boardroom Tub Chair 1');
-  createTubArmchair(-7.8, 13.0, 0, 'Boardroom Tub Chair 2');
-  createTubArmchair(-10.2, 19.0, Math.PI, 'Boardroom Tub Chair 3');
-  createTubArmchair(-7.8, 19.0, Math.PI, 'Boardroom Tub Chair 4');
-
-  // Gold Drinks Tables between armchairs
-  createDrinkTable(-9.0, 13.0);
-  createDrinkTable(-9.0, 19.0);
-
-  // ==========================================
-  // 2. CONFERENCE B (x: 5, z: 16)
-  // Matching media_1791969444037.png
-  // ==========================================
-  createSpotWallScreen(
-    -1.8, 1.55, 16, 3.2, 1.8, Math.PI / 2, 'conference_b',
-    screenTextures?.createSprintBoardTexture ? screenTextures.createSprintBoardTexture() : screenTextures?.chartTexture,
-    'Conference Room B Sprint Standup Screen'
-  );
-
-  // Long Dark Conference Table
-  const confBTable = new THREE.Mesh(roundedBox(6.4, 0.1, 1.8, 0.05), darkTableMat);
-  confBTable.position.set(5.0, 0.74, 16.0);
-  confBTable.castShadow = true;
-  furnitureGroup.add(confBTable);
+  // Large Dark Conference Table (8.0m long x 1.8m wide)
+  const boardTable = new THREE.Mesh(roundedBox(8.0, 0.1, 1.8, 0.06), darkTableMat);
+  boardTable.position.set(-23.0, 0.74, -16.0);
+  boardTable.castShadow = true;
+  furnitureGroup.add(boardTable);
 
   // Table plinth pedestals
-  [-1.8, 1.8].forEach((px) => {
-    const leg = new THREE.Mesh(roundedBox(0.18, 0.68, 1.2, 0.04), blackMat);
-    leg.position.set(5.0 + px, 0.36, 16.0);
-    furnitureGroup.add(leg);
-  });
-
-  // 8 White Cantilever Chairs
-  [-2.1, -0.7, 0.7, 2.1].forEach((cx) => {
-    createCantileverChair(5.0 + cx, 14.8, 0, 'Conf B North Chair');
-    createCantileverChair(5.0 + cx, 17.2, Math.PI, 'Conf B South Chair');
-  });
-
-  // ==========================================
-  // 3. CONFERENCE A (x: 19, z: 16)
-  // ==========================================
-  createSpotWallScreen(
-    12.2, 1.55, 16, 3.2, 1.8, Math.PI / 2, 'conference_a',
-    screenTextures?.kpiTexture,
-    'Conference Room A Telemetry Scoreboard'
-  );
-
-  // 10-Seater Dark Conference Table
-  const confATable = new THREE.Mesh(roundedBox(8.2, 0.1, 1.8, 0.05), darkTableMat);
-  confATable.position.set(19.0, 0.74, 16.0);
-  confATable.castShadow = true;
-  furnitureGroup.add(confATable);
-
   [-2.6, 0, 2.6].forEach((px) => {
     const leg = new THREE.Mesh(roundedBox(0.18, 0.68, 1.2, 0.04), blackMat);
-    leg.position.set(19.0 + px, 0.36, 16.0);
+    leg.position.set(-23.0 + px, 0.36, -16.0);
     furnitureGroup.add(leg);
   });
 
-  // 10 Chairs
-  [-2.8, -1.4, 0, 1.4, 2.8].forEach((cx) => {
-    createCantileverChair(19.0 + cx, 14.8, 0, 'Conf A North Chair');
-    createCantileverChair(19.0 + cx, 17.2, Math.PI, 'Conf A South Chair');
+  // 12 White Cantilever Chairs (6 north, 6 south) matching media_1792165933867.png
+  [-3.0, -1.8, -0.6, 0.6, 1.8, 3.0].forEach((cx, idx) => {
+    createCantileverChair(-23.0 + cx, -17.2, 0, `Boardroom North Chair ${idx + 1}`);
+    createCantileverChair(-23.0 + cx, -14.8, Math.PI, `Boardroom South Chair ${idx + 1}`);
   });
 
-  // ==========================================
-  // 4. AUDITORIUM 🏠 (x: -24, z: 16)
-  // Massive IMAX-Scale Cinema Presentation Stage matching Spot Virtual reference
-  // ==========================================
-  // Elevated Stage Platform
-  const stagePlatform = new THREE.Mesh(
-    roundedBox(3.4, 0.4, 15.6, 0.08),
-    new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 })
-  );
-  stagePlatform.position.set(-30.0, 0.2, 16.0);
-  stagePlatform.receiveShadow = true;
-  furnitureGroup.add(stagePlatform);
+  // Potted ficus tree in corner
+  createPottedPlant(-30.5, -9.5, 'Boardroom Ficus');
 
-  // Speaker Lectern / Podium on Stage
-  const lectern = new THREE.Mesh(
-    roundedBox(0.65, 1.1, 0.55, 0.04),
-    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.3 })
-  );
-  lectern.position.set(-28.6, 0.75, 16.0);
-  lectern.castShadow = true;
-  furnitureGroup.add(lectern);
-
-  // Massive IMAX-Scale Cinema Screen (13.6m wide x 6.8m high)
+  // =========================================================================
+  // 2. MEETING CABIN / PRIVATE LOUNGE (North-Center: X: -14 to +6, Z: -24 to -8)
+  // Exact match to media_1792165933956.png
+  // =========================================================================
+  // Starry Spot screen mounted on dividing wall
   createSpotWallScreen(
-    -31.7, 3.8, 16.0, 13.6, 6.8, Math.PI / 2, 'auditorium',
+    -13.8, 1.55, -16.0, 3.2, 1.8, Math.PI / 2, 'conference_b',
+    screenTextures?.starryLogoTexture,
+    'Meeting Cabin Presentation Screen'
+  );
+
+  // Two facing cream curved sofas
+  createCreamCurvedSofa(-4.0, -18.2, 0, 'Meeting Cabin North Sofa');
+  createCreamCurvedSofa(-4.0, -13.8, Math.PI, 'Meeting Cabin South Sofa');
+
+  // Round black coffee table with lavender flower vase
+  createRoundCoffeeTable(-4.0, -16.0, 0.55, 0.38);
+  createFlowerVase(-4.0, 0.38, -16.0);
+
+  // Gold side table with dome lamp next to north sofa
+  createDrinkTable(-1.6, -18.2);
+  const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.10, 0.22, 16), brassGoldMat);
+  lampBase.position.set(-1.6, 0.59, -18.2);
+  furnitureGroup.add(lampBase);
+  const lampDome = new THREE.Mesh(new THREE.SphereGeometry(0.14, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2), whiteMat);
+  lampDome.position.set(-1.6, 0.70, -18.2);
+  furnitureGroup.add(lampDome);
+
+  // Potted ficus plant
+  createPottedPlant(-12.0, -14.5, 'Meeting Cabin Plant');
+
+  // =========================================================================
+  // 3. AUDITORIUM OPEN ATRIUM (East: X: +6 to +32, Z: -24 to +4)
+  // Exact match to media_1792165933867.png & media_1792165933914.png
+  // =========================================================================
+  // Dark vertical slatted backdrop structure framing the cinema screen on the East Wall
+  const slattedBackdrop = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 9.2, 17.0),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.85 })
+  );
+  slattedBackdrop.position.set(31.85, 4.6, -10.0);
+  slattedBackdrop.receiveShadow = true;
+  furnitureGroup.add(slattedBackdrop);
+
+  // Massive 14m x 7.2m Cinema Presentation Screen facing West
+  createSpotWallScreen(
+    31.65, 4.4, -10.0, 14.0, 7.2, -Math.PI / 2, 'auditorium',
     screenTextures?.createAuditoriumKeynoteTexture ? screenTextures.createAuditoriumKeynoteTexture() : screenTextures?.starryLogoTexture,
     'Auditorium Cinema Keynote Display'
   );
 
-  // Helper: Individual Deluxe Theater Chair with padded cushion, armrests and cup holders
-  const createTheaterSeat = (sx, sy, sz, seatName = 'Theater Seat') => {
-    const seatGrp = new THREE.Group();
-    const seatWorldPos = new THREE.Vector3(sx, sy, sz);
-    const facingScreenRot = -Math.PI / 2; // Facing west toward stage screen
+  // Elevated White Stage Platform in front of screen
+  const audStage = new THREE.Mesh(
+    roundedBox(3.6, 0.25, 15.4, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.35 })
+  );
+  audStage.position.set(29.6, 0.125, -10.0);
+  audStage.receiveShadow = true;
+  furnitureGroup.add(audStage);
 
-    // Chair frame & pedestal
-    const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.35, 10), chromeMat);
-    pedestal.position.set(0, sy + 0.18, 0);
-    seatGrp.add(pedestal);
+  // Sleek Black Speaker Podium / Lectern on stage
+  const audPodium = new THREE.Mesh(
+    roundedBox(0.65, 1.1, 0.55, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 })
+  );
+  audPodium.position.set(27.4, 0.70, -10.0);
+  audPodium.rotation.y = -Math.PI / 2;
+  audPodium.castShadow = true;
+  furnitureGroup.add(audPodium);
 
-    // Thick padded cushion seat
-    const seatCushion = new THREE.Mesh(roundedBox(0.56, 0.10, 0.52, 0.04), blackLeatherMat);
-    seatCushion.position.set(0, sy + 0.40, 0);
-    seatCushion.castShadow = true;
-    seatGrp.add(seatCushion);
-
-    // High ergonomic backrest
-    const backrest = new THREE.Mesh(roundedBox(0.54, 0.62, 0.08, 0.04), blackLeatherMat);
-    backrest.position.set(0.24, sy + 0.70, 0);
-    backrest.castShadow = true;
-    seatGrp.add(backrest);
-
-    // Left & right armrests
-    [-0.30, 0.30].forEach((az) => {
-      const arm = new THREE.Mesh(roundedBox(0.44, 0.06, 0.08, 0.02), blackMat);
-      arm.position.set(0.02, sy + 0.56, az);
-      seatGrp.add(arm);
-    });
-
-    seatGrp.name = 'clickable_chair';
-    seatGrp.userData = {
-      isChair: true,
-      name: seatName,
-      chairPos: seatWorldPos,
-      chairRotY: facingScreenRot,
-      seatHeight: sy + 0.46
-    };
-    seatCushion.userData = seatGrp.userData;
-    seatCushion.name = 'clickable_chair';
-
-    furnitureGroup.add(seatGrp);
-
-    if (chairsRef?.current) {
-      chairsRef.current.push({
-        name: seatName,
-        pos: seatWorldPos,
-        rot: facingScreenRot,
-        seatHeight: sy + 0.46
-      });
-    }
-    return seatGrp;
-  };
-
-  // 4 Orderly Tiers of Stable Deluxe Theater Seats facing the Cinema Screen
-  const tiersConfig = [
-    { x: -25.8, y: 0.00, count: 8, riserH: 0 },
-    { x: -23.4, y: 0.32, count: 8, riserH: 0.32 },
-    { x: -21.0, y: 0.64, count: 8, riserH: 0.64 },
-    { x: -18.6, y: 0.96, count: 8, riserH: 0.96 }
+  // 4 Stepped Stadium Seating Tiers facing East towards the cinema screen
+  const audTiers = [
+    { x: 22.0, y: 0.00, riserH: 0.00 },
+    { x: 18.5, y: 0.28, riserH: 0.28 },
+    { x: 15.0, y: 0.56, riserH: 0.56 },
+    { x: 11.5, y: 0.84, riserH: 0.84 }
   ];
 
-  tiersConfig.forEach((tier, tIdx) => {
+  audTiers.forEach((tier, tIdx) => {
     // Stepped concrete/carpet riser floor
     if (tier.riserH > 0) {
       const riserStep = new THREE.Mesh(
-        new THREE.BoxGeometry(2.3, tier.riserH, 15.0),
-        new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 })
+        new THREE.BoxGeometry(2.6, tier.riserH, 14.6),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 })
       );
-      riserStep.position.set(tier.x, tier.riserH / 2, 16.0);
+      riserStep.position.set(tier.x, tier.riserH / 2, -10.0);
       riserStep.receiveShadow = true;
       furnitureGroup.add(riserStep);
     }
 
-    // 8 Seats spaced across z: 10.5 to 21.5
-    for (let s = 0; s < tier.count; s++) {
-      const sz = 10.8 + s * 1.5;
-      createTheaterSeat(tier.x, tier.y, sz, `Auditorium Tier ${tIdx + 1} Seat ${s + 1}`);
+    // Long dark charcoal stadium bench (matching media_1792165933914.png)
+    const bench = new THREE.Mesh(
+      roundedBox(0.85, 0.22, 14.0, 0.06),
+      blackLeatherMat
+    );
+    bench.position.set(tier.x, tier.y + 0.34, -10.0);
+    bench.castShadow = true;
+    bench.name = 'clickable_chair';
+    furnitureGroup.add(bench);
+
+    // 8 Individually clickable seat cushions along each bench
+    for (let s = 0; s < 8; s++) {
+      const sz = -15.25 + s * 1.5;
+      const seatWorldPos = new THREE.Vector3(tier.x, tier.y, sz);
+      const facingEastRot = Math.PI / 2; // Facing East towards the big cinema screen
+
+      const cushion = new THREE.Mesh(roundedBox(0.72, 0.08, 1.25, 0.04), blackMat);
+      cushion.position.set(tier.x, tier.y + 0.47, sz);
+      cushion.castShadow = true;
+      cushion.name = 'clickable_chair';
+      cushion.userData = {
+        isChair: true,
+        name: `Auditorium Tier ${tIdx + 1} Seat ${s + 1}`,
+        chairPos: seatWorldPos,
+        chairRotY: facingEastRot,
+        seatHeight: tier.y + 0.46
+      };
+      furnitureGroup.add(cushion);
+
+      if (chairsRef?.current) {
+        chairsRef.current.push({
+          name: `Auditorium Tier ${tIdx + 1} Seat ${s + 1}`,
+          pos: seatWorldPos,
+          rot: facingEastRot,
+          seatHeight: tier.y + 0.46
+        });
+      }
     }
   });
 
-  // ==========================================
-  // 5. PATIO ((•)) (x: -23, z: -16)
-  // Outdoor terrace with interactive giant chessboard and sunken pool
-  // ==========================================
-  // Giant 8x8 Interactive Chessboard (x: -25.5, z: -18.5)
+  // =========================================================================
+  // 4. CENTRAL CONCOURSE / LOUNGE C (X = -32 to +14, Z = -8 to +8)
+  // Exact match to media_1792165947435.png & media_1792165933956.png
+  // =========================================================================
+  // The iconic Spot 3-Disc Overlapping Circular Coffee Table Cluster (media_1792165947435.png)
+  const create3DiscCoffeeCluster = (cx, cz) => {
+    const cluster = new THREE.Group();
+
+    // Center disc (highest)
+    const d1 = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.70, 0.045, 32), darkTableMat);
+    d1.position.set(0, 0.42, 0);
+    d1.castShadow = true;
+    cluster.add(d1);
+    const stem1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.40, 16), brassGoldMat);
+    stem1.position.set(0, 0.20, 0);
+    cluster.add(stem1);
+    const base1 = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.025, 24), brassGoldMat);
+    base1.position.set(0, 0.015, 0);
+    cluster.add(base1);
+
+    // Overlapping disc 2 (left/south)
+    const d2 = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.045, 32), darkTableMat);
+    d2.position.set(-0.85, 0.36, 0.45);
+    d2.castShadow = true;
+    cluster.add(d2);
+    const stem2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.34, 16), brassGoldMat);
+    stem2.position.set(-0.85, 0.17, 0.45);
+    cluster.add(stem2);
+    const base2 = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.025, 24), brassGoldMat);
+    base2.position.set(-0.85, 0.015, 0.45);
+    cluster.add(base2);
+
+    // Overlapping disc 3 (right/south)
+    const d3 = new THREE.Mesh(new THREE.CylinderGeometry(0.60, 0.60, 0.045, 32), darkTableMat);
+    d3.position.set(0.80, 0.38, 0.40);
+    d3.castShadow = true;
+    cluster.add(d3);
+    const stem3 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.36, 16), brassGoldMat);
+    stem3.position.set(0.80, 0.18, 0.40);
+    cluster.add(stem3);
+    const base3 = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.025, 24), brassGoldMat);
+    base3.position.set(0.80, 0.015, 0.40);
+    cluster.add(base3);
+
+    cluster.position.set(cx, 0, cz);
+    furnitureGroup.add(cluster);
+
+    // Flower vase on center disc
+    createFlowerVase(cx, 0.42, cz);
+  };
+
+  create3DiscCoffeeCluster(-10.0, 4.0);
+
+  // Seating surrounding the 3-disc coffee cluster (media_1792165947435.png)
+  createBlackSofa(-14.2, 4.0, Math.PI / 2, 'Lounge C West Sofa');
+  createBlackSofa(-5.8, 4.0, -Math.PI / 2, 'Lounge C East Sofa');
+
+  // North bench armchairs with gold drink table
+  createBenchArmchair(-11.6, 1.4, 0, 'Lounge C North Bench 1');
+  createBenchArmchair(-8.4, 1.4, 0, 'Lounge C North Bench 2');
+  createDrinkTable(-10.0, 1.4);
+
+  // South bench armchairs with gold drink table
+  createBenchArmchair(-11.6, 6.6, Math.PI, 'Lounge C South Bench 1');
+  createBenchArmchair(-8.4, 6.6, Math.PI, 'Lounge C South Bench 2');
+  createDrinkTable(-10.0, 6.6);
+
+  // Potted plant next to west sofa (media_1792165947435.png)
+  createPottedPlant(-14.2, 2.0, 'Lounge C Ficus');
+
+  // Credenza & Refreshment Station (media_1792165933956.png lower-left & media_1792165933867.png)
+  const credenzaMat = new THREE.MeshStandardMaterial({ color: 0x134e4a, roughness: 0.6 }); // Teal/green body
+  const credenzaTopMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 }); // Dark top
+  const credenza = new THREE.Mesh(roundedBox(2.8, 0.85, 0.72, 0.04), credenzaMat);
+  credenza.position.set(-21.0, 0.42, 0.0);
+  credenza.castShadow = true;
+  furnitureGroup.add(credenza);
+
+  const credTop = new THREE.Mesh(roundedBox(2.88, 0.06, 0.76, 0.02), credenzaTopMat);
+  credTop.position.set(-21.0, 0.86, 0.0);
+  furnitureGroup.add(credTop);
+  createFlowerVase(-21.0, 0.88, 0.0);
+
+  // Refreshment credenza with blue water dispenser jug (media_1792165933867.png)
+  const refCred = new THREE.Mesh(roundedBox(2.4, 0.85, 0.72, 0.04), woodDeskMat);
+  refCred.position.set(-26.0, 0.42, -4.0);
+  furnitureGroup.add(refCred);
+
+  // Water cooler dispenser
+  const coolerBase = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.35, 16), whiteMat);
+  coolerBase.position.set(-26.4, 1.02, -4.0);
+  furnitureGroup.add(coolerBase);
+
+  const waterBottle = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.16, 0.16, 0.45, 16),
+    new THREE.MeshPhysicalMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65, roughness: 0.1 })
+  );
+  waterBottle.position.set(-26.4, 1.40, -4.0);
+  furnitureGroup.add(waterBottle);
+
+  // Coffee machine
+  const coffeeMachine = new THREE.Mesh(
+    roundedBox(0.40, 0.38, 0.35, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6, roughness: 0.3 })
+  );
+  coffeeMachine.position.set(-25.6, 1.04, -4.0);
+  furnitureGroup.add(coffeeMachine);
+
+  // Cocktail table with two white curved armchairs outside Cabin door (media_1792165933956.png)
+  createRoundCoffeeTable(-4.0, 2.0, 0.65, 0.45);
+  createFlowerVase(-4.0, 0.45, 2.0);
+  createTubArmchair(-5.4, 2.0, Math.PI / 2, 'Lounge C Tub Chair 1');
+  createTubArmchair(-2.6, 2.0, -Math.PI / 2, 'Lounge C Tub Chair 2');
+
+  // =========================================================================
+  // 5. EAST PROMENADE WINDOW SEATING (X = +22 to +32, Z = +6 to +24)
+  // Exact match to media_1792165933867.png & media_1792165933914.png
+  // Pairs of curved black armchairs with cocktail tables looking out at Seattle
+  // =========================================================================
+  [7.0, 12.0, 17.0, 22.0].forEach((wz, idx) => {
+    // Round cocktail table
+    createRoundCoffeeTable(29.4, wz, 0.52, 0.46);
+    createFlowerVase(29.4, 0.46, wz);
+
+    // North facing armchair
+    createWindowArmchair(29.4, wz - 1.25, 0, `Window Promenade Set ${idx + 1} North Chair`);
+    // South facing armchair
+    createWindowArmchair(29.4, wz + 1.25, Math.PI, `Window Promenade Set ${idx + 1} South Chair`);
+  });
+
+  // =========================================================================
+  // 6. SOUTH WING: FOCUS CUBICLES, WORKSPACE A & PATIO
+  // =========================================================================
+
+  // Focus Cubicle 1 (Private pod at x = -22.5, z = 11.0)
+  const cubicle1Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
+  cubicle1Desk.position.set(-22.5, 0.74, 11.0);
+  furnitureGroup.add(cubicle1Desk);
+
+  createWorkstationMonitor(
+    -22.5, 0.78, 10.65, 0,
+    'desk_cubicle_1',
+    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('FocusProject.rs') : screenTextures?.codeEditorTexture,
+    'Focus Cubicle 1 Workstation'
+  );
+  createCantileverChair(-22.5, 11.8, Math.PI, 'Focus Cubicle 1 Chair');
+
+  // Focus Cubicle 2 (Private pod at x = -16.5, z = 11.0)
+  const cubicle2Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
+  cubicle2Desk.position.set(-16.5, 0.74, 11.0);
+  furnitureGroup.add(cubicle2Desk);
+
+  createWorkstationMonitor(
+    -16.5, 0.78, 10.65, 0,
+    'desk_cubicle_2',
+    screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.chartTexture,
+    'Focus Cubicle 2 Workstation'
+  );
+  createCantileverChair(-16.5, 11.8, Math.PI, 'Focus Cubicle 2 Chair');
+
+  // Workspace A: 2 Collaboration Desks with properly oriented monitors (x: -4 and +4, z: 16)
+  const createCollabPod = (px, pz, podId) => {
+    const pod = new THREE.Group();
+    const desk = new THREE.Mesh(roundedBox(3.4, 0.08, 2.0, 0.04), woodDeskMat);
+    desk.position.y = 0.74;
+    desk.castShadow = true;
+    pod.add(desk);
+
+    const divider = new THREE.Mesh(
+      roundedBox(3.2, 0.44, 0.06, 0.02),
+      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 })
+    );
+    divider.position.set(0, 0.96, 0);
+    pod.add(divider);
+
+    // North monitors face North (rotY = Math.PI) toward chairs at pz - 1.3
+    createWorkstationMonitor(
+      px - 0.85, 0.78, pz - 0.28, Math.PI,
+      `desk_${podId}_n_left`,
+      screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('CollabModule.ts') : screenTextures?.chartTexture,
+      `Collab Pod ${podId} (IDE)`
+    );
+    createWorkstationMonitor(
+      px + 0.85, 0.78, pz - 0.28, Math.PI,
+      `desk_${podId}_n_right`,
+      screenTextures?.createTerminalLogsTexture ? screenTextures.createTerminalLogsTexture() : screenTextures?.kpiTexture,
+      `Collab Pod ${podId} (Terminal)`
+    );
+
+    // South monitors face South (rotY = 0) toward chairs at pz + 1.3
+    createWorkstationMonitor(
+      px - 0.85, 0.78, pz + 0.28, 0,
+      `desk_${podId}_s_left`,
+      screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.featTexture,
+      `Collab Pod ${podId} (Figma Canvas)`
+    );
+    createWorkstationMonitor(
+      px + 0.85, 0.78, pz + 0.28, 0,
+      `desk_${podId}_s_right`,
+      screenTextures?.createTelecastLiveTexture ? screenTextures.createTelecastLiveTexture(`Pod ${podId}`, 'Team') : screenTextures?.starryLogoTexture,
+      `Collab Pod ${podId} (Telecast)`
+    );
+
+    [-0.85, 0.85].forEach((dx) => {
+      createCantileverChair(px + dx, pz - 1.3, 0, `Collab Pod ${podId} North Chair`);
+      createCantileverChair(px + dx, pz + 1.3, Math.PI, `Collab Pod ${podId} South Chair`);
+    });
+
+    pod.position.set(px, 0, pz);
+    furnitureGroup.add(pod);
+  };
+
+  createCollabPod(-4.0, 16.0, 1);
+  createCollabPod(4.0, 16.0, 2);
+
+  // Workspace A Team CI/CD Screen on South wall
+  createSpotWallScreen(
+    0, 1.55, 23.8, 3.8, 2.1, Math.PI, 'workspace_a',
+    screenTextures?.createCiCdMonitorTexture ? screenTextures.createCiCdMonitorTexture() : screenTextures?.chartTexture,
+    'Workspace A Team CI/CD Monitor'
+  );
+
+  // Patio Outdoor Game Zone: Giant 8x8 Chessboard at (x: -23.0, z: 19.0)
   const chessGrp = new THREE.Group();
   chessGrp.name = 'clickable_chessboard';
   chessGrp.userData = { isChessboard: true, name: 'Giant Terrace Chessboard' };
@@ -556,7 +964,6 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const whiteTileMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.6 });
   const blackTileMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
 
-  // Outer border trim
   const border = new THREE.Mesh(
     roundedBox(boardSize + 0.3, 0.05, boardSize + 0.3, 0.04),
     brassGoldMat
@@ -576,7 +983,6 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       tile.userData = { isChessboard: true, row: r, col: c };
       chessGrp.add(tile);
 
-      // Low-poly chess pieces on starting ranks
       if (r === 0 || r === 1 || r === 6 || r === 7) {
         const pieceMat = r < 2 ? blackMat : whiteMat;
         const piece = new THREE.Mesh(
@@ -591,350 +997,20 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       }
     }
   }
-  chessGrp.position.set(-25.5, 0, -18.5);
+  chessGrp.position.set(-23.0, 0, 19.0);
   furnitureGroup.add(chessGrp);
 
-  // Sunken Square Turquoise Lounge Pit (x: -18, z: -18)
-  const patioPit = new THREE.Mesh(roundedBox(4.4, 0.35, 4.4, 0.1), turquoiseMat);
-  patioPit.position.set(-18.5, 0.18, -18.5);
+  // Patio Sunken Turquoise Lounge Pit (x: -18, z: 20)
+  const patioPit = new THREE.Mesh(roundedBox(3.8, 0.32, 3.8, 0.1), turquoiseMat);
+  patioPit.position.set(-18.0, 0.16, 20.0);
   furnitureGroup.add(patioPit);
+  createRoundCoffeeTable(-18.0, 20.0, 0.65, 0.30);
 
-  const patioPitTable = createRoundCoffeeTable(-18.5, -18.5, 0.8, 0.32);
-
-  // Chevron angled corner terrace benches (x: -27, z: -11)
-  [-1, 1].forEach((dir) => {
-    const chevBench = new THREE.Mesh(roundedBox(3.4, 0.4, 0.8, 0.06), tubArmchairMat);
-    chevBench.position.set(-26.5, 0.25, -11.5 + dir * 1.8);
-    chevBench.rotation.y = dir * 0.4;
-    furnitureGroup.add(chevBench);
-  });
-
-  // ==========================================
-  // 6. WORKSPACE A (x: 0, z: -16)
-  // 4 Engineering workstation desk clusters with properly oriented monitors
-  // ==========================================
-  const createDeskPod = (px, pz, podId = 1) => {
-    const pod = new THREE.Group();
-
-    // Central 4-person shared desk
-    const desk = new THREE.Mesh(roundedBox(3.4, 0.08, 2.2, 0.04), woodDeskMat);
-    desk.position.y = 0.74;
-    desk.castShadow = true;
-    pod.add(desk);
-
-    // Acoustic fabric privacy divider screen
-    const divider = new THREE.Mesh(
-      roundedBox(3.2, 0.48, 0.06, 0.02),
-      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.9 })
-    );
-    divider.position.set(0, 0.98, 0);
-    pod.add(divider);
-
-    // 4 Modern Interactive Workstation Monitors correctly oriented toward chairs
-    // North monitors face North (rotY = Math.PI) toward chairs at pz - 1.4
-    createWorkstationMonitor(
-      px - 0.9, 0.78, pz - 0.28, Math.PI,
-      `desk_${podId}_n_left`,
-      screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('WorkspacePlatform.jsx') : screenTextures?.chartTexture,
-      `Engineering Pod ${podId} (IDE Display)`
-    );
-    createWorkstationMonitor(
-      px + 0.9, 0.78, pz - 0.28, Math.PI,
-      `desk_${podId}_n_right`,
-      screenTextures?.createTerminalLogsTexture ? screenTextures.createTerminalLogsTexture() : screenTextures?.kpiTexture,
-      `Engineering Pod ${podId} (DevOps Terminal)`
-    );
-
-    // South monitors face South (rotY = 0) toward chairs at pz + 1.4
-    createWorkstationMonitor(
-      px - 0.9, 0.78, pz + 0.28, 0,
-      `desk_${podId}_s_left`,
-      screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.featTexture,
-      `Engineering Pod ${podId} (Figma UI Canvas)`
-    );
-    createWorkstationMonitor(
-      px + 0.9, 0.78, pz + 0.28, 0,
-      `desk_${podId}_s_right`,
-      screenTextures?.createTelecastLiveTexture ? screenTextures.createTelecastLiveTexture(`Pod ${podId} Station`, 'Ayush (you)') : screenTextures?.starryLogoTexture,
-      `Engineering Pod ${podId} (Workstation Telecast)`
-    );
-
-    // Task chairs facing the desk
-    [-0.9, 0.9].forEach((dx) => {
-      createCantileverChair(px + dx, pz - 1.4, 0, `Engineering Pod ${podId} North Chair`);
-      createCantileverChair(px + dx, pz + 1.4, Math.PI, `Engineering Pod ${podId} South Chair`);
-    });
-
-    pod.position.set(px, 0, pz);
-    furnitureGroup.add(pod);
-  };
-
-  createDeskPod(-6, -19, 1);
-  createDeskPod(6, -19, 2);
-  createDeskPod(-6, -13, 3);
-  createDeskPod(6, -13, 4);
-
-  // Dedicated Private Coworking Focus Cubicles in Lounge C:
-  // Cubicle 1 (North pod at x = -15, z = -4)
-  const cubicle1Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
-  cubicle1Desk.position.set(-15.0, 0.74, -4.0);
-  furnitureGroup.add(cubicle1Desk);
-
-  createWorkstationMonitor(
-    -15.0, 0.78, -4.25, 0,
-    'desk_cubicle_1',
-    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('FocusProject.rs') : screenTextures?.codeEditorTexture,
-    'Focus Cubicle 1 Workstation'
-  );
-  createCantileverChair(-15.0, -3.2, Math.PI, 'Focus Cubicle 1 Chair');
-
-  // Cubicle 2 (South pod at x = -15, z = 4)
-  const cubicle2Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
-  cubicle2Desk.position.set(-15.0, 0.74, 4.0);
-  furnitureGroup.add(cubicle2Desk);
-
-  createWorkstationMonitor(
-    -15.0, 0.78, 4.25, Math.PI,
-    'desk_cubicle_2',
-    screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.chartTexture,
-    'Focus Cubicle 2 Workstation'
-  );
-  createCantileverChair(-15.0, 3.2, 0, 'Focus Cubicle 2 Chair');
-
-  // ==========================================
-  // 7. LOBBY 🌐 (x: 22, z: -16)
-  // Reception desk and waiting area
-  // ==========================================
-  // Modern curved reception desk
-  const recepDesk = new THREE.Mesh(roundedBox(4.2, 1.05, 1.6, 0.12), whiteMat);
-  recepDesk.position.set(22.0, 0.52, -21.0);
-  recepDesk.castShadow = true;
-  furnitureGroup.add(recepDesk);
-
-  // Interactive Reception Monitor facing receptionist
-  createWorkstationMonitor(
-    22.0, 1.05, -21.2, 0,
-    'desk_reception',
-    screenTextures?.schedTexture,
-    'Lobby Reception Guest Monitor'
-  );
-
-  createCantileverChair(22.0, -20.2, Math.PI, 'Receptionist Chair');
-
-  // Waiting lounge
-  createRoundCoffeeTable(22.0, -13.0, 0.9, 0.38);
-  createTubArmchair(20.5, -13.0, Math.PI / 2, 'Lobby Armchair 1');
-  createTubArmchair(23.5, -13.0, -Math.PI / 2, 'Lobby Armchair 2');
-  createTubArmchair(22.0, -11.5, Math.PI, 'Lobby Armchair 3');
-  createTubArmchair(22.0, -14.5, 0, 'Lobby Armchair 4');
-
-  // ==========================================
-  // 8. LOUNGE C ((•)) (x: -21, z: 0)
-  // Long buffet dining counter, 2 cocktail tables, 4 small 2-top tables
-  // ==========================================
-  // Long black buffet table (x: -21, z: -2)
-  const buffetTable = new THREE.Mesh(roundedBox(8.4, 0.1, 1.4, 0.05), darkTableMat);
-  buffetTable.position.set(-21.0, 0.74, -2.0);
-  buffetTable.castShadow = true;
-  furnitureGroup.add(buffetTable);
-
-  [-3, -1.5, 0, 1.5, 3].forEach((bx) => {
-    createCantileverChair(-21.0 + bx, -2.9, 0, 'Buffet North Chair');
-    createCantileverChair(-21.0 + bx, -1.1, Math.PI, 'Buffet South Chair');
-  });
-
-  // 2 Large Circular Cocktail tables with stools (x: -25 and -17, z: 4)
-  [-25, -17].forEach((cx) => {
-    createRoundCoffeeTable(cx, 4.0, 1.1, 0.45);
-    // 4 Round Ottomans / Stools
-    [-1, 1].forEach((sx) => {
-      [-1, 1].forEach((sz) => {
-        const stool = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.3, 0.3, 0.38, 20),
-          blackLeatherMat
-        );
-        const stoolPos = new THREE.Vector3(cx + sx * 0.95, 0, 4.0 + sz * 0.95);
-        stool.position.set(cx + sx * 0.95, 0.19, 4.0 + sz * 0.95);
-        stool.castShadow = true;
-        stool.name = 'clickable_chair';
-        const rotTowardCenter = Math.atan2(-sx, -sz);
-        stool.userData = {
-          isChair: true,
-          name: 'Cocktail Stool',
-          chairPos: stoolPos,
-          chairRotY: rotTowardCenter,
-          seatHeight: 0.38
-        };
-        furnitureGroup.add(stool);
-        if (chairsRef?.current) {
-          chairsRef.current.push({
-            name: 'Cocktail Stool',
-            pos: stoolPos,
-            rot: rotTowardCenter,
-            seatHeight: 0.38
-          });
-        }
-      });
-    });
-  });
-
-  // 4 Small 2-Top Tables along the west wall (x: -30)
-  [-5, -2, 2, 5].forEach((tz) => {
-    createRoundCoffeeTable(-30.0, tz, 0.5, 0.74);
-    createCantileverChair(-29.2, tz, -Math.PI / 2, '2-Top Chair');
-  });
-
-  // ==========================================
-  // 9. LOUNGE B ((•)) (x: -1, z: 0)
-  // Central coffee counter & 2 circular tables
-  // ==========================================
-  // Coffee Credenza / Island
-  const coffeeBar = new THREE.Mesh(roundedBox(4.8, 0.95, 1.6, 0.08), woodDeskMat);
-  coffeeBar.position.set(-1.0, 0.48, 0);
-  coffeeBar.castShadow = true;
-  furnitureGroup.add(coffeeBar);
-
-  // 2 Circular Cocktail Tables (x: -5 and 3, z: 4)
-  [-5, 3].forEach((cx) => {
-    createRoundCoffeeTable(cx, 4.0, 1.1, 0.45);
-    [-1, 1].forEach((sx) => {
-      [-1, 1].forEach((sz) => {
-        const stool = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.3, 0.3, 0.38, 20),
-          blackLeatherMat
-        );
-        const stoolPos = new THREE.Vector3(cx + sx * 0.95, 0, 4.0 + sz * 0.95);
-        stool.position.set(cx + sx * 0.95, 0.19, 4.0 + sz * 0.95);
-        stool.castShadow = true;
-        stool.name = 'clickable_chair';
-        const rotTowardCenter = Math.atan2(-sx, -sz);
-        stool.userData = {
-          isChair: true,
-          name: 'Cocktail Stool',
-          chairPos: stoolPos,
-          chairRotY: rotTowardCenter,
-          seatHeight: 0.38
-        };
-        furnitureGroup.add(stool);
-        if (chairsRef?.current) {
-          chairsRef.current.push({
-            name: 'Cocktail Stool',
-            pos: stoolPos,
-            rot: rotTowardCenter,
-            seatHeight: 0.38
-          });
-        }
-      });
-    });
-  });
-
-  // 2 4-person workstation pods on the right (x: 4, z: -4)
-  createDeskPod(4, -4, 5);
-
-  // ==========================================
-  // 10. CHAT A & CHAT B (x: 12, z: -4 & +4)
-  // Private 1-on-1 huddle booths
-  // ==========================================
-  [-4, 4].forEach((cz, idx) => {
-    const isChatA = idx === 0;
-    const desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
-    desk.position.set(12.0, 0.74, cz);
-    desk.castShadow = true;
-    furnitureGroup.add(desk);
-
-    // Interactive Desk Workstation Monitor
-    createWorkstationMonitor(
-      12.0, 0.78, cz - 0.25, 0,
-      isChatA ? 'desk_chat_a' : 'desk_chat_b',
-      isChatA
-        ? (screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('PairProgramming.tsx') : screenTextures?.codeEditorTexture)
-        : screenTextures?.archTexture,
-      isChatA ? 'Chat A Huddle Workstation' : 'Chat B Huddle Workstation'
-    );
-
-    createCantileverChair(12.0, cz + 0.6, Math.PI, `Chat ${isChatA ? 'A' : 'B'} Chair`);
-  });
-
-  // ==========================================
-  // 11. LOUNGE A ((•)) (x: 23, z: 0)
-  // Sunken lounge pit in the middle with cushions
-  // ==========================================
-  // Sunken Pit Upholstered Basin
-  const pit = new THREE.Mesh(roundedBox(6.4, 0.38, 6.4, 0.12), turquoiseMat);
-  pit.position.set(23.0, 0.19, 0);
-  furnitureGroup.add(pit);
-
-  // Recessed seating area
-  const pitCenter = new THREE.Mesh(roundedBox(4.2, 0.18, 4.2, 0.08), whiteMat);
-  pitCenter.position.set(23.0, 0.28, 0);
-  furnitureGroup.add(pitCenter);
-
-  // Throw cushions
-  [-1.4, 0, 1.4].forEach((cx) => {
-    const c1Pos = new THREE.Vector3(23.0 + cx, 0, -1.8);
-    const c1 = new THREE.Mesh(roundedBox(0.52, 0.12, 0.52, 0.04), cushionYellowMat);
-    c1.position.set(23.0 + cx, 0.38, -1.8);
-    c1.name = 'clickable_chair';
-    c1.userData = {
-      isChair: true,
-      name: 'Lounge Pit Cushion',
-      chairPos: c1Pos,
-      chairRotY: 0,
-      seatHeight: 0.44
-    };
-    furnitureGroup.add(c1);
-    if (chairsRef?.current) {
-      chairsRef.current.push({ name: 'Lounge Pit Cushion', pos: c1Pos, rot: 0, seatHeight: 0.44 });
-    }
-
-    const c2Pos = new THREE.Vector3(23.0 + cx, 0, 1.8);
-    const c2 = new THREE.Mesh(roundedBox(0.52, 0.12, 0.52, 0.04), cushionOrangeMat);
-    c2.position.set(23.0 + cx, 0.38, 1.8);
-    c2.name = 'clickable_chair';
-    c2.userData = {
-      isChair: true,
-      name: 'Lounge Pit Cushion',
-      chairPos: c2Pos,
-      chairRotY: Math.PI,
-      seatHeight: 0.44
-    };
-    furnitureGroup.add(c2);
-    if (chairsRef?.current) {
-      chairsRef.current.push({ name: 'Lounge Pit Cushion', pos: c2Pos, rot: Math.PI, seatHeight: 0.44 });
-    }
-  });
-
-  createRoundCoffeeTable(23.0, 0, 0.9, 0.36);
-
-  // 4-person table pod above and below Lounge A
-  createRoundCoffeeTable(23.0, -5.2, 0.8, 0.74);
-  createCantileverChair(23.0, -6.1, 0, 'Lounge A North Chair');
-  createCantileverChair(23.0, -4.3, Math.PI, 'Lounge A South Chair');
-
-  createRoundCoffeeTable(23.0, 5.2, 0.8, 0.74);
-  createCantileverChair(23.0, 4.3, 0, 'Lounge A North Chair 2');
-  createCantileverChair(23.0, 6.1, Math.PI, 'Lounge A South Chair 2');
-
-  // Dedicated interactive screens across other rooms with separate roles
+  // Conference A Screen (Lobby/Presentation: x: 19, z: 20)
   createSpotWallScreen(
-    0, 1.55, -23.8, 3.2, 1.8, 0, 'workspace_a',
-    screenTextures?.createCiCdMonitorTexture ? screenTextures.createCiCdMonitorTexture() : screenTextures?.chartTexture,
-    'Workspace A Team CI/CD Monitor'
-  );
-  createSpotWallScreen(
-    13.8, 1.55, -4.0, 2.2, 1.3, -Math.PI / 2, 'chat_a',
-    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('WorkspacePlatform.jsx') : screenTextures?.codeEditorTexture,
-    'Chat A Pair Programming Monitor'
-  );
-  createSpotWallScreen(
-    13.8, 1.55, 4.0, 2.2, 1.3, -Math.PI / 2, 'chat_b',
-    screenTextures?.archTexture,
-    'Chat B System Architecture Monitor'
-  );
-  createSpotWallScreen(
-    23.0, 1.55, -8.8, 3.2, 1.8, 0, 'lounge_a',
-    screenTextures?.createSocialWallTexture ? screenTextures.createSocialWallTexture() : screenTextures?.featTexture,
-    'Lounge A Community Video Wall'
+    19.0, 1.55, 23.8, 3.2, 1.8, Math.PI, 'conference_a',
+    screenTextures?.kpiTexture,
+    'Conference A Telemetry Display'
   );
 
   return { ...screensMap, furnitureGroup };

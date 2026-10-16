@@ -222,14 +222,37 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   floorMesh.name = 'floor';
   environmentGroup.add(floorMesh);
 
-  // Patio outdoor floor overlay (x: -32 to -14, z: -24 to -8)
+  // Patio outdoor floor overlay (Southwest game terrace: x: -32 to -14, z: +12 to +24)
   const patioFloor = new THREE.Mesh(
-    new THREE.BoxGeometry(18, 0.42, 16),
+    new THREE.BoxGeometry(18, 0.42, 12),
     materials.patioFloorMat
   );
-  patioFloor.position.set(-23, -0.19, -16);
+  patioFloor.position.set(-23, -0.19, 18);
   patioFloor.receiveShadow = true;
   environmentGroup.add(patioFloor);
+
+  // Meeting Cabin / Private Lounge light polished floor overlay (North-Center: x: -14 to +6, z: -24 to -8)
+  const cabinFloorCanvas = document.createElement('canvas');
+  cabinFloorCanvas.width = 512;
+  cabinFloorCanvas.height = 512;
+  const cfCtx = cabinFloorCanvas.getContext('2d');
+  cfCtx.fillStyle = '#eaecef';
+  cfCtx.fillRect(0, 0, 512, 512);
+  cfCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+  for (let i = 0; i < 400; i++) {
+    cfCtx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
+  }
+  const cabinFloorTex = new THREE.CanvasTexture(cabinFloorCanvas);
+  cabinFloorTex.wrapS = THREE.RepeatWrapping;
+  cabinFloorTex.wrapT = THREE.RepeatWrapping;
+  cabinFloorTex.repeat.set(4, 3);
+  const cabinFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(20, 0.42, 16),
+    new THREE.MeshStandardMaterial({ map: cabinFloorTex, roughness: 0.82 })
+  );
+  cabinFloor.position.set(-4, -0.19, -16);
+  cabinFloor.receiveShadow = true;
+  environmentGroup.add(cabinFloor);
 
   // 4. Exact Wall Builder Helpers (Dollhouse Cutaway Height: 2.85m matching Spot desktop reference)
   const WALL_HEIGHT = 2.85;
@@ -434,16 +457,71 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     return doorGroup;
   };
 
-  // 5. Build the Exact 12-Room Wall Blueprint (media_1791969443822.png)
+  // Helper: Low modern planter with tall vertical reeds (media_1792165933867.png & media_1792165933914.png)
+  const createLowPlanter = (x, z, length, width = 0.65, rotY = 0) => {
+    const planterGroup = new THREE.Group();
+    planterGroup.name = 'planter_divider_group';
+
+    // Dark charcoal / black trough box
+    const box = new THREE.Mesh(
+      new THREE.BoxGeometry(length, 0.42, width),
+      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.85 })
+    );
+    box.position.y = 0.21;
+    box.castShadow = true;
+    planterGroup.add(box);
+
+    // Soil bedding
+    const soil = new THREE.Mesh(
+      new THREE.BoxGeometry(length - 0.08, 0.06, width - 0.08),
+      new THREE.MeshStandardMaterial({ color: 0x271c19, roughness: 0.95 })
+    );
+    soil.position.y = 0.40;
+    planterGroup.add(soil);
+
+    // Reeds / ornamental grasses
+    const reedMat1 = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.8 });
+    const reedMat2 = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.8 });
+    const reedCount = Math.floor(length * 7);
+    for (let i = 0; i < reedCount; i++) {
+      const rx = -length / 2 + 0.15 + (i / reedCount) * (length - 0.3) + (Math.random() - 0.5) * 0.08;
+      const rz = (Math.random() - 0.5) * (width - 0.22);
+      const rHeight = 0.85 + Math.random() * 0.45;
+      const reed = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.012, 0.018, rHeight, 6),
+        Math.random() > 0.4 ? reedMat1 : reedMat2
+      );
+      reed.position.set(rx, 0.40 + rHeight / 2, rz);
+      reed.rotation.z = (Math.random() - 0.5) * 0.12;
+      planterGroup.add(reed);
+    }
+
+    planterGroup.position.set(x, 0, z);
+    planterGroup.rotation.y = rotY;
+    environmentGroup.add(planterGroup);
+
+    // Register planter as collision boundary
+    wallsList.push({
+      mesh: box,
+      center: new THREE.Vector3(x, 0.21, z),
+      width: rotY === 0 ? length : width,
+      depth: rotY === 0 ? width : length,
+      radius: Math.hypot(length, width) / 2
+    });
+
+    return planterGroup;
+  };
+
+  // 5. Build the Exact Spot Virtual Wall Blueprint (media_1792165933867.png & media_1792165933914.png)
   // Overall interior dimensions: X = [-32, +32], Z = [-24, +24]
 
-  // Outer Perimeter Walls:
-  createWall(-32, 0, WALL_THICKNESS, 48); // West Wall
-  createWall(32, 0, WALL_THICKNESS, 48);  // East Wall
+  // Outer Perimeter Solid Walls:
+  createWall(-32, 0, WALL_THICKNESS, 48); // West Wall (X = -32)
+  createWall(32, -10, WALL_THICKNESS, 28); // East Wall behind Auditorium Stage (X = +32, Z: -24 to +4)
 
-  // Transparent Clerestory Windows with mullions on North & South Perimeters
-  const createClerestoryFacade = (zPos) => {
-    for (let x = -30; x <= 30; x += 6) {
+  // Transparent Clerestory Windows with mullions on North, South, and East Promenade:
+  const createClerestoryFacade = (zPos, startX = -30, endX = 30) => {
+    for (let x = startX; x <= endX; x += 6) {
       const glassPane = new THREE.Mesh(
         new THREE.BoxGeometry(5.8, WALL_HEIGHT, 0.08),
         materials.glassMat
@@ -460,106 +538,94 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
       environmentGroup.add(mullion);
     }
   };
-  createClerestoryFacade(-24); // North clerestory
-  createClerestoryFacade(24);  // South clerestory
 
-  // Internal Horizontal Dividers:
-  // Divider between Row 3 (North) and Row 2 (Middle): Z = -8
-  // Patio partition (X = -32 to -14) with double doors leading out to terrace
-  createWall(-28, -8, 8, WALL_THICKNESS);
-  createDoubleDoor(-22, -8, 0); // Double doors into Patio Terrace
-  createWall(-16.5, -8, 5, WALL_THICKNESS);
+  // North Clerestory overlooking exterior street, trees, park benches & zebra crossings
+  createClerestoryFacade(-24, -30, 30);
 
-  // Workspace A partition (X = -14 to +14, with entryway openings at -3 and +3)
-  createWall(-8.5, -8, 11, WALL_THICKNESS);
-  createWall(8.5, -8, 11, WALL_THICKNESS);
+  // South Clerestory overlooking exterior sidewalk & lawn
+  createClerestoryFacade(24, -30, 30);
 
-  // Lobby partition (X = +14 to +32, with double doors)
-  createWall(17.5, -8, 7, WALL_THICKNESS);
-  createDoubleDoor(23, -8, 0); // Double doors into Lobby
-  createWall(28.5, -8, 7, WALL_THICKNESS);
+  // East Promenade Clerestory: Floor-to-ceiling glass windows overlooking Seattle skyline & Ferris Wheel (media_1792165933914.png)
+  for (let z = 6; z <= 22; z += 5) {
+    const glassPane = new THREE.Mesh(
+      new THREE.BoxGeometry(0.08, WALL_HEIGHT, 4.8),
+      materials.glassMat
+    );
+    glassPane.position.set(32, WALL_HEIGHT / 2, z);
+    environmentGroup.add(glassPane);
 
-  // Divider between Row 2 (Middle) and Row 1 (South): Z = +8
-  // Auditorium north wall with double doors (X = -32 to -16):
-  createWall(-29, 8, 6, WALL_THICKNESS);
-  createDoubleDoor(-24, 8, 0); // Double doors into Auditorium
-  createWall(-18.5, 8, 5, WALL_THICKNESS);
+    const mullion = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, WALL_HEIGHT, 0.16),
+      materials.frameMat
+    );
+    mullion.position.set(32, WALL_HEIGHT / 2, z + 2.4);
+    environmentGroup.add(mullion);
+  }
 
-  // Boardroom north wall with double door (X = -16 to -2):
-  createWall(-14, 8, 4, WALL_THICKNESS);
-  createDoubleDoor(-9, 8, 0); // Double doors into Boardroom
-  createWall(-4, 8, 4, WALL_THICKNESS);
+  // =========================================================================
+  // ROW 1: NORTH ROOMS (Z = -24 to -8) - Exact match to media_1792165933867.png
+  // =========================================================================
 
-  // Conference B north wall with double door (X = -2 to +12):
-  createWall(0.5, 8, 5, WALL_THICKNESS);
-  createDoubleDoor(5, 8, 0);  // Double doors into Conference B
-  createWall(9.5, 8, 5, WALL_THICKNESS);
-
-  // Conference A north wall with double door (X = +12 to +26):
-  createWall(14.5, 8, 5, WALL_THICKNESS);
-  createDoubleDoor(19, 8, 0); // Double doors into Conference A
-  createWall(23.5, 8, 5, WALL_THICKNESS);
-
-  // Internal Vertical Dividers:
-  // Between Auditorium and Boardroom (X = -16, Z = +8 to +24)
-  createWall(-16, 16, WALL_THICKNESS, 16);
-
-  // Between Boardroom and Conference B (X = -2, Z = +8 to +24)
-  createWall(-2, 16, WALL_THICKNESS, 16);
-
-  // Between Conference B and Conference A (X = +12, Z = +8 to +24)
-  createWall(12, 16, WALL_THICKNESS, 16);
-
-  // Between Patio and Workspace A (X = -14, Z = -24 to -8)
+  // 1. BOARDROOM (Northwest: X = -32 to -14, Z = -24 to -8)
+  // Dividing wall between Boardroom and Meeting Cabin (X = -14, Z = -24 to -8)
   createWall(-14, -16, WALL_THICKNESS, 16);
 
-  // Between Workspace A and Lobby (X = +14, Z = -24 to -8)
-  createWall(14, -16, WALL_THICKNESS, 16);
+  // South wall of Boardroom with Double Doors at X = -23, Z = -8
+  createWall(-28.25, -8, 7.5, WALL_THICKNESS);
+  createDoubleDoor(-23, -8, 0); // Double doors with brass handles into Boardroom
+  createWall(-17.75, -8, 7.5, WALL_THICKNESS);
 
-  // In Row 2 (Middle Row):
-  // Between Lounge C and Lounge B (X = -10, Z = -8 to +8, with central open portal)
-  createWall(-10, -5.5, WALL_THICKNESS, 5);
-  createWall(-10, 5.5, WALL_THICKNESS, 5);
+  // 2. MEETING CABIN / PRIVATE LOUNGE (North-Center: X = -14 to +6, Z = -24 to -8)
+  // Dividing wall between Meeting Cabin and Auditorium (X = +6, Z = -24 to -8)
+  createWall(6, -16, WALL_THICKNESS, 16);
 
-  // Chat A and Chat B Private Booth Enclosures (X: +8 to +16) with Single Doors:
-  createWall(8, -6.5, WALL_THICKNESS, 3);
-  createSingleDoor(8, -4, Math.PI / 2); // Single door into Chat A
-  createWall(8, -1.5, WALL_THICKNESS, 3);
+  // South wall of Meeting Cabin with Double Doors at X = -4, Z = -8
+  createWall(-9.75, -8, 8.5, WALL_THICKNESS);
+  createDoubleDoor(-4, -8, 0); // Double doors with brass handles into Meeting Cabin
+  createWall(1.75, -8, 8.5, WALL_THICKNESS);
 
-  createWall(8, 1.5, WALL_THICKNESS, 3);
-  createSingleDoor(8, 4, Math.PI / 2);  // Single door into Chat B
-  createWall(8, 6.5, WALL_THICKNESS, 3);
+  // 3. AUDITORIUM OPEN ATRIUM (East: X = +6 to +32, Z = -24 to +4)
+  // Open layout: Framed by stylish low black planters with tall green reeds (media_1792165933867.png & media_1792165933914.png)
+  // West boundary planter along X = +6 from Z = -8 to Z = +4
+  createLowPlanter(6, -2, 12, 0.65, Math.PI / 2);
 
-  // Partition dividing Chat A and Chat B (Z = 0, X = +8 to +16)
-  createWall(12, 0, 8, WALL_THICKNESS);
+  // South boundary planter along Z = +4 from X = +6 to X = +18
+  createLowPlanter(12, 4, 12, 0.65, 0);
+  // Wide open walkway opening at X = 18 to 22 allows walking freely into the stadium seating tiers!
 
-  // East wall of Chat pods (X = +16, Z = -8 to +8)
-  createWall(16, -4, WALL_THICKNESS, 8);
-  createWall(16, 4, WALL_THICKNESS, 8);
+  // =========================================================================
+  // ROW 2: CENTRAL CONCOURSE / LOUNGE C (X = -32 to +14, Z = -8 to +8)
+  // Open, expansive, bright modern concourse with bleached birch plank flooring
+  // =========================================================================
 
-  // Dedicated Coworking Focus Cubicles in Lounge C:
-  // Cubicle 1 (North pod at Z = -4, X = -17 to -12)
-  createWall(-14.5, -2.0, 5.0, WALL_THICKNESS); // South divider
-  createWall(-12, -4.8, WALL_THICKNESS, 1.8);
-  createSingleDoor(-12, -3.4, Math.PI / 2);      // Private door to Cubicle 1
-  createWall(-12, -2.2, WALL_THICKNESS, 0.6);
+  // =========================================================================
+  // ROW 3: SOUTH ROOMS & COLLABORATION WING (Z = +8 to +24)
+  // =========================================================================
 
-  // Cubicle 2 (South pod at Z = +4, X = -17 to -12)
-  createWall(-14.5, 2.0, 5.0, WALL_THICKNESS);  // North divider
-  createWall(-12, 2.2, WALL_THICKNESS, 0.6);
-  createSingleDoor(-12, 3.4, Math.PI / 2);       // Private door to Cubicle 2
-  createWall(-12, 4.8, WALL_THICKNESS, 1.8);
+  // Focus Cubicle 1 & 2 Front Wall (Z = 8, X = -26 to -14) with Private Single Doors
+  createWall(-25.25, 8, 2.5, WALL_THICKNESS);
+  createSingleDoor(-22.5, 8, 0); // Single door into Focus Cubicle 1
+  createWall(-19.5, 8, 3.5, WALL_THICKNESS);
+  createSingleDoor(-16.2, 8, 0); // Single door into Focus Cubicle 2
+  createWall(-14.4, 8, 1.2, WALL_THICKNESS);
 
-  // Door openings into Chat A and Chat B (sliding glass / open portal)
-  // Lounge A is located to the right of Chat A & B (X = +16 to +32, Z = -8 to +8)
+  // Divider between Cubicle 1 and Cubicle 2 (X = -19.5, Z = 8 to 14)
+  createWall(-19.5, 11, WALL_THICKNESS, 6);
 
-  // 6. Giant Spot Vertical Signboard / Monolith outside Auditorium (media_1791969443822.png)
+  // Back wall of Cubicles (Z = 14, X = -26 to -14)
+  createWall(-20, 14, 12, WALL_THICKNESS);
+
+  // Workspace A & Reception divider (X = 14, Z = 8 to 24 with open portal at Z = 16)
+  createWall(14, 10.5, WALL_THICKNESS, 5);
+  createWall(14, 21.5, WALL_THICKNESS, 5);
+
+  // 6. Giant Spot Vertical Signboard / Monolith (East entranceway outside Auditorium)
   const monolithGrp = new THREE.Group();
   const monolith = new THREE.Mesh(
     new THREE.BoxGeometry(0.8, 11, 14),
     new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.5 })
   );
-  monolith.position.set(-34.5, 5.5, 16);
+  monolith.position.set(34.5, 5.5, -10);
   monolith.castShadow = true;
   monolithGrp.add(monolith);
 
@@ -569,7 +635,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     new THREE.MeshBasicMaterial({ color: 0x10b981 })
   );
   spotCircle.rotation.z = Math.PI / 2;
-  spotCircle.position.set(-34.0, 7.5, 14);
+  spotCircle.position.set(34.0, 7.5, -10);
   monolithGrp.add(spotCircle);
 
   // Spot lowercase typography plaque
@@ -578,8 +644,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
       new THREE.PlaneGeometry(8, 2.5),
       new THREE.MeshBasicMaterial({ map: screenTextures.logoTexture, transparent: true })
     );
-    spotSign.rotation.y = Math.PI / 2;
-    spotSign.position.set(-34.05, 5.5, 16);
+    spotSign.rotation.y = -Math.PI / 2;
+    spotSign.position.set(34.05, 5.5, -10);
     monolithGrp.add(spotSign);
   }
   environmentGroup.add(monolithGrp);
