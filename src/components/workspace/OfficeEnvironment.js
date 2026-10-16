@@ -580,47 +580,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createStreetTree(-16, 28, 1.0);
   createStreetTree(2, 28, 1.15);
 
-  // Low-poly City Skyline Buildings (Seattle backdrop)
-  const buildingCanvas = document.createElement('canvas');
-  buildingCanvas.width = 128;
-  buildingCanvas.height = 256;
-  const bCtx = buildingCanvas.getContext('2d');
-  bCtx.fillStyle = '#475569';
-  bCtx.fillRect(0, 0, 128, 256);
-  // Subtle illuminated windows
-  bCtx.fillStyle = '#cbd5e1';
-  for (let wy = 12; wy < 250; wy += 20) {
-    for (let wx = 10; wx < 120; wx += 16) {
-      bCtx.fillRect(wx, wy, 10, 12);
-    }
-  }
-  const buildingTexture = new THREE.CanvasTexture(buildingCanvas);
-  buildingTexture.wrapS = THREE.RepeatWrapping;
-  buildingTexture.wrapT = THREE.RepeatWrapping;
-
-  const buildings = [
-    { x: -55, z: -55, w: 22, h: 36, d: 20 },
-    { x: -25, z: -58, w: 20, h: 28, d: 18 },
-    { x: 12, z: -60, w: 26, h: 42, d: 22 },
-    { x: 50, z: -56, w: 24, h: 32, d: 20 },
-    { x: -60, z: 52, w: 22, h: 30, d: 20 },
-    { x: -10, z: 56, w: 24, h: 38, d: 22 },
-    { x: 38, z: 54, w: 20, h: 26, d: 18 }
-  ];
-
-  buildings.forEach((b) => {
-    const bMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(b.w, b.h, b.d),
-      new THREE.MeshStandardMaterial({
-        map: buildingTexture,
-        roughness: 0.8
-      })
-    );
-    bMesh.position.set(b.x, b.h / 2, b.z);
-    bMesh.receiveShadow = true;
-    seattleGroup.add(bMesh);
-  });
-
+  // City Skyline Buildings completely removed to ensure all office rooms are 100% unobstructed
+  // seattleGroup now keeps only the ground landscape and trees far outside the clerestory glass
   environmentGroup.add(seattleGroup);
 
   return {

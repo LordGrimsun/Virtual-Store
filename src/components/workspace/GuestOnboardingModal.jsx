@@ -156,6 +156,27 @@ export default function GuestOnboardingModal({
     } catch (e) {}
   };
 
+  const SpotBrandHeader = ({ marginBottom = '24px' }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom }}>
+      <img
+        src="data:image/svg+xml,%3csvg%20width='50'%20height='50'%20viewBox='0%200%2050%2050'%20fill='none'%20xmlns='http://www.w3.org/2000/svg'%3e%3crect%20y='21.875'%20width='50'%20height='6.25'%20fill='%230D8225'/%3e%3cpath%20d='M50%2028.125C50%2040.2062%2038.8071%2050%2025%2050C11.1929%2050%200%2040.2062%200%2028.125C0%2016.0438%2011.1929%206.25%2025%206.25C38.8071%206.25%2050%2016.0438%2050%2028.125Z'%20fill='%230D8225'/%3e%3cellipse%20cx='25'%20cy='21.875'%20rx='25'%20ry='21.875'%20fill='%2314C939'/%3e%3c/svg%3e"
+        alt="Spot"
+        style={{ width: '28px', height: '28px' }}
+      />
+      <span
+        style={{
+          fontFamily: 'Comfortaa, cursive, sans-serif',
+          fontWeight: 300,
+          fontSize: '26px',
+          color: '#111827',
+          letterSpacing: '-0.5px'
+        }}
+      >
+        spot
+      </span>
+    </div>
+  );
+
   return (
     <div
       style={{
@@ -166,7 +187,7 @@ export default function GuestOnboardingModal({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
       }}
     >
       {/* ================= STEP 1: JOIN ================= */}
@@ -183,86 +204,25 @@ export default function GuestOnboardingModal({
           {/* Left Hero Graphic Banner */}
           <div
             style={{
-              flex: 1.1,
-              background: 'linear-gradient(135deg, #eff6ff 0%, #e0e7ff 50%, #f3e8ff 100%)',
-              position: 'relative',
+              flex: 1.15,
+              background: '#f8fafc',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              padding: '40px',
               overflow: 'hidden'
             }}
           >
-            {/* SVG illustrated workspace & avatars matching real_spot_office_lobby.png */}
-            <svg
-              width="540"
-              height="500"
-              viewBox="0 0 540 500"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{ zIndex: 1 }}
-            >
-              {/* Background soft shapes */}
-              <circle cx="270" cy="250" r="200" fill="#dbeafe" opacity="0.6" />
-              <circle cx="340" cy="180" r="120" fill="#ede9fe" opacity="0.7" />
-
-              {/* Floating Horse Mascot */}
-              <g transform="translate(80, 80) scale(0.85)">
-                <ellipse cx="60" cy="80" rx="36" ry="24" fill="#a78bfa" />
-                <circle cx="90" cy="55" r="20" fill="#a78bfa" />
-                <polygon points="100,45 115,25 95,35" fill="#8b5cf6" />
-                <polygon points="85,45 75,25 90,38" fill="#8b5cf6" />
-                <circle cx="98" cy="52" r="3" fill="#ffffff" />
-                <rect x="40" y="95" width="8" height="26" rx="4" fill="#8b5cf6" />
-                <rect x="70" y="95" width="8" height="26" rx="4" fill="#8b5cf6" />
-                <path d="M 30,75 Q 10,85 20,105" stroke="#8b5cf6" strokeWidth="6" strokeLinecap="round" />
-              </g>
-
-              {/* Central Floating Avatar Girl with glasses */}
-              <g transform="translate(240, 140) scale(0.95)">
-                <ellipse cx="60" cy="130" rx="28" ry="38" fill="#3b82f6" />
-                <circle cx="60" cy="65" r="30" fill="#f9d3b4" />
-                <path d="M 30,55 Q 60,15 90,55 Q 85,25 60,20 Q 35,25 30,55" fill="#1e293b" />
-                {/* Glasses */}
-                <rect x="42" y="58" width="14" height="10" rx="2" stroke="#0f172a" strokeWidth="2.5" fill="none" />
-                <rect x="64" y="58" width="14" height="10" rx="2" stroke="#0f172a" strokeWidth="2.5" fill="none" />
-                <line x1="56" y1="63" x2="64" y2="63" stroke="#0f172a" strokeWidth="2.5" />
-                {/* Coffee mug */}
-                <rect x="85" y="120" width="16" height="18" rx="3" fill="#ef4444" />
-                <path d="M 101,124 Q 107,129 101,134" stroke="#ef4444" strokeWidth="2.5" fill="none" />
-              </g>
-
-              {/* Guy on Beanbag coder with headphones */}
-              <g transform="translate(100, 260) scale(0.9)">
-                {/* Orange beanbag */}
-                <ellipse cx="90" cy="120" rx="65" ry="42" fill="#fb923c" />
-                <ellipse cx="80" cy="90" rx="24" ry="32" fill="#22c55e" />
-                <circle cx="80" cy="45" r="22" fill="#c68b59" />
-                {/* Hair */}
-                <path d="M 60,40 Q 80,20 100,38 Z" fill="#451a03" />
-                {/* Headphones */}
-                <path d="M 58,45 Q 80,18 102,45" stroke="#1f2937" strokeWidth="4" fill="none" />
-                <circle cx="58" cy="47" r="5" fill="#1f2937" />
-                <circle cx="102" cy="47" r="5" fill="#1f2937" />
-                {/* Laptop */}
-                <rect x="90" y="80" width="36" height="24" rx="2" fill="#cbd5e1" transform="rotate(-15 90 80)" />
-              </g>
-
-              {/* Guy with phone in green chair */}
-              <g transform="translate(340, 260) scale(0.9)">
-                <ellipse cx="70" cy="115" rx="45" ry="35" fill="#38bdf8" />
-                <ellipse cx="65" cy="85" rx="22" ry="30" fill="#a855f7" />
-                <circle cx="65" cy="45" r="22" fill="#e8b688" />
-                <path d="M 45,40 Q 65,15 85,38 Z" fill="#312e81" />
-                {/* Phone */}
-                <rect x="42" y="75" width="12" height="20" rx="2" fill="#1e293b" />
-              </g>
-
-              {/* Decorative sparkle stars */}
-              <g fill="#f59e0b">
-                <path d="M 190,70 L 193,78 L 201,81 L 193,84 L 190,92 L 187,84 L 179,81 L 187,78 Z" />
-                <path d="M 420,110 L 422,116 L 428,118 L 422,120 L 420,126 L 418,120 L 412,118 L 418,116 Z" />
-              </g>
-            </svg>
+            <img
+              src="https://spotvirtual.com/static/vite/login-hero-CnrJe5Jj.svg"
+              alt="Spot Login Hero"
+              style={{
+                maxWidth: '640px',
+                width: '92%',
+                height: 'auto',
+                objectFit: 'contain'
+              }}
+            />
           </div>
 
           {/* Right Form Card matching Spot Virtual */}
@@ -276,31 +236,32 @@ export default function GuestOnboardingModal({
               maxWidth: '560px'
             }}
           >
-            {/* Spot Brand Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  background: '#10b981'
-                }}
-              />
-              <span style={{ fontSize: '26px', fontWeight: 700, color: '#111827', letterSpacing: '-0.5px' }}>
-                spot
-              </span>
-            </div>
+            <SpotBrandHeader marginBottom="24px" />
 
-            {/* Space Title */}
-            <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#111827', margin: '0 0 12px 0' }}>
+            <h1
+              style={{
+                fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+                fontSize: '30px',
+                fontWeight: 700,
+                color: '#111827',
+                margin: '0 0 10px 0'
+              }}
+            >
               Visit {spaceName}
             </h1>
-            <p style={{ fontSize: '15px', color: '#6b7280', margin: '0 0 32px 0', lineHeight: 1.5 }}>
+            <p
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '15px',
+                color: '#4b5563',
+                margin: '0 0 28px 0',
+                lineHeight: 1.5
+              }}
+            >
               Continue below to visit <strong style={{ color: '#111827' }}>{orgName}</strong> in the{' '}
-              <strong style={{ color: '#111827' }}>{spaceSlug}</strong> space.
+              <strong style={{ color: '#111827' }}>{spaceName}</strong> space.
             </p>
 
-            {/* Form */}
             <form onSubmit={handleJoinSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div>
                 <input
@@ -314,18 +275,19 @@ export default function GuestOnboardingModal({
                   required
                   style={{
                     width: '100%',
-                    height: '52px',
+                    height: '48px',
                     padding: '0 16px',
                     fontSize: '15px',
-                    borderRadius: '8px',
+                    borderRadius: '4px',
                     border: '1px solid #d1d5db',
                     outline: 'none',
                     boxSizing: 'border-box',
-                    transition: 'border-color 0.15s ease, box-shadow 0.15s ease'
+                    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                    fontFamily: 'Inter, sans-serif'
                   }}
                   onFocus={(e) => {
-                    e.target.style.borderColor = '#10b981';
-                    e.target.style.boxShadow = '0 0 0 3px rgba(16, 185, 129, 0.15)';
+                    e.target.style.borderColor = '#0091ff';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(0, 145, 255, 0.2)';
                   }}
                   onBlur={(e) => {
                     e.target.style.borderColor = '#d1d5db';
@@ -334,16 +296,15 @@ export default function GuestOnboardingModal({
                 />
               </div>
 
-              {/* Continue button */}
               <button
                 type="submit"
                 style={{
                   width: '100%',
-                  height: '52px',
-                  background: '#10b981',
+                  height: '48px',
+                  background: '#14C939',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '4px',
                   fontSize: '16px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -351,25 +312,37 @@ export default function GuestOnboardingModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   transition: 'background 0.15s ease',
-                  boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+                  fontFamily: 'Inter, sans-serif'
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#059669')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = '#10b981')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#0ea82d')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#14C939')}
               >
                 Continue
               </button>
             </form>
 
-            <div style={{ marginTop: '28px', fontSize: '13px', color: '#9ca3af', lineHeight: 1.6 }}>
+            <div style={{ marginTop: '28px', fontSize: '13px', color: '#6b7280', lineHeight: 1.6 }}>
               By visiting, you agree to our{' '}
-              <a href="https://www.spotvirtual.com/terms-of-service/" target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'underline' }}>
+              <a
+                href="https://www.spotvirtual.com/terms-of-service/"
+                target="_blank"
+                rel="noreferrer"
+                style={{ color: '#0091ff', textDecoration: 'none' }}
+              >
                 Terms of Service
               </a>
             </div>
 
-            <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #f3f4f6', fontSize: '14px', color: '#6b7280' }}>
+            <div style={{ marginTop: '16px', fontSize: '14px', color: '#6b7280' }}>
               Already have an account?{' '}
-              <a href="#signin" onClick={(e) => { e.preventDefault(); if (onClose) onClose(); }} style={{ color: '#10b981', fontWeight: 600, textDecoration: 'none' }}>
+              <a
+                href="#signin"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (onClose) onClose();
+                }}
+                style={{ color: '#0091ff', textDecoration: 'none' }}
+              >
                 Sign in
               </a>
             </div>
@@ -390,16 +363,20 @@ export default function GuestOnboardingModal({
             textAlign: 'center'
           }}
         >
-          {/* Spot Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981' }} />
-            <span style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>spot</span>
-          </div>
+          <SpotBrandHeader marginBottom="20px" />
 
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111827', margin: '0 0 10px 0' }}>
+          <h2
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '28px',
+              fontWeight: 700,
+              color: '#111827',
+              margin: '0 0 10px 0'
+            }}
+          >
             Customize your avatar
           </h2>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 32px 0', maxWidth: '380px' }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#6b7280', margin: '0 0 32px 0', maxWidth: '380px', lineHeight: 1.5 }}>
             Choose an avatar that fits your personality! You can further customize your avatar later.
           </p>
 
@@ -470,7 +447,6 @@ export default function GuestOnboardingModal({
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                 }}
               >
-                {/* Stylized hair */}
                 <div
                   style={{
                     position: 'absolute',
@@ -482,7 +458,6 @@ export default function GuestOnboardingModal({
                     borderRadius: '34px 34px 10px 10px'
                   }}
                 />
-                {/* Eyes */}
                 <div
                   style={{
                     position: 'absolute',
@@ -491,7 +466,7 @@ export default function GuestOnboardingModal({
                     width: '7px',
                     height: '7px',
                     borderRadius: '50%',
-                    background: '#10b981'
+                    background: '#14C939'
                   }}
                 />
                 <div
@@ -502,7 +477,7 @@ export default function GuestOnboardingModal({
                     width: '7px',
                     height: '7px',
                     borderRadius: '50%',
-                    background: '#10b981'
+                    background: '#14C939'
                   }}
                 />
               </div>
@@ -546,7 +521,7 @@ export default function GuestOnboardingModal({
               </div>
             </div>
 
-            {/* Right Controls (Gender swapper & Rotation arrows) */}
+            {/* Right Controls */}
             <div
               style={{
                 position: 'absolute',
@@ -558,31 +533,14 @@ export default function GuestOnboardingModal({
               }}
             >
               <button
-                onClick={() => setAvatarGender('male')}
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  background: avatarGender === 'male' ? '#f0fdf4' : '#ffffff',
-                  border: avatarGender === 'male' ? '2px solid #10b981' : '1px solid #e5e7eb',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '16px'
-                }}
-              >
-                👨
-              </button>
-
-              <button
                 onClick={() => setAvatarGender('female')}
+                title="Female"
                 style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
                   background: avatarGender === 'female' ? '#f0fdf4' : '#ffffff',
-                  border: avatarGender === 'female' ? '2px solid #10b981' : '1px solid #e5e7eb',
+                  border: avatarGender === 'female' ? '2px solid #14C939' : '1px solid #e5e7eb',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -591,6 +549,25 @@ export default function GuestOnboardingModal({
                 }}
               >
                 👩
+              </button>
+
+              <button
+                onClick={() => setAvatarGender('male')}
+                title="Male"
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  background: avatarGender === 'male' ? '#f0fdf4' : '#ffffff',
+                  border: avatarGender === 'male' ? '2px solid #14C939' : '1px solid #e5e7eb',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px'
+                }}
+              >
+                👨
               </button>
 
               <button
@@ -638,15 +615,15 @@ export default function GuestOnboardingModal({
               width: '100%',
               maxWidth: '380px',
               height: '48px',
-              background: '#10b981',
+              background: '#14C939',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '4px',
               fontSize: '15px',
               fontWeight: 600,
               cursor: 'pointer',
               marginBottom: '16px',
-              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             Continue
@@ -658,13 +635,14 @@ export default function GuestOnboardingModal({
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#0284c7',
+              color: '#0091ff',
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             <ArrowLeft size={14} /> Back
@@ -685,34 +663,37 @@ export default function GuestOnboardingModal({
             textAlign: 'center'
           }}
         >
-          {/* Spot Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981' }} />
-            <span style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>spot</span>
-          </div>
+          <SpotBrandHeader marginBottom="20px" />
 
-          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#111827', margin: '0 0 8px 0' }}>
+          <h2
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '28px',
+              fontWeight: 700,
+              color: '#111827',
+              margin: '0 0 8px 0'
+            }}
+          >
             Audio & video setup
           </h2>
-          <p style={{ fontSize: '14px', color: '#6b7280', margin: '0 0 24px 0', maxWidth: '380px' }}>
+          <p style={{ fontFamily: 'Inter, sans-serif', fontSize: '14px', color: '#6b7280', margin: '0 0 24px 0', maxWidth: '380px', lineHeight: 1.5 }}>
             Make sure your mic, camera and speakers are setup correctly before joining.
           </p>
 
-          {/* Video Preview Box matching real_spot_step3.png */}
+          {/* Video Preview Box */}
           <div
             style={{
               width: '100%',
               maxWidth: '380px',
               height: '210px',
-              borderRadius: '10px',
+              borderRadius: '8px',
               background: '#09090b',
               position: 'relative',
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: '20px',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
+              marginBottom: '20px'
             }}
           >
             {isCameraOn ? (
@@ -724,7 +705,7 @@ export default function GuestOnboardingModal({
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             ) : (
-              <span style={{ color: '#d1d5db', fontSize: '13.5px' }}>
+              <span style={{ color: '#d1d5db', fontSize: '14px', fontFamily: 'Inter, sans-serif' }}>
                 Your mic and camera are <strong>off</strong>
               </span>
             )}
@@ -749,7 +730,7 @@ export default function GuestOnboardingModal({
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: isMicOn ? '#10b981' : '#374151',
+                  background: isMicOn ? '#14C939' : '#374151',
                   border: 'none',
                   color: '#ffffff',
                   cursor: 'pointer',
@@ -767,7 +748,7 @@ export default function GuestOnboardingModal({
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: isCameraOn ? '#10b981' : '#374151',
+                  background: isCameraOn ? '#14C939' : '#374151',
                   border: 'none',
                   color: '#ffffff',
                   cursor: 'pointer',
@@ -781,9 +762,8 @@ export default function GuestOnboardingModal({
             </div>
           </div>
 
-          {/* Device Dropdowns matching Spot layout */}
+          {/* Device Dropdowns */}
           <div style={{ width: '100%', maxWidth: '380px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-            {/* Audio Input (Mic) */}
             <div style={{ position: 'relative' }}>
               <select
                 value={selectedAudioInput}
@@ -792,23 +772,23 @@ export default function GuestOnboardingModal({
                   width: '100%',
                   height: '42px',
                   padding: '0 12px 0 36px',
-                  borderRadius: '6px',
+                  borderRadius: '4px',
                   border: '1px solid #d1d5db',
                   background: '#ffffff',
                   fontSize: '13px',
                   color: '#1f2937',
                   outline: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif'
                 }}
               >
                 {audioInputDevices.map((d, i) => (
-                  <option key={i} value={d.deviceId}>{d.label || `Microphone ${i + 1}`}</option>
+                  <option key={i} value={d.deviceId}>{d.label || `Fake Default Audio Input`}</option>
                 ))}
               </select>
               <Mic size={16} color="#6b7280" style={{ position: 'absolute', left: '12px', top: '13px' }} />
             </div>
 
-            {/* Video Input (Camera) */}
             <div style={{ position: 'relative' }}>
               <select
                 value={selectedVideo}
@@ -817,23 +797,23 @@ export default function GuestOnboardingModal({
                   width: '100%',
                   height: '42px',
                   padding: '0 12px 0 36px',
-                  borderRadius: '6px',
+                  borderRadius: '4px',
                   border: '1px solid #d1d5db',
                   background: '#ffffff',
                   fontSize: '13px',
                   color: '#1f2937',
                   outline: 'none',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif'
                 }}
               >
                 {videoDevices.map((d, i) => (
-                  <option key={i} value={d.deviceId}>{d.label || `Camera ${i + 1}`}</option>
+                  <option key={i} value={d.deviceId}>{d.label || `System default`}</option>
                 ))}
               </select>
               <Video size={16} color="#6b7280" style={{ position: 'absolute', left: '12px', top: '13px' }} />
             </div>
 
-            {/* Audio Output (Speakers) with Test button */}
             <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
               <div style={{ position: 'relative', flex: 1 }}>
                 <select
@@ -843,17 +823,18 @@ export default function GuestOnboardingModal({
                     width: '100%',
                     height: '42px',
                     padding: '0 12px 0 36px',
-                    borderRadius: '6px',
+                    borderRadius: '4px',
                     border: '1px solid #d1d5db',
                     background: '#ffffff',
                     fontSize: '13px',
                     color: '#1f2937',
                     outline: 'none',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    fontFamily: 'Inter, sans-serif'
                   }}
                 >
                   {audioOutputDevices.map((d, i) => (
-                    <option key={i} value={d.deviceId}>{d.label || `Speaker ${i + 1}`}</option>
+                    <option key={i} value={d.deviceId}>{d.label || `Fake Default Audio Output`}</option>
                   ))}
                 </select>
                 <Volume2 size={16} color="#6b7280" style={{ position: 'absolute', left: '12px', top: '13px' }} />
@@ -866,11 +847,12 @@ export default function GuestOnboardingModal({
                   height: '42px',
                   background: '#f3f4f6',
                   border: '1px solid #d1d5db',
-                  borderRadius: '6px',
+                  borderRadius: '4px',
                   fontSize: '12.5px',
                   fontWeight: 600,
-                  color: '#374151',
-                  cursor: 'pointer'
+                  color: '#0091ff',
+                  cursor: 'pointer',
+                  fontFamily: 'Inter, sans-serif'
                 }}
               >
                 Test
@@ -878,40 +860,39 @@ export default function GuestOnboardingModal({
             </div>
           </div>
 
-          {/* Continue button */}
           <button
             onClick={handleAudioVideoContinue}
             style={{
               width: '100%',
               maxWidth: '380px',
               height: '48px',
-              background: '#10b981',
+              background: '#14C939',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '4px',
               fontSize: '15px',
               fontWeight: 600,
               cursor: 'pointer',
               marginBottom: '16px',
-              boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             Continue
           </button>
 
-          {/* Back button */}
           <button
             onClick={() => setStep('customize-avatar')}
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#0284c7',
+              color: '#0091ff',
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '4px',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             <ArrowLeft size={14} /> Back
@@ -932,85 +913,79 @@ export default function GuestOnboardingModal({
             textAlign: 'center'
           }}
         >
-          {/* Spot Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
-            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#10b981' }} />
-            <span style={{ fontSize: '24px', fontWeight: 700, color: '#111827' }}>spot</span>
-          </div>
+          <SpotBrandHeader marginBottom="20px" />
 
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#111827', margin: '0 0 10px 0' }}>
+          <h2
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '28px',
+              fontWeight: 700,
+              color: '#111827',
+              margin: '0 0 10px 0'
+            }}
+          >
             Waiting to be let in...
           </h2>
-          <p style={{ fontSize: '15px', color: '#6b7280', margin: '0 0 24px 0', maxWidth: '420px', lineHeight: 1.5 }}>
-            You're currently waiting to be let into <strong style={{ color: '#111827' }}>{spaceName}</strong>. Someone from{' '}
-            <strong style={{ color: '#111827' }}>{orgName}</strong> will let you in shortly.
+          <p
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '15px',
+              color: '#4b5563',
+              margin: '0 0 20px 0',
+              maxWidth: '440px',
+              lineHeight: 1.5
+            }}
+          >
+            You're currently waiting to be let into <strong>{spaceName}</strong>. Someone from{' '}
+            <strong>{orgName}</strong> will let you in shortly.
           </p>
 
-          {/* Animated Spinner matching real_spot_step4.png */}
           <div style={{ margin: '8px 0 20px 0' }}>
             <Loader2 size={32} color="#0091ff" className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
           </div>
 
-          {/* Back button */}
           <button
             onClick={() => setStep('setup-audio-video')}
             style={{
               background: 'transparent',
               border: 'none',
-              color: '#0284c7',
+              color: '#0091ff',
               fontSize: '14px',
               fontWeight: 500,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              marginBottom: '28px'
+              marginBottom: '24px',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             <ArrowLeft size={14} /> Back
           </button>
 
-          {/* Team table illustration matching real_spot_step4.png */}
-          <svg
-            width="380"
-            height="180"
-            viewBox="0 0 380 180"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ marginBottom: '24px' }}
-          >
-            {/* Table */}
-            <rect x="90" y="110" width="200" height="12" rx="4" fill="#64748b" />
-            <rect x="186" y="122" width="8" height="45" fill="#475569" />
+          {/* Official Spot Waiting Room Hero Illustration */}
+          <img
+            src="https://spotvirtual.com/static/vite/waiting-room-hero-AObid9Ex.svg"
+            alt="Waiting in room"
+            style={{
+              maxWidth: '460px',
+              width: '92%',
+              height: 'auto',
+              objectFit: 'contain',
+              marginBottom: '28px'
+            }}
+          />
 
-            {/* Left seated person */}
-            <circle cx="95" cy="80" r="16" fill="#8d5524" />
-            <path d="M 80,105 Q 95,95 110,105 L 105,140 L 85,140 Z" fill="#38bdf8" />
-
-            {/* Center standing person */}
-            <circle cx="190" cy="55" r="16" fill="#f9d3b4" />
-            <path d="M 175,75 Q 190,65 205,75 L 202,135 L 178,135 Z" fill="#22c55e" />
-
-            {/* Right seated person */}
-            <circle cx="285" cy="80" r="16" fill="#e8b688" />
-            <path d="M 270,105 Q 285,95 300,105 L 295,140 L 275,140 Z" fill="#4ade80" />
-
-            {/* Plant & Mug */}
-            <rect x="140" y="98" width="12" height="12" rx="2" fill="#ef4444" />
-            <circle cx="240" cy="100" r="8" fill="#10b981" />
-          </svg>
-
-          {/* Admitted button / Enter space button */}
           <button
             onClick={handleEnterSpace}
             style={{
               width: '100%',
               maxWidth: '380px',
               height: '48px',
-              background: isAdmitted ? '#10b981' : '#0284c7',
+              background: isAdmitted ? '#14C939' : '#0091ff',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '4px',
               fontSize: '15px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -1018,8 +993,8 @@ export default function GuestOnboardingModal({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: isAdmitted ? '0 2px 6px rgba(16, 185, 129, 0.3)' : '0 2px 6px rgba(2, 132, 199, 0.3)',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              fontFamily: 'Inter, sans-serif'
             }}
           >
             {isAdmitted ? (
@@ -1028,9 +1003,7 @@ export default function GuestOnboardingModal({
                 <span>You were admitted! Enter {spaceName}</span>
               </>
             ) : (
-              <>
-                <span>Enter as Host / Admitted</span>
-              </>
+              <span>Enter as Host / Admitted</span>
             )}
           </button>
         </div>

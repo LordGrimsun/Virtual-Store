@@ -142,7 +142,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       return new THREE.Vector3(22, 0, -16);
     }
     if (user?.targetRoom?.toLowerCase().includes('office a') || user?.targetRoomId === 'office-a' || isInitialSer) {
-      return new THREE.Vector3(-8, 0, 8);
+      return new THREE.Vector3(-8, 0, 14);
     }
     return new THREE.Vector3(-9, 0, 16);
   };
@@ -155,9 +155,9 @@ export default function WorkspacePlatform({ user, onExit }) {
   const keysPressedRef = useRef({});
 
   // Dynamic Camera Orbit, Zoom & Performance Throttling
-  const cameraDistanceRef = useRef(20);
+  const cameraDistanceRef = useRef(18);
   const cameraOrbitAngleRef = useRef(0.28);
-  const cameraPitchAngleRef = useRef(0.64);
+  const cameraPitchAngleRef = useRef(0.78);
   const isDraggingOrbitRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const lastUiUpdateRef = useRef(0);
@@ -650,7 +650,31 @@ export default function WorkspacePlatform({ user, onExit }) {
         let target = new THREE.Vector3(-9, 0, 16);
         let slug = 'boardroom';
         let formattedName = 'Boardroom';
-        if (clean.includes('conference b') || clean.includes('conference')) {
+        if (clean.includes('office-a') || clean.includes('office a')) {
+          target.set(-8, 0, 14);
+          slug = 'office-a';
+          formattedName = 'Office A';
+        } else if (clean.includes('focus-pod-1') || clean.includes('focus pod 1')) {
+          target.set(10, 0, -8);
+          slug = 'focus-pod-1';
+          formattedName = 'Focus Pod 1';
+        } else if (clean.includes('focus-pod-2') || clean.includes('focus pod 2')) {
+          target.set(10, 0, 8);
+          slug = 'focus-pod-2';
+          formattedName = 'Focus Pod 2';
+        } else if (clean.includes('team-suite') || clean.includes('team suite')) {
+          target.set(0, 0, 16);
+          slug = 'team-suite';
+          formattedName = 'Team Suite';
+        } else if (clean.includes('terrace')) {
+          target.set(-18, 0, -12);
+          slug = 'terrace';
+          formattedName = 'Terrace Lounge';
+        } else if (clean.includes('lobby')) {
+          target.set(22, 0, -16);
+          slug = 'lobby';
+          formattedName = 'Lobby';
+        } else if (clean.includes('conference b') || clean.includes('conference')) {
           target.set(5, 0, 16);
           slug = 'conference-b';
           formattedName = 'Conference B';
@@ -662,6 +686,10 @@ export default function WorkspacePlatform({ user, onExit }) {
           target.set(-24, 0, 14);
           slug = 'auditorium';
           formattedName = 'Auditorium';
+        } else if (clean.includes('patio')) {
+          target.set(-23, 0, -16);
+          slug = 'patio';
+          formattedName = 'Patio';
         } else if (clean.includes('workspace')) {
           target.set(0, 0, -16);
           slug = 'workspace-a';
@@ -671,7 +699,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         targetPosRef.current.copy(target);
         setCurrentRoom(formattedName);
         setCurrentRoomId(slug);
-        camera.position.set(target.x + 4.5, 12.0, target.z + 14.0);
+        camera.position.set(target.x + 3.5, 14.0, target.z + 12.0);
         camera.lookAt(target.x, 1.5, target.z);
       }
     }
@@ -1162,7 +1190,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     let formattedName = 'Boardroom';
 
     if (clean.includes('office-a') || clean.includes('office a')) {
-      target.set(-8, 0, 8);
+      target.set(-8, 0, 14);
       slug = 'office-a';
       formattedName = 'Office A';
     } else if (clean.includes('focus-pod-1') || clean.includes('focus pod 1')) {
@@ -1239,9 +1267,9 @@ export default function WorkspacePlatform({ user, onExit }) {
       playerMeshRef.current.position.copy(target);
     }
 
-    cameraDistanceRef.current = 20;
+    cameraDistanceRef.current = 18;
     cameraOrbitAngleRef.current = 0.28;
-    cameraPitchAngleRef.current = 0.64;
+    cameraPitchAngleRef.current = 0.78;
     isSittingRef.current = false;
 
     if (cameraRef.current && !isTopDownBlueprint) {
