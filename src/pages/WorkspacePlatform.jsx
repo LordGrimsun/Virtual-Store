@@ -1130,6 +1130,53 @@ export default function WorkspacePlatform({ user, onExit }) {
         }
       }
 
+      // Dynamic Wall Occlusion: Smoothly fade any foreground wall crossing the camera's sightline to the player/target
+      const walls = scene.userData.officeWalls;
+      if (walls && walls.length > 0 && camera) {
+        const camPos = camera.position;
+        const targetPos = showcaseScreenRef.current?.mesh
+          ? showcaseScreenRef.current.mesh.position
+          : (playerMeshRef.current ? playerMeshRef.current.position : new THREE.Vector3(0, 1.5, 0));
+
+        const camToTargetX = targetPos.x - camPos.x;
+        const camToTargetZ = targetPos.z - camPos.z;
+        const targetDistSq = camToTargetX * camToTargetX + camToTargetZ * camToTargetZ;
+        const targetDist = Math.sqrt(targetDistSq);
+
+        if (targetDist > 0.5) {
+          const rayDirX = camToTargetX / targetDist;
+          const rayDirZ = camToTargetZ / targetDist;
+
+          for (let i = 0; i < walls.length; i++) {
+            const w = walls[i];
+            const toWallX = w.center.x - camPos.x;
+            const toWallZ = w.center.z - camPos.z;
+
+            // Project wall onto camera-to-target sightline
+            const projDist = toWallX * rayDirX + toWallZ * rayDirZ;
+
+            // Check if wall is positioned between camera and target
+            let isOccluding = false;
+            if (projDist > 0.8 && projDist < targetDist - 0.5) {
+              const perpDistSq = (toWallX * toWallX + toWallZ * toWallZ) - (projDist * projDist);
+              const perpDist = perpDistSq > 0 ? Math.sqrt(perpDistSq) : 0;
+              const threshold = Math.max(1.8, Math.min(w.width, w.depth) / 2 + 1.2);
+              if (perpDist < threshold) {
+                isOccluding = true;
+              }
+            }
+
+            const targetOpacity = isOccluding ? 0.15 : 1.0;
+            if (w.mesh?.material) {
+              w.mesh.material.opacity = THREE.MathUtils.lerp(w.mesh.material.opacity, targetOpacity, 0.2);
+            }
+            if (w.trimMesh?.material) {
+              w.trimMesh.material.opacity = THREE.MathUtils.lerp(w.trimMesh.material.opacity, targetOpacity, 0.2);
+            }
+          }
+        }
+      }
+
       renderer.render(scene, camera);
     };
 
@@ -1175,7 +1222,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       return null;
     };
 
-    // Mouse Wheel Zoom: Smooth distance adjustment between 8 and 45
+    // Mouse Wheel Zoom: Smooth distance adjustment between 6 and 38
     const handleWheel = (e) => {
       e.preventDefault();
       if (showcaseScreenRef.current) {
@@ -1183,7 +1230,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         setShowcaseScreenTarget(null);
       }
       const zoomFactor = e.deltaY * 0.025;
-      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 8, 45);
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 6, 38);
     };
 
     // Mouse Orbit Dragging (Primary Left-Click Drag, Middle, Right, or Trackpad)

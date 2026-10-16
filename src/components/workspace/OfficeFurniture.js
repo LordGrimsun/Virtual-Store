@@ -353,7 +353,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // ==========================================
   // West wall starry Spot screen (matching authentic Spot layout in media_1791969444037.png)
   createSpotWallScreen(
-    -15.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'boardroom',
+    -15.8, 1.55, 16, 3.2, 1.8, Math.PI / 2, 'boardroom',
     screenTextures?.starryLogoTexture,
     'Boardroom Presentation Screen'
   );
@@ -381,7 +381,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Matching media_1791969444037.png
   // ==========================================
   createSpotWallScreen(
-    -1.8, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'conference_b',
+    -1.8, 1.55, 16, 3.2, 1.8, Math.PI / 2, 'conference_b',
     screenTextures?.createSprintBoardTexture ? screenTextures.createSprintBoardTexture() : screenTextures?.chartTexture,
     'Conference Room B Sprint Standup Screen'
   );
@@ -409,7 +409,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // 3. CONFERENCE A (x: 19, z: 16)
   // ==========================================
   createSpotWallScreen(
-    12.2, 3.2, 16, 4.8, 2.7, Math.PI / 2, 'conference_a',
+    12.2, 1.55, 16, 3.2, 1.8, Math.PI / 2, 'conference_a',
     screenTextures?.kpiTexture,
     'Conference Room A Telemetry Scoreboard'
   );
@@ -438,7 +438,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // ==========================================
   // Giant vertical screen on west wall
   createSpotWallScreen(
-    -31.8, 3.6, 16, 7.2, 4.0, Math.PI / 2, 'auditorium',
+    -31.8, 1.85, 16, 5.2, 2.7, Math.PI / 2, 'auditorium',
     screenTextures?.createAuditoriumKeynoteTexture ? screenTextures.createAuditoriumKeynoteTexture() : screenTextures?.starryLogoTexture,
     'Auditorium Main Stage Display'
   );
@@ -808,22 +808,22 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // Dedicated interactive screens across other rooms with separate roles
   createSpotWallScreen(
-    0, 3.2, -23.8, 4.8, 2.7, 0, 'workspace_a',
+    0, 1.55, -23.8, 3.2, 1.8, 0, 'workspace_a',
     screenTextures?.createCiCdMonitorTexture ? screenTextures.createCiCdMonitorTexture() : screenTextures?.chartTexture,
     'Workspace A Team CI/CD Monitor'
   );
   createSpotWallScreen(
-    13.8, 2.2, -4.0, 2.2, 1.4, -Math.PI / 2, 'chat_a',
+    13.8, 1.55, -4.0, 2.2, 1.3, -Math.PI / 2, 'chat_a',
     screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('WorkspacePlatform.jsx') : screenTextures?.codeEditorTexture,
     'Chat A Pair Programming Monitor'
   );
   createSpotWallScreen(
-    13.8, 2.2, 4.0, 2.2, 1.4, -Math.PI / 2, 'chat_b',
+    13.8, 1.55, 4.0, 2.2, 1.3, -Math.PI / 2, 'chat_b',
     screenTextures?.archTexture,
     'Chat B System Architecture Monitor'
   );
   createSpotWallScreen(
-    23.0, 3.0, -8.8, 3.6, 2.2, 0, 'lounge_a',
+    23.0, 1.55, -8.8, 3.2, 1.8, 0, 'lounge_a',
     screenTextures?.createSocialWallTexture ? screenTextures.createSocialWallTexture() : screenTextures?.featTexture,
     'Lounge A Community Video Wall'
   );

@@ -231,79 +231,97 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   patioFloor.receiveShadow = true;
   environmentGroup.add(patioFloor);
 
-  // 4. Exact Wall Builder Helpers
-  const WALL_HEIGHT = 6.0;
+  // 4. Exact Wall Builder Helpers (Dollhouse Cutaway Height: 2.85m matching Spot desktop reference)
+  const WALL_HEIGHT = 2.85;
   const WALL_THICKNESS = 0.32;
+  const wallsList = [];
 
-  const createWall = (x, z, width, depth, height = WALL_HEIGHT, mat = materials.wallMat) => {
-    const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), mat);
+  const createWall = (x, z, width, depth, height = WALL_HEIGHT, mat = null) => {
+    // Each wall gets its own cloned material with transparent: true so individual foreground walls can fade independently
+    const wallMat = (mat || materials.wallMat).clone();
+    wallMat.transparent = true;
+    wallMat.opacity = 1.0;
+
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), wallMat);
     wall.position.set(x, height / 2, z);
     wall.castShadow = true;
     wall.receiveShadow = true;
+    wall.userData = {
+      isWall: true,
+      wallCenter: new THREE.Vector3(x, height / 2, z),
+      width,
+      depth,
+      height
+    };
     environmentGroup.add(wall);
 
     // Wall top trim cap
+    const trimMat = materials.wallTrimMat.clone();
+    trimMat.transparent = true;
+    trimMat.opacity = 1.0;
     const trim = new THREE.Mesh(
       new THREE.BoxGeometry(width + 0.04, 0.08, depth + 0.04),
-      materials.wallTrimMat
+      trimMat
     );
     trim.position.set(x, height + 0.04, z);
     environmentGroup.add(trim);
 
+    wallsList.push({
+      mesh: wall,
+      trimMesh: trim,
+      center: new THREE.Vector3(x, height / 2, z),
+      width,
+      depth,
+      radius: Math.hypot(width, depth) / 2
+    });
+
     return wall;
   };
 
-  // Helper: Double Doorway with grey doors and horizontal brass handles
+  // Helper: Double Doorway with grey doors and horizontal brass handles (calibrated to 2.4m height)
   const createDoubleDoor = (x, z, rotY = 0) => {
     const doorGroup = new THREE.Group();
-
     doorGroup.name = 'doorway_group';
 
     // Door frame
-    const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.4, 0.36), materials.doorFrameMat);
-    frameLeft.position.set(-1.45, 2.2, 0);
+    const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
+    frameLeft.position.set(-1.45, 1.2, 0);
     frameLeft.name = 'doorway_mesh';
-    frameLeft.userData = { isDoorway: true };
     doorGroup.add(frameLeft);
 
-    const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.4, 0.36), materials.doorFrameMat);
-    frameRight.position.set(1.45, 2.2, 0);
+    const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
+    frameRight.position.set(1.45, 1.2, 0);
     frameRight.name = 'doorway_mesh';
-    frameRight.userData = { isDoorway: true };
     doorGroup.add(frameRight);
 
-    const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.12, 0.36), materials.doorFrameMat);
-    frameTop.position.set(0, 4.46, 0);
+    const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.1, 0.36), materials.doorFrameMat);
+    frameTop.position.set(0, 2.4, 0);
     frameTop.name = 'doorway_mesh';
-    frameTop.userData = { isDoorway: true };
     doorGroup.add(frameTop);
 
     // Left door leaf
-    const doorL = new THREE.Mesh(new THREE.BoxGeometry(1.36, 4.34, 0.08), materials.doorMat);
-    doorL.position.set(-0.7, 2.17, 0);
+    const doorL = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.08), materials.doorMat);
+    doorL.position.set(-0.7, 1.14, 0);
     doorL.castShadow = true;
     doorL.name = 'doorway_mesh';
-    doorL.userData = { isDoorway: true };
     doorGroup.add(doorL);
 
     // Right door leaf
-    const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 4.34, 0.08), materials.doorMat);
-    doorR.position.set(0.7, 2.17, 0);
+    const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.08), materials.doorMat);
+    doorR.position.set(0.7, 1.14, 0);
     doorR.castShadow = true;
     doorR.name = 'doorway_mesh';
-    doorR.userData = { isDoorway: true };
     doorGroup.add(doorR);
 
     // Brass horizontal handles
     [-1, 1].forEach((side) => {
       const handle = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.022, 0.022, 0.45, 12),
+        new THREE.CylinderGeometry(0.02, 0.02, 0.42, 12),
         materials.brassHandleMat
       );
       handle.rotation.z = Math.PI / 2;
-      handle.position.set(side * 0.18, 2.1, 0.06);
+      handle.position.set(side * 0.18, 1.05, 0.06);
       handle.name = 'doorway_mesh';
-      handle.userData = { isDoorway: true };
       doorGroup.add(handle);
     });
 
@@ -582,11 +600,13 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   // City Skyline Buildings completely removed to ensure all office rooms are 100% unobstructed
   // seattleGroup now keeps only the ground landscape and trees far outside the clerestory glass
-  environmentGroup.add(seattleGroup);
+  // Register all wall references on scene.userData for fast dynamic camera occlusion fading
+  scene.userData.officeWalls = wallsList;
 
   return {
     materials,
     environmentGroup,
+    walls: wallsList,
     setEnvironment: (theme) => {
       // Toggle environment themes dynamically
       if (theme === 'Beach') {

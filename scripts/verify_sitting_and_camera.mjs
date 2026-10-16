@@ -97,6 +97,23 @@ async function run() {
   await new Promise((r) => setTimeout(r, 1200));
   await page.screenshot({ path: `${ARTIFACT_DIR}/verify_step7_screen_toolbar.png` });
 
+  // 8. Test 360° Camera Orbit Behind Wall (Verify Dynamic Wall Transparency)
+  console.log('Step 8: Testing camera orbit behind partition wall to verify dynamic wall transparency...');
+  await page.evaluate(() => {
+    const exitBtn = document.querySelector('button');
+    const buttons = Array.from(document.querySelectorAll('button'));
+    const exit = buttons.find((b) => b.textContent.includes('Exit Showcase'));
+    if (exit) exit.click();
+  });
+  await new Promise((r) => setTimeout(r, 1000));
+  // Orbit camera 180 degrees around
+  await page.mouse.move(700, 450);
+  await page.mouse.down();
+  await page.mouse.move(1100, 450, { steps: 40 });
+  await page.mouse.up();
+  await new Promise((r) => setTimeout(r, 1500));
+  await page.screenshot({ path: `${ARTIFACT_DIR}/verify_step8_wall_transparency.png` });
+
   console.log('All verification screenshots captured successfully!');
   await browser.close();
   server.kill();
