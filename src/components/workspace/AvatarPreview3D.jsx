@@ -60,10 +60,10 @@ export default function AvatarPreview3D({
     rendererRef.current = renderer;
     container.appendChild(renderer.domElement);
 
-    // 2. Camera: Framed head-to-toe matching real_spot_after_continue.png
-    const camera = new THREE.PerspectiveCamera(30, width / height, 0.1, 50);
-    camera.position.set(0, 1.25, 3.85);
-    camera.lookAt(0, 1.02, 0);
+    // 2. Camera: Framed head-to-toe with comfortable headroom & ground plinth padding
+    const camera = new THREE.PerspectiveCamera(33, width / height, 0.1, 50);
+    camera.position.set(0, 1.22, 4.30);
+    camera.lookAt(0, 1.08, 0);
 
     // 3. Studio Lighting Setup
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);

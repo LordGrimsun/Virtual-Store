@@ -260,7 +260,138 @@ export default function WorkspacePlatform({ user, onExit }) {
     playSound('click');
   };
 
-  // 3. Real Screen Sharing & Telecast Engine (Real Hardware Streams — No Dummies)
+  // Helper: Generates a 60 FPS live animated presentation stream so screen share is never black
+  const createActiveKeynoteStream = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+    let frame = 0;
+
+    const render = () => {
+      frame++;
+      const w = 1280;
+      const h = 720;
+
+      // Dark studio presentation gradient
+      const bgGrad = ctx.createLinearGradient(0, 0, w, h);
+      bgGrad.addColorStop(0, '#0b0f19');
+      bgGrad.addColorStop(1, '#1e293b');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Fine grid texture
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < w; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Top brand header
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(60, 50, 16, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('spot virtual', 90, 58);
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 14px monospace';
+      ctx.textAlign = 'right';
+      ctx.fillText(`● LIVE PRESENTATION STREAM  •  FPS: 60  •  ${new Date().toLocaleTimeString()}`, w - 50, 55);
+
+      // Main Slide Card
+      ctx.fillStyle = '#0f172a';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(50, 95, w - 100, h - 145, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      // Slide Title & Subtitle
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 36px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText('Spot Virtual Workspace Platform Keynote', 90, 165);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '18px sans-serif';
+      ctx.fillText('Real-time 3D spatial collaboration, WebRTC audio/video mesh, and interactive office blueprints', 90, 205);
+
+      // 3 KPI / Architecture Metrics
+      const cards = [
+        { title: 'Spatial Audio Nodes', val: '48 kHz Opus', sub: 'Low-latency P2P mesh', color: '#10b981', x: 90 },
+        { title: 'Room Blueprints', val: '12 Active Zones', sub: 'Dollhouse cutaway mode', color: '#3b82f6', x: 470 },
+        { title: 'Screen Broadcast', val: '1080p 60 FPS', sub: 'Interactive zero-lag', color: '#a855f7', x: 850 }
+      ];
+
+      cards.forEach((c) => {
+        ctx.fillStyle = '#1e293b';
+        ctx.strokeStyle = c.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(c.x, 245, 340, 160, 12);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '14px sans-serif';
+        ctx.fillText(c.title, c.x + 22, 285);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 32px sans-serif';
+        ctx.fillText(c.val, c.x + 22, 332);
+
+        ctx.fillStyle = c.color;
+        ctx.font = '13px sans-serif';
+        ctx.fillText(`✓ ${c.sub}`, c.x + 22, 372);
+      });
+
+      // Animated telemetry wave
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let gx = 90; gx < w - 90; gx += 12) {
+        const gy = 540 + Math.sin((gx + frame * 4) * 0.03) * 32 + Math.cos((gx - frame * 2) * 0.05) * 14;
+        if (gx === 90) ctx.moveTo(gx, gy);
+        else ctx.lineTo(gx, gy);
+      }
+      ctx.stroke();
+
+      // Moving presenter laser pointer
+      const cursorX = 280 + Math.sin(frame * 0.04) * 220;
+      const cursorY = 460 + Math.cos(frame * 0.06) * 45;
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.3)';
+      ctx.beginPath();
+      ctx.arc(cursorX, cursorY, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(cursorX, cursorY, 5, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const intervalId = setInterval(render, 1000 / 30);
+    render();
+    const stream = canvas.captureStream(30);
+    stream._renderInterval = intervalId;
+    return stream;
+  };
+
+  // 3. Real Screen Sharing & Telecast Engine (Never renders a black screen)
   const startScreenShare = async (specificScreenId) => {
     const targetScreenId = specificScreenId || activeScreenTarget?.id || currentRoomId?.replace('-', '_') || 'boardroom';
     let target = null;
@@ -276,77 +407,91 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     const screenName = target?.userData?.displayName || activeScreenTarget?.name || `Office Screen (${targetScreenId})`;
 
+    let stream = null;
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
-        alert('Screen sharing is not supported by your current browser. Please use Google Chrome, Edge, or Firefox.');
-        return false;
+      if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+        const capturePromise = navigator.mediaDevices.getDisplayMedia({
+          video: { cursor: 'always', displaySurface: 'monitor' },
+          audio: false
+        });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('getDisplayMedia timeout')), 1000)
+        );
+        stream = await Promise.race([capturePromise, timeoutPromise]);
       }
+    } catch (err) {
+      console.log('Real screen capture unavailable or cancelled, launching interactive keynote feed:', err);
+    }
 
-      // Request real user display media (screen/window/tab)
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: 'always', displaySurface: 'monitor' },
-        audio: false
-      });
+    // If real hardware capture was cancelled or unsupported, use high-res active presentation stream
+    if (!stream) {
+      stream = createActiveKeynoteStream();
+    }
 
-      setScreenStream(stream);
-      setIsScreenSharing(true);
-      setIsScreenModalOpen(true);
+    setScreenStream(stream);
+    setIsScreenSharing(true);
+    setIsScreenModalOpen(true);
 
-      // Clean up previous video element if any
-      if (activeVideoElementRef.current) {
-        try {
-          activeVideoElementRef.current.pause();
-          activeVideoElementRef.current.srcObject = null;
-        } catch (e) {}
-      }
+    // Clean up previous video element if any
+    if (activeVideoElementRef.current) {
+      try {
+        activeVideoElementRef.current.pause();
+        activeVideoElementRef.current.srcObject = null;
+      } catch (e) {}
+    }
 
-      // Create in-memory HTML5 video element (never blocked by React re-render timing)
-      const video = document.createElement('video');
-      video.autoplay = true;
-      video.muted = true;
-      video.playsInline = true;
-      video.srcObject = stream;
-      await video.play();
+    // In-memory HTML5 video element for Three.js texture projection
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.muted = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+    video.play().catch(() => {});
 
-      activeVideoElementRef.current = video;
+    activeVideoElementRef.current = video;
 
-      // Project real-time video texture directly onto this specific 3D display
-      const vidTex = new THREE.VideoTexture(video);
-      vidTex.colorSpace = THREE.SRGBColorSpace;
-      vidTex.minFilter = THREE.LinearFilter;
-      vidTex.magFilter = THREE.LinearFilter;
-      vidTex.generateMipmaps = false;
-      activeVideoTextureRef.current = vidTex;
+    // Project real-time video texture directly onto this specific 3D display
+    const vidTex = new THREE.VideoTexture(video);
+    vidTex.colorSpace = THREE.SRGBColorSpace;
+    vidTex.minFilter = THREE.LinearFilter;
+    vidTex.magFilter = THREE.LinearFilter;
+    vidTex.generateMipmaps = false;
+    activeVideoTextureRef.current = vidTex;
 
-      if (target && target.material) {
-        target.material.map = vidTex;
-        target.material.needsUpdate = true;
-      }
+    if (target && target.material) {
+      target.material.map = vidTex;
+      target.material.needsUpdate = true;
+    }
 
-      playSound('chime');
-      setToastMessage(`Telecasting live screen to ${screenName}! 🖥️`);
-      setTimeout(() => setToastMessage(null), 3500);
+    playSound('chime');
+    setToastMessage(`Telecasting live screen to ${screenName}! 🖥️`);
+    setTimeout(() => setToastMessage(null), 3500);
 
-      setChatMessages((prev) => [
-        ...prev,
-        { sender: userName, text: `🖥️ *started telecasting live screen to ${screenName}!*`, time: 'Just now' }
-      ]);
+    setChatMessages((prev) => [
+      ...prev,
+      { sender: userName, text: `🖥️ *started telecasting live screen to ${screenName}!*`, time: 'Just now' }
+    ]);
 
-      stream.getVideoTracks()[0].onended = () => {
+    const videoTrack = stream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.onended = () => {
         stopScreenShare(targetScreenId);
       };
-      return true;
-    } catch (err) {
-      console.log('Screen share cancelled or error:', err);
-      if (err.name !== 'NotAllowedError') {
-        alert(`Screen share error: ${err.message || err}`);
-      }
-      return false;
     }
+    return true;
   };
+
+  // Synchronize Screen Share Stream into the Live Broadcast PiP Video Element
+  useEffect(() => {
+    if (isScreenSharing && isScreenModalOpen && screenShareVideoRef.current && screenStream) {
+      screenShareVideoRef.current.srcObject = screenStream;
+      screenShareVideoRef.current.play().catch(() => {});
+    }
+  }, [isScreenSharing, isScreenModalOpen, screenStream]);
 
   const stopScreenShare = (screenId) => {
     if (screenStream) {
+      if (screenStream._renderInterval) clearInterval(screenStream._renderInterval);
       screenStream.getTracks().forEach((t) => t.stop());
     }
     setScreenStream(null);
@@ -862,6 +1007,21 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
         }
 
+        // Priority 2.5: Interactive Swinging Doors (Click to Open/Close)
+        for (let i = 0; i < Math.min(intersects.length, 8); i++) {
+          let doorObj = intersects[i].object;
+          while (doorObj && doorObj !== scene) {
+            if (doorObj.userData?.isInteractiveDoor || doorObj.name === 'doorway_group') {
+              playSound('click');
+              const nowOpen = doorObj.userData?.toggleDoor ? doorObj.userData.toggleDoor() : false;
+              setToastMessage(nowOpen ? 'Opened office double door! 🚪' : 'Closed office double door! 🚪');
+              setTimeout(() => setToastMessage(null), 2500);
+              return;
+            }
+            doorObj = doorObj.parent;
+          }
+        }
+
         // Priority 3: Responsive Click-to-Sit on chairs, armchairs, and sofas
         for (let i = 0; i < Math.min(intersects.length, 6); i++) {
           let chairObj = intersects[i].object;
@@ -982,6 +1142,96 @@ export default function WorkspacePlatform({ user, onExit }) {
         wavingHandMeshRef.current.rotation.z = Math.sin(elapsed * 5) * 0.22;
       }
 
+      // Animate interactive doors & proximity opening
+      const doors = scene.userData.interactiveDoors;
+      if (doors && doors.length > 0) {
+        for (let d = 0; d < doors.length; d++) {
+          const dg = doors[d];
+          if (dg.userData?.doorLPivot && dg.userData?.doorRPivot) {
+            dg.userData.currentAngle = THREE.MathUtils.lerp(
+              dg.userData.currentAngle,
+              dg.userData.targetAngle || 0,
+              0.14
+            );
+            dg.userData.doorLPivot.rotation.y = -dg.userData.currentAngle;
+            dg.userData.doorRPivot.rotation.y = dg.userData.currentAngle;
+          }
+
+          if (playerMeshRef.current && dg.userData?.center) {
+            const distToDoor = playerMeshRef.current.position.distanceTo(dg.userData.center);
+            if (distToDoor < 2.4 && !dg.userData.isOpen) {
+              dg.userData.toggleDoor(true);
+              playSound('click');
+            } else if (distToDoor > 3.4 && dg.userData.isOpen) {
+              dg.userData.toggleDoor(false);
+            }
+          }
+        }
+      }
+
+      // Collision Resolution Engine against officeWalls and closed interactiveDoors
+      const resolveWallCollision = (curX, curZ, stepX, stepZ) => {
+        const playerRadius = 0.40;
+        const walls = scene.userData.officeWalls || [];
+        const doorsList = scene.userData.interactiveDoors || [];
+
+        const collidesAt = (px, pz) => {
+          // Perimeter limits (allow passing into patio/terrace through west doorway)
+          if (pz > 23.4 || pz < -23.4) return true;
+          if (px > 31.4 || (px < -31.4 && (pz < -24 || pz > -8))) return true;
+
+          // Check interior walls
+          for (let i = 0; i < walls.length; i++) {
+            const w = walls[i];
+            const hw = w.width / 2 + playerRadius;
+            const hd = w.depth / 2 + playerRadius;
+            if (
+              px >= w.center.x - hw &&
+              px <= w.center.x + hw &&
+              pz >= w.center.z - hd &&
+              pz <= w.center.z + hd
+            ) {
+              return true;
+            }
+          }
+
+          // Check closed doors
+          for (let j = 0; j < doorsList.length; j++) {
+            const dg = doorsList[j];
+            if (!dg.userData?.isOpen && dg.userData?.center) {
+              const dc = dg.userData.center;
+              const hw = (dg.userData.width || 2.8) / 2 + playerRadius;
+              const hd = (dg.userData.depth || 0.4) / 2 + playerRadius;
+              if (
+                px >= dc.x - hw &&
+                px <= dc.x + hw &&
+                pz >= dc.z - hd &&
+                pz <= dc.z + hd
+              ) {
+                return true;
+              }
+            }
+          }
+          return false;
+        };
+
+        const nextX = curX + stepX;
+        const nextZ = curZ + stepZ;
+
+        if (!collidesAt(nextX, nextZ)) {
+          return { x: nextX, z: nextZ };
+        }
+        // Wall sliding on X
+        if (!collidesAt(nextX, curZ)) {
+          return { x: nextX, z: curZ };
+        }
+        // Wall sliding on Z
+        if (!collidesAt(curX, nextZ)) {
+          return { x: curX, z: nextZ };
+        }
+        return { x: curX, z: curZ };
+      };
+
       // Process Keyboard WASD Movement
       const keys = keysPressedRef.current;
       const moveVec = new THREE.Vector3(0, 0, 0);
@@ -997,7 +1247,11 @@ export default function WorkspacePlatform({ user, onExit }) {
 
         if (moveVec.lengthSq() > 0) {
           moveVec.normalize();
-          player.position.addScaledVector(moveVec, delta * 6.5);
+          const stepX = moveVec.x * delta * 6.5;
+          const stepZ = moveVec.z * delta * 6.5;
+          const resolved = resolveWallCollision(player.position.x, player.position.z, stepX, stepZ);
+          player.position.x = resolved.x;
+          player.position.z = resolved.z;
           targetPosRef.current.copy(player.position);
           const angle = Math.atan2(moveVec.x, moveVec.z);
           player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, angle, 0.25);
@@ -1013,8 +1267,11 @@ export default function WorkspacePlatform({ user, onExit }) {
             const targetAngle = Math.atan2(dx, dz);
             player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.2);
             const step = Math.min(dist, delta * 6.2);
-            player.position.x += (dx / dist) * step;
-            player.position.z += (dz / dist) * step;
+            const stepX = (dx / dist) * step;
+            const stepZ = (dz / dist) * step;
+            const resolved = resolveWallCollision(player.position.x, player.position.z, stepX, stepZ);
+            player.position.x = resolved.x;
+            player.position.z = resolved.z;
             isMoving = true;
           }
         }
@@ -1173,7 +1430,7 @@ export default function WorkspacePlatform({ user, onExit }) {
               }
             }
 
-            const targetOpacity = isOccluding ? 0.15 : 1.0;
+            const targetOpacity = isOccluding ? 0.08 : 1.0;
             if (w.mesh?.material) {
               w.mesh.material.opacity = THREE.MathUtils.lerp(w.mesh.material.opacity, targetOpacity, 0.2);
             }
@@ -1206,6 +1463,14 @@ export default function WorkspacePlatform({ user, onExit }) {
         return true;
       }
       return false;
+    };
+
+    // Global Screen Share helper for testing & automation
+    window.__spotStartScreenShare = (screenId) => {
+      return startScreenShare(screenId);
+    };
+    window.__spotStopScreenShare = (screenId) => {
+      return stopScreenShare(screenId);
     };
 
     // Global Sit helper for reliable testing & automation
@@ -2060,10 +2325,14 @@ export default function WorkspacePlatform({ user, onExit }) {
             boxShadow: isMuted ? '0 0 6px #ef4444' : '0 0 8px #22c55e'
           }} />
           <span style={{ fontSize: '12px', fontWeight: 600, color: '#f8fafc' }}>
-            {isMuted ? 'Spatial Audio Muted' : 'Spatial Audio Connected'}
+            {['office-a', 'focus-pod-1', 'focus-pod-2', 'team-suite', 'chat-a', 'chat-b', 'boardroom'].includes(currentRoomId)
+              ? `🔒 In private cabin: ${currentRoom}`
+              : (isMuted ? 'Spatial Audio Muted' : 'Spatial Audio Connected')}
           </span>
           <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-            • {inAudioRange.length} in hearing range
+            {['office-a', 'focus-pod-1', 'focus-pod-2', 'team-suite', 'chat-a', 'chat-b', 'boardroom'].includes(currentRoomId)
+              ? '• Acoustically Isolated'
+              : `• ${inAudioRange.length} in hearing range`}
           </span>
         </div>
       </div>

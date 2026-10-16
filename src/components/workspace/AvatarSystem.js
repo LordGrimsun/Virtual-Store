@@ -95,77 +95,78 @@ export function createAvatarSystem() {
     nose.scale.set(0.9, 0.8, 1.2);
     headGroup.add(nose);
 
-    // Ears on both sides (covered by hair in wavy bob styles matching real_spot_after_continue.png)
-    if (config.hairType === 'blond_styled' || config.hairType === 'pompadour' || config.hairType === 'short_parted' || config.hasGlasses || config.hasHeadphones) {
-      [-0.38, 0.38].forEach((ex) => {
-        const ear = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.055, 0.055, 0.024, 12),
-          skinMat
-        );
-        ear.position.set(ex, 0, 0);
-        ear.rotation.z = Math.PI / 2;
-        headGroup.add(ear);
-      });
-    }
+    // Stylized friendly human ears on both sides
+    [-0.37, 0.37].forEach((ex) => {
+      const ear = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.055, 0.055, 0.024, 12),
+        skinMat
+      );
+      ear.position.set(ex, 0, 0.02);
+      ear.rotation.z = Math.PI / 2;
+      headGroup.add(ear);
+    });
 
-    // 3D Stylized Calm Almond Eyes (matching real_spot_after_continue.png)
+    // 3D Stylized Friendly Human Eyes (matching real Spot reference media_1792144700841.png)
     const eyeColor = config.eyeColor || (name === 'Wes' ? 0x0284c7 : (config.hasBeard ? 0x0369a1 : 0x10b981));
-    const eyeBaseMat = new THREE.MeshBasicMaterial({ color: 0x064e3b }); // deep forest emerald rim
-    const irisMat = new THREE.MeshBasicMaterial({ color: eyeColor }); // emerald green
-    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x022c22 });
-    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const eyeRimMat = new THREE.MeshBasicMaterial({ color: 0x18181b }); // deep charcoal soft rim
+    const irisMat = new THREE.MeshBasicMaterial({ color: eyeColor }); // vibrant iris
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x09090b }); // deep pupil center
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff }); // specular catchlight
     const eyebrowMat = new THREE.MeshStandardMaterial({
-      color: config.hairColor || (config.hairType === 'blond_styled' ? 0xa16207 : 0x1c1917),
+      color: config.hairColor || (config.hairType === 'blond_styled' ? 0x854d0e : 0x1c1917),
       roughness: 0.7
     });
 
     [-0.12, 0.12].forEach((eyeX) => {
       const eyeGroup = new THREE.Group();
-      eyeGroup.position.set(eyeX, 0.02, 0.36);
+      eyeGroup.position.set(eyeX, 0.02, 0.362);
 
-      // Eye contour base (calm almond shape)
-      const eyeOuter = new THREE.Mesh(new THREE.SphereGeometry(0.042, 16, 16), eyeBaseMat);
-      eyeOuter.scale.set(1.35, 0.65, 0.25);
-      eyeGroup.add(eyeOuter);
+      // Soft natural eye backing (warm almond contour)
+      const eyeRim = new THREE.Mesh(new THREE.SphereGeometry(0.038, 16, 16), eyeRimMat);
+      eyeRim.scale.set(1.25, 0.72, 0.22);
+      eyeGroup.add(eyeRim);
 
-      // Vibrant emerald iris
-      const iris = new THREE.Mesh(new THREE.CircleGeometry(0.028, 16), irisMat);
-      iris.position.set(0, 0, 0.016);
-      iris.scale.set(1.2, 0.75, 1);
+      // Vibrant expressive iris
+      const iris = new THREE.Mesh(new THREE.CircleGeometry(0.025, 18), irisMat);
+      iris.position.set(0, 0, 0.014);
+      iris.scale.set(1.15, 0.82, 1);
       eyeGroup.add(iris);
 
       // Pupil center
-      const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.014, 16), pupilMat);
-      pupil.position.set(0, 0, 0.018);
-      pupil.scale.set(1.1, 0.75, 1);
+      const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.013, 16), pupilMat);
+      pupil.position.set(0, 0, 0.016);
+      pupil.scale.set(1.05, 0.82, 1);
       eyeGroup.add(pupil);
 
-      // Specular highlight glint (top corner)
-      const glint = new THREE.Mesh(new THREE.CircleGeometry(0.006, 8), glintMat);
-      glint.position.set(-0.008, 0.007, 0.020);
+      // Specular shine catchlight (gives warmth and human life to eyes)
+      const glint = new THREE.Mesh(new THREE.CircleGeometry(0.0055, 8), glintMat);
+      glint.position.set(-0.007, 0.007, 0.018);
       eyeGroup.add(glint);
 
-      // Upper eyelid line
-      const upperLid = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.006, 6, 14, Math.PI * 0.7), eyebrowMat);
-      upperLid.position.set(0, 0.022, 0.016);
-      upperLid.rotation.z = (eyeX < 0 ? -1 : 1) * 0.08;
+      // Upper eyelid line (gentle resting eyelid)
+      const upperLid = new THREE.Mesh(
+        new THREE.TorusGeometry(0.034, 0.005, 6, 14, Math.PI * 0.65),
+        eyebrowMat
+      );
+      upperLid.position.set(0, 0.018, 0.015);
+      upperLid.rotation.z = (eyeX < 0 ? -1 : 1) * 0.06;
       eyeGroup.add(upperLid);
 
-      // Arched brow above eye
-      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.014, 0.015), eyebrowMat);
-      brow.position.set(0, 0.052, 0.014);
-      brow.rotation.z = (eyeX < 0 ? -1 : 1) * 0.08;
+      // Natural contoured eyebrow
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.082, 0.012, 0.012), eyebrowMat);
+      brow.position.set(0, 0.046, 0.014);
+      brow.rotation.z = (eyeX < 0 ? -1 : 1) * 0.06;
       eyeGroup.add(brow);
 
       headGroup.add(eyeGroup);
     });
 
-    // Friendly 3D Smile / Lips (natural warm contour matching real_spot_after_continue.png)
-    const lipMat = new THREE.MeshBasicMaterial({ color: 0x854d0e });
-    const smile = new THREE.Mesh(new THREE.TorusGeometry(0.038, 0.006, 6, 14, Math.PI * 0.6), lipMat);
-    smile.position.set(0, -0.12, 0.36);
+    // Friendly Natural Smile & Soft Lips (natural warm rose/nude tone, NO red clown lipstick)
+    const lipMat = new THREE.MeshBasicMaterial({ color: 0x9e6648 }); // natural warm rose/nude
+    const smile = new THREE.Mesh(new THREE.TorusGeometry(0.032, 0.005, 6, 14, Math.PI * 0.55), lipMat);
+    smile.position.set(0, -0.115, 0.362);
     smile.rotation.x = 0.22;
-    smile.rotation.z = Math.PI * 1.20;
+    smile.rotation.z = Math.PI * 1.22;
     headGroup.add(smile);
 
     // Beard / Stubble for Stan / Phil
@@ -213,110 +214,121 @@ export function createAvatarSystem() {
       brim.rotation.x = Math.PI / 2;
       headGroup.add(brim);
     } else if (config.hairType === 'blond_styled' || config.hairType === 'pompadour' || config.hairType === 'short_parted') {
-      // Styled pompadour / parted volume with side locks
-      const hairCol = config.hairColor || (config.hairType === 'blond_styled' ? 0xfacc15 : 0x1c1917);
+      // Styled pompadour / parted volume with side locks (matching media_1792144700841.png)
+      const hairCol = config.hairColor || (config.hairType === 'blond_styled' ? 0xfacc15 : (config.isPlayer ? 0x3d2714 : 0x1c1917));
       const hairMat = new THREE.MeshStandardMaterial({ color: hairCol, roughness: 0.55 });
+
+      // Cranial dome covering skull smoothly
       const hairDome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.42, 20, 20, 0, Math.PI * 2, 0, Math.PI / 2.3),
+        new THREE.SphereGeometry(0.405, 24, 24, 0, Math.PI * 2, 0, Math.PI * 0.62),
         hairMat
       );
-      hairDome.position.set(0, 0.12, -0.04);
-      hairDome.rotation.x = -0.22;
+      hairDome.position.set(0, 0.10, -0.03);
+      hairDome.rotation.x = -0.20;
       headGroup.add(hairDome);
 
-      const hairBack = new THREE.Mesh(new THREE.SphereGeometry(0.40, 18, 18), hairMat);
-      hairBack.position.set(0, 0.02, -0.08);
+      const hairBack = new THREE.Mesh(new THREE.SphereGeometry(0.395, 20, 20), hairMat);
+      hairBack.position.set(0, 0.02, -0.07);
       headGroup.add(hairBack);
 
-      // Swept pompadour volume
-      const pomp = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.26, 8, 14), hairMat);
-      pomp.position.set(0.03, 0.32, 0.16);
-      pomp.rotation.x = 0.65;
-      pomp.rotation.z = -0.1;
+      // Swept pompadour crown volume (smoothly styled curve)
+      const pomp = new THREE.Mesh(new THREE.CapsuleGeometry(0.12, 0.24, 10, 16), hairMat);
+      pomp.position.set(0.02, 0.28, 0.14);
+      pomp.rotation.x = 0.55;
+      pomp.rotation.z = -0.08;
       headGroup.add(pomp);
 
-      // Side locks framing ears
-      [-0.36, 0.36].forEach((sx) => {
-        const sideLock = new THREE.Mesh(new THREE.CapsuleGeometry(0.05, 0.18, 6, 10), hairMat);
-        sideLock.position.set(sx, 0.06, 0.08);
+      // Side locks framing face and ears
+      [-0.35, 0.35].forEach((sx) => {
+        const sideLock = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 0.16, 6, 10), hairMat);
+        sideLock.position.set(sx, 0.05, 0.08);
         headGroup.add(sideLock);
       });
     } else if (config.hairType === 'orange_bob') {
       const hairMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.5 });
       const hairDome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.42, 18, 18, 0, Math.PI * 2, 0, Math.PI / 1.5),
+        new THREE.SphereGeometry(0.41, 20, 20, 0, Math.PI * 2, 0, Math.PI * 0.60),
         hairMat
       );
       hairDome.position.set(0, 0.10, -0.02);
       headGroup.add(hairDome);
 
-      const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.12, 0.15), hairMat);
+      const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.10, 0.14), hairMat);
       fringe.position.set(0, 0.16, 0.33);
-      fringe.rotation.x = 0.3;
+      fringe.rotation.x = 0.25;
       headGroup.add(fringe);
 
       [-0.32, 0.32].forEach((sx) => {
-        const strand = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.34, 8, 12), hairMat);
+        const strand = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.32, 8, 12), hairMat);
         strand.position.set(sx, -0.06, 0.08);
         headGroup.add(strand);
       });
     } else {
-      // Authentic Spot Virtual Volumetric Wavy Hair with Cascading Shoulder Locks (matching real_spot_after_continue.png)
+      // Authentic Spot Virtual Volumetric Wavy Hair (smooth, flowing, NO mouse-ear lobes)
       const hairColor = config.hairColor || 0x1c1917; // Deep espresso / dark charcoal
       const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.55 });
 
-      // Main cranial hair volume dome
+      // Main cranial hair volume dome (smooth complete shell)
       const topHair = new THREE.Mesh(
-        new THREE.SphereGeometry(0.42, 24, 24, 0, Math.PI * 2, 0, Math.PI / 2.3),
+        new THREE.SphereGeometry(0.405, 32, 32),
         hairMat
       );
-      topHair.position.set(0, 0.12, -0.04);
-      topHair.rotation.x = -0.25;
+      topHair.position.set(0, 0.06, -0.04);
+      topHair.scale.set(1.0, 1.02, 1.0);
       headGroup.add(topHair);
 
       // Back Hair Volume enclosing nape
-      const backHair = new THREE.Mesh(new THREE.SphereGeometry(0.40, 20, 20), hairMat);
-      backHair.position.set(0, 0.02, -0.10);
+      const backHair = new THREE.Mesh(new THREE.SphereGeometry(0.395, 22, 22), hairMat);
+      backHair.position.set(0, -0.02, -0.08);
       headGroup.add(backHair);
 
-      // Parted crown volume lobes
-      [-0.14, 0.14].forEach((px) => {
-        const lobe = new THREE.Mesh(new THREE.SphereGeometry(0.18, 16, 16), hairMat);
-        lobe.position.set(px, 0.26, 0.04);
-        lobe.scale.set(1.1, 0.85, 1.0);
-        headGroup.add(lobe);
-      });
+      // Soft curved bangs / fringe across the forehead framing face
+      const frontBangs = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.075, 0.26, 8, 16),
+        hairMat
+      );
+      frontBangs.position.set(-0.06, 0.16, 0.28);
+      frontBangs.rotation.set(0.32, 0.14, -1.45);
+      headGroup.add(frontBangs);
+
+      const sideBangs = new THREE.Mesh(
+        new THREE.CapsuleGeometry(0.065, 0.20, 8, 14),
+        hairMat
+      );
+      sideBangs.position.set(0.14, 0.15, 0.29);
+      sideBangs.rotation.set(0.30, -0.18, -1.25);
+      headGroup.add(sideBangs);
 
       // Left side cascading locks
-      const leftUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.22, 8, 14), hairMat);
-      leftUpper.position.set(-0.35, 0.04, 0.04);
-      leftUpper.rotation.set(0.12, 0, 0.16);
+      const leftUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.22, 8, 14), hairMat);
+      leftUpper.position.set(-0.34, 0.04, 0.05);
+      leftUpper.rotation.set(0.12, 0, 0.14);
       headGroup.add(leftUpper);
 
-      const leftMid = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.24, 8, 14), hairMat);
-      leftMid.position.set(-0.33, -0.16, 0.08);
-      leftMid.rotation.set(0.15, 0, -0.08);
+      const leftMid = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.22, 8, 14), hairMat);
+      leftMid.position.set(-0.32, -0.15, 0.08);
+      leftMid.rotation.set(0.14, 0, -0.06);
       headGroup.add(leftMid);
 
-      const leftLower = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.20, 8, 14), hairMat);
-      leftLower.position.set(-0.29, -0.28, 0.12);
-      leftLower.rotation.set(0.25, 0.1, -0.05);
+      const leftLower = new THREE.Mesh(new THREE.CapsuleGeometry(0.06, 0.18, 8, 14), hairMat);
+      leftLower.position.set(-0.28, -0.26, 0.12);
+      leftLower.rotation.set(0.22, 0.08, -0.04);
       headGroup.add(leftLower);
 
-      // Right side cascading locks (flowing forward toward collarbone)
-      const rightUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.22, 8, 14), hairMat);
-      rightUpper.position.set(0.35, 0.04, 0.04);
-      rightUpper.rotation.set(0.12, 0, -0.16);
+      // Right side cascading locks
+      const rightUpper = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.22, 8, 14), hairMat);
+      rightUpper.position.set(0.34, 0.04, 0.05);
+      rightUpper.rotation.set(0.12, 0, -0.14);
       headGroup.add(rightUpper);
 
-      const rightMid = new THREE.Mesh(new THREE.CapsuleGeometry(0.075, 0.24, 8, 14), hairMat);
-      rightMid.position.set(0.33, -0.16, 0.08);
-      rightMid.rotation.set(0.15, 0, 0.08);
+      const rightMid = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.22, 8, 14), hairMat);
+      rightMid.position.set(0.32, -0.15, 0.08);
+      rightMid.rotation.set(0.14, 0, 0.06);
       headGroup.add(rightMid);
 
-      const rightForward = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.22, 8, 14), hairMat);
-      rightForward.position.set(0.27, -0.26, 0.16);
-      rightForward.rotation.set(0.30, -0.12, 0.10);
+      const rightForward = new THREE.Mesh(new THREE.CapsuleGeometry(0.065, 0.20, 8, 14), hairMat);
+      rightForward.position.set(0.26, -0.24, 0.14);
+      rightForward.rotation.set(0.26, -0.10, 0.08);
       headGroup.add(rightForward);
     }
 
@@ -368,7 +380,10 @@ export function createAvatarSystem() {
     torsoGroup.position.y = 1.20;
 
     let torsoMat;
-    if (config.clothing === 'cyan_puffer') {
+    const isHoodie = config.clothing === 'red_hoodie';
+    if (isHoodie) {
+      torsoMat = new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.65 });
+    } else if (config.clothing === 'cyan_puffer') {
       torsoMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.38 });
     } else if (config.clothing === 'plaid_flannel') {
       torsoMat = new THREE.MeshStandardMaterial({ map: plaidTexture, roughness: 0.8 });
@@ -386,26 +401,39 @@ export function createAvatarSystem() {
     torso.castShadow = true;
     torsoGroup.add(torso);
 
-    // Button-down center placket and pearl buttons
-    const placket = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.50, 0.015), torsoMat);
-    placket.position.set(0, 0, 0.29);
-    torsoGroup.add(placket);
+    if (isHoodie) {
+      // Hood collar ring around neck
+      const hoodRim = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.055, 8, 20), torsoMat);
+      hoodRim.position.set(0, 0.28, -0.03);
+      hoodRim.rotation.x = Math.PI / 2;
+      torsoGroup.add(hoodRim);
 
-    const buttonMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
-    [0.18, 0.06, -0.06, -0.18].forEach((by) => {
-      const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.008, 8), buttonMat);
-      btn.rotation.x = Math.PI / 2;
-      btn.position.set(0, by, 0.30);
-      torsoGroup.add(btn);
-    });
+      // Kangaroo pouch pocket
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.16, 0.04), torsoMat);
+      pouch.position.set(0, -0.12, 0.28);
+      torsoGroup.add(pouch);
+    } else {
+      // Button-down center placket and pearl buttons
+      const placket = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.50, 0.015), torsoMat);
+      placket.position.set(0, 0, 0.29);
+      torsoGroup.add(placket);
 
-    // 3D Winged Shirt Collar around neck
-    [-0.09, 0.09].forEach((cx) => {
-      const collarWing = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.10), torsoMat);
-      collarWing.position.set(cx, 0.28, 0.12);
-      collarWing.rotation.set(-0.35, cx < 0 ? 0.3 : -0.3, cx < 0 ? -0.2 : 0.2);
-      torsoGroup.add(collarWing);
-    });
+      const buttonMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+      [0.18, 0.06, -0.06, -0.18].forEach((by) => {
+        const btn = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.008, 8), buttonMat);
+        btn.rotation.x = Math.PI / 2;
+        btn.position.set(0, by, 0.30);
+        torsoGroup.add(btn);
+      });
+
+      // 3D Winged Shirt Collar around neck
+      [-0.09, 0.09].forEach((cx) => {
+        const collarWing = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.10), torsoMat);
+        collarWing.position.set(cx, 0.28, 0.12);
+        collarWing.rotation.set(-0.35, cx < 0 ? 0.3 : -0.3, cx < 0 ? -0.2 : 0.2);
+        torsoGroup.add(collarWing);
+      });
+    }
 
     root.add(torsoGroup);
 

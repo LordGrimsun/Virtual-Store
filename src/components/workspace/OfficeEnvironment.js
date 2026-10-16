@@ -278,7 +278,9 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     return wall;
   };
 
-  // Helper: Double Doorway with grey doors and horizontal brass handles (calibrated to 2.4m height)
+  const doorsList = [];
+
+  // Helper: Interactive Double Doorway with swinging hinge pivots & brass handles
   const createDoubleDoor = (x, z, rotY = 0) => {
     const doorGroup = new THREE.Group();
     doorGroup.name = 'doorway_group';
@@ -286,48 +288,86 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     // Door frame
     const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
     frameLeft.position.set(-1.45, 1.2, 0);
-    frameLeft.name = 'doorway_mesh';
+    frameLeft.name = 'doorway_frame';
     doorGroup.add(frameLeft);
 
     const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
     frameRight.position.set(1.45, 1.2, 0);
-    frameRight.name = 'doorway_mesh';
+    frameRight.name = 'doorway_frame';
     doorGroup.add(frameRight);
 
     const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.1, 0.36), materials.doorFrameMat);
     frameTop.position.set(0, 2.4, 0);
-    frameTop.name = 'doorway_mesh';
+    frameTop.name = 'doorway_frame';
     doorGroup.add(frameTop);
 
-    // Left door leaf
+    // Left Door Leaf mounted on Hinge Pivot at -1.38
+    const doorLPivot = new THREE.Group();
+    doorLPivot.position.set(-1.38, 0, 0);
+
     const doorL = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.08), materials.doorMat);
-    doorL.position.set(-0.7, 1.14, 0);
+    doorL.position.set(0.68, 1.14, 0);
     doorL.castShadow = true;
-    doorL.name = 'doorway_mesh';
-    doorGroup.add(doorL);
+    doorL.name = 'interactive_door_leaf';
+    doorLPivot.add(doorL);
 
-    // Right door leaf
-    const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.08), materials.doorMat);
-    doorR.position.set(0.7, 1.14, 0);
-    doorR.castShadow = true;
-    doorR.name = 'doorway_mesh';
-    doorGroup.add(doorR);
-
-    // Brass horizontal handles
-    [-1, 1].forEach((side) => {
-      const handle = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.02, 0.02, 0.42, 12),
-        materials.brassHandleMat
-      );
+    // Left brass handles on both interior and exterior sides
+    [-0.055, 0.055].forEach((hz) => {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 12), materials.brassHandleMat);
       handle.rotation.z = Math.PI / 2;
-      handle.position.set(side * 0.18, 1.05, 0.06);
-      handle.name = 'doorway_mesh';
-      doorGroup.add(handle);
+      handle.position.set(1.20, 1.05, hz);
+      handle.name = 'interactive_door_leaf';
+      doorLPivot.add(handle);
     });
+
+    doorGroup.add(doorLPivot);
+
+    // Right Door Leaf mounted on Hinge Pivot at +1.38
+    const doorRPivot = new THREE.Group();
+    doorRPivot.position.set(1.38, 0, 0);
+
+    const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.08), materials.doorMat);
+    doorR.position.set(-0.68, 1.14, 0);
+    doorR.castShadow = true;
+    doorR.name = 'interactive_door_leaf';
+    doorRPivot.add(doorR);
+
+    // Right brass handles on both interior and exterior sides
+    [-0.055, 0.055].forEach((hz) => {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.42, 12), materials.brassHandleMat);
+      handle.rotation.z = Math.PI / 2;
+      handle.position.set(-1.20, 1.05, hz);
+      handle.name = 'interactive_door_leaf';
+      doorRPivot.add(handle);
+    });
+
+    doorGroup.add(doorRPivot);
 
     doorGroup.position.set(x, 0, z);
     doorGroup.rotation.y = rotY;
+
+    // Interactive state for smooth animation and collision checking
+    doorGroup.userData = {
+      isInteractiveDoor: true,
+      isOpen: false,
+      currentAngle: 0,
+      targetAngle: 0,
+      doorLPivot,
+      doorRPivot,
+      center: new THREE.Vector3(x, 1.2, z),
+      width: 2.8,
+      depth: 0.4,
+      toggleDoor: (forceOpen) => {
+        const nextState = forceOpen !== undefined ? forceOpen : !doorGroup.userData.isOpen;
+        doorGroup.userData.isOpen = nextState;
+        doorGroup.userData.targetAngle = nextState ? Math.PI * 0.48 : 0;
+        return nextState;
+      }
+    };
+
     environmentGroup.add(doorGroup);
+    doorsList.push(doorGroup);
+    return doorGroup;
   };
 
   // 5. Build the Exact 12-Room Wall Blueprint (media_1791969443822.png)
@@ -598,15 +638,227 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createStreetTree(-16, 28, 1.0);
   createStreetTree(2, 28, 1.15);
 
-  // City Skyline Buildings completely removed to ensure all office rooms are 100% unobstructed
-  // seattleGroup now keeps only the ground landscape and trees far outside the clerestory glass
-  // Register all wall references on scene.userData for fast dynamic camera occlusion fading
+  // 8. Scenic Outer Zone Environment matching Spot Virtual reference (media_1792144700841.png)
+  // Procedural Sky Dome with soft clouds
+  const skyCanvas = document.createElement('canvas');
+  skyCanvas.width = 1024;
+  skyCanvas.height = 512;
+  const sCtx = skyCanvas.getContext('2d');
+  const skyGrad = sCtx.createLinearGradient(0, 0, 0, 512);
+  skyGrad.addColorStop(0, '#2563eb'); // Rich celestial blue at zenith
+  skyGrad.addColorStop(0.4, '#60a5fa');
+  skyGrad.addColorStop(0.75, '#93c5fd');
+  skyGrad.addColorStop(1, '#dbeafe'); // Soft hazy horizon
+  sCtx.fillStyle = skyGrad;
+  sCtx.fillRect(0, 0, 1024, 512);
+
+  // Soft procedural white cloud layers
+  sCtx.fillStyle = 'rgba(255, 255, 255, 0.42)';
+  const drawCloud = (cx, cy, scale) => {
+    sCtx.beginPath();
+    sCtx.arc(cx, cy, 28 * scale, 0, Math.PI * 2);
+    sCtx.arc(cx + 25 * scale, cy - 8 * scale, 22 * scale, 0, Math.PI * 2);
+    sCtx.arc(cx + 50 * scale, cy, 26 * scale, 0, Math.PI * 2);
+    sCtx.arc(cx + 25 * scale, cy + 8 * scale, 24 * scale, 0, Math.PI * 2);
+    sCtx.fill();
+  };
+  drawCloud(180, 220, 1.4);
+  drawCloud(420, 180, 1.8);
+  drawCloud(720, 240, 1.2);
+  drawCloud(900, 200, 1.6);
+  drawCloud(300, 310, 1.0);
+
+  const skyTex = new THREE.CanvasTexture(skyCanvas);
+  skyTex.colorSpace = THREE.SRGBColorSpace;
+  const skyDome = new THREE.Mesh(
+    new THREE.SphereGeometry(210, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide })
+  );
+  skyDome.position.y = -5;
+  seattleGroup.add(skyDome);
+
+  // Rolling Green Hills on the left horizon (matching media_1792144700841.png)
+  const hillMat = new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.95 });
+  const hill1 = new THREE.Mesh(new THREE.ConeGeometry(55, 28, 16), hillMat);
+  hill1.position.set(-85, 4, -65);
+  hill1.scale.set(1.4, 0.7, 1.0);
+  seattleGroup.add(hill1);
+
+  const hill2 = new THREE.Mesh(new THREE.ConeGeometry(65, 34, 16), hillMat);
+  hill2.position.set(-110, 6, -45);
+  hill2.scale.set(1.3, 0.8, 1.2);
+  seattleGroup.add(hill2);
+
+  // Low-poly Modern City Skyline in the far distance (Z = -65 to -105, completely outside office)
+  const buildingMats = [
+    new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 }), // Modern light grey
+    new THREE.MeshStandardMaterial({ color: 0xd6c7b2, roughness: 0.7 }), // Warm tan
+    new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 }), // Slate
+    new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.4 })  // Dark charcoal glass
+  ];
+
+  const windowMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+
+  const createSkylineBuilding = (bx, bz, bw, bh, bd, matIdx) => {
+    const bGroup = new THREE.Group();
+    const bMesh = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), buildingMats[matIdx % buildingMats.length]);
+    bMesh.position.y = bh / 2;
+    bMesh.castShadow = true;
+    bGroup.add(bMesh);
+
+    // Floor window bands
+    const floors = Math.floor(bh / 3.2);
+    for (let f = 1; f < floors; f++) {
+      const winBand = new THREE.Mesh(new THREE.BoxGeometry(bw + 0.05, 0.9, bd + 0.05), windowMat);
+      winBand.position.y = f * 3.2;
+      bGroup.add(winBand);
+    }
+
+    // Rooftop equipment box
+    const roofBox = new THREE.Mesh(new THREE.BoxGeometry(bw * 0.4, 2.5, bd * 0.4), buildingMats[2]);
+    roofBox.position.y = bh + 1.25;
+    bGroup.add(roofBox);
+
+    bGroup.position.set(bx, 0, bz);
+    seattleGroup.add(bGroup);
+  };
+
+  // Far City Towers along the north horizon
+  createSkylineBuilding(-38, -75, 16, 26, 14, 0);
+  createSkylineBuilding(-18, -82, 14, 34, 12, 1);
+  createSkylineBuilding(0, -78, 18, 28, 16, 2);
+  createSkylineBuilding(22, -88, 15, 38, 14, 0);
+  createSkylineBuilding(42, -76, 20, 24, 16, 3);
+  createSkylineBuilding(64, -84, 16, 30, 14, 1);
+
+  // Distant Architectural Ferris Wheel (matching media_1792144700841.png)
+  const ferrisWheelGroup = new THREE.Group();
+  ferrisWheelGroup.position.set(30, 15, -82);
+
+  const wheelWhiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.35 });
+  const wheelRim = new THREE.Mesh(new THREE.TorusGeometry(12.5, 0.25, 8, 32), wheelWhiteMat);
+  ferrisWheelGroup.add(wheelRim);
+
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.4, 16), wheelWhiteMat);
+  hub.rotation.x = Math.PI / 2;
+  ferrisWheelGroup.add(hub);
+
+  // 12 Radial Spokes & Passenger Gondolas
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * Math.PI * 2) / 12;
+    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.12, 12.4, 0.12), wheelWhiteMat);
+    spoke.position.set((Math.cos(angle) * 12.4) / 2, (Math.sin(angle) * 12.4) / 2, 0);
+    spoke.rotation.z = angle - Math.PI / 2;
+    ferrisWheelGroup.add(spoke);
+
+    // Gondola cabin
+    const gondola = new THREE.Mesh(
+      new THREE.SphereGeometry(0.8, 10, 10),
+      new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.4 })
+    );
+    gondola.position.set(Math.cos(angle) * 12.5, Math.sin(angle) * 12.5 - 0.4, 0);
+    ferrisWheelGroup.add(gondola);
+  }
+
+  // Support A-frame legs
+  [-1, 1].forEach((side) => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.5, 17, 8), wheelWhiteMat);
+    leg.position.set(side * 3.5, -7.5, 0);
+    leg.rotation.z = side * 0.22;
+    ferrisWheelGroup.add(leg);
+  });
+  seattleGroup.add(ferrisWheelGroup);
+
+  // Modern Outdoor Terrace Deck Furniture & Lush Planters (matching media_1792144700841.png right side)
+  const planterMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+  const hedgeMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.85, flatShading: true });
+  const flowerMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 }); // Lavender purple flowers
+  const outdoorSofaMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
+  const outdoorCushionMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+  const goldTrimMat = new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.8, roughness: 0.25 });
+
+  const createTerracePlanter = (px, pz, length = 12) => {
+    const pGroup = new THREE.Group();
+    // Long black trough
+    const box = new THREE.Mesh(new THREE.BoxGeometry(length, 0.75, 0.9), planterMat);
+    box.position.y = 0.38;
+    box.castShadow = true;
+    pGroup.add(box);
+
+    // Green hedge shrubs filling box
+    const shrubs = Math.floor(length / 1.5);
+    for (let i = 0; i < shrubs; i++) {
+      const sx = -length / 2 + 0.75 + i * 1.5;
+      const hedge = new THREE.Mesh(new THREE.SphereGeometry(0.65, 8, 8), hedgeMat);
+      hedge.position.set(sx, 0.9, 0);
+      hedge.scale.set(1.2, 0.85, 0.9);
+      pGroup.add(hedge);
+
+      // Purple flower buds
+      const fl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), flowerMat);
+      fl.position.set(sx + 0.2, 1.35, 0.1);
+      pGroup.add(fl);
+    }
+
+    pGroup.position.set(px, 0, pz);
+    seattleGroup.add(pGroup);
+  };
+
+  // Place continuous planter boxes directly outside the clerestory glass
+  createTerracePlanter(-18, -25.2, 14);
+  createTerracePlanter(0, -25.2, 14);
+  createTerracePlanter(18, -25.2, 14);
+
+  // Modern Outdoor Curved Lounge Sofas & Round Cocktail Tables (matching media_1792144700841.png)
+  const createTerraceLoungeSet = (lx, lz) => {
+    const lGroup = new THREE.Group();
+    // Curved banquette sofa
+    const sofaBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.6, 1.6, 0.42, 16, 1, false, 0, Math.PI),
+      outdoorSofaMat
+    );
+    sofaBase.position.y = 0.21;
+    sofaBase.castShadow = true;
+    lGroup.add(sofaBase);
+
+    const cushion = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.5, 1.5, 0.12, 16, 1, false, 0, Math.PI),
+      outdoorCushionMat
+    );
+    cushion.position.y = 0.45;
+    lGroup.add(cushion);
+
+    // Curved backrest with gold base trim
+    const backrest = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.6, 1.6, 0.45, 16, 1, true, 0, Math.PI),
+      outdoorSofaMat
+    );
+    backrest.position.y = 0.65;
+    lGroup.add(backrest);
+
+    // Low round brass coffee table in front of lounge
+    const table = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.35, 16), goldTrimMat);
+    table.position.set(0, 0.18, 0.6);
+    table.castShadow = true;
+    lGroup.add(table);
+
+    lGroup.position.set(lx, 0.08, lz);
+    seattleGroup.add(lGroup);
+  };
+
+  createTerraceLoungeSet(-10, -28.5);
+  createTerraceLoungeSet(2, -28.5);
+  createTerraceLoungeSet(14, -28.5);
+
+  // Register interactive doors and office walls on scene.userData
+  scene.userData.interactiveDoors = doorsList;
   scene.userData.officeWalls = wallsList;
 
   return {
     materials,
     environmentGroup,
     walls: wallsList,
+    doors: doorsList,
     setEnvironment: (theme) => {
       // Toggle environment themes dynamically
       if (theme === 'Beach') {
