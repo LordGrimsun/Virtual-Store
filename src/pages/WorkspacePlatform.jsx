@@ -148,22 +148,28 @@ export default function WorkspacePlatform({ user, onExit }) {
   };
   const targetPosRef = useRef(getInitialPlayerPosition());
   const isSittingRef = useRef(false);
+  const chairRotYRef = useRef(0);
+  const seatHeightRef = useRef(0.46);
   const avatarsRef = useRef([]);
   const chairsRef = useRef([]);
   const wavingHandMeshRef = useRef(null);
   const playerAnimStateRef = useRef({ emote: null, emoteTime: 0 });
   const keysPressedRef = useRef({});
 
-  // Dynamic Camera Orbit, Zoom & Performance Throttling
-  const cameraDistanceRef = useRef(18);
+  // Dynamic Camera Orbit, Zoom & Showcase Screen Presentation
+  const cameraDistanceRef = useRef(16.5);
   const cameraOrbitAngleRef = useRef(0.28);
-  const cameraPitchAngleRef = useRef(0.78);
+  const cameraPitchAngleRef = useRef(0.76); // Optimal dollhouse isometric 44° pitch
   const isDraggingOrbitRef = useRef(false);
+  const pointerDownPosRef = useRef({ x: 0, y: 0, time: 0, button: 0 });
+  const isPointerMovedRef = useRef(false);
   const lastMousePosRef = useRef({ x: 0, y: 0 });
   const lastUiUpdateRef = useRef(0);
   const activeVideoTextureRef = useRef(null);
   const activeVideoElementRef = useRef(null);
   const screenTimerIntervalRef = useRef(null);
+  const showcaseScreenRef = useRef(null);
+  const [showcaseScreenTarget, setShowcaseScreenTarget] = useState(null);
 
   // 1. Procedural Web Audio Sound Synthesizer
   const audioCtxRef = useRef(null);
@@ -237,6 +243,22 @@ export default function WorkspacePlatform({ user, onExit }) {
     }
     loadDevices();
   }, []);
+
+  // Showcase Screen View and Content Handlers
+  const showcaseScreen = (target) => {
+    if (!target) return;
+    showcaseScreenRef.current = target;
+    setShowcaseScreenTarget(target);
+    playSound('chime');
+    setToastMessage(`Showcasing ${target.name}! 🎥`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const exitShowcaseScreen = () => {
+    showcaseScreenRef.current = null;
+    setShowcaseScreenTarget(null);
+    playSound('click');
+  };
 
   // 3. Real Screen Sharing & Telecast Engine (Real Hardware Streams — No Dummies)
   const startScreenShare = async (specificScreenId) => {
@@ -709,20 +731,20 @@ export default function WorkspacePlatform({ user, onExit }) {
       wavingHandMeshRef.current = sarahObj.parts.wavingHandMesh;
     }
 
-    // Raycast Pointer Down (Interactions, Movement & Click-to-Sit)
+    // Raycast Interaction & Click-to-Sit Engine
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
     const handlePointerDown = (e) => {
-      if (e.target.closest('header, aside, .Platform_uiDock, .Platform_toast, .Platform_modal, .Platform_minimap')) return;
+      if (e.target.closest('header, aside, .Platform_uiDock, .Platform_toast, .Platform_modal, .Platform_minimap, button')) return;
 
-      // Right-click (button 2), middle-click (button 1), or Alt-click activates camera orbit drag
-      if (e.button === 2 || e.button === 1 || e.altKey) {
-        isDraggingOrbitRef.current = true;
-        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
-        return;
-      }
+      pointerDownPosRef.current = { x: e.clientX, y: e.clientY, time: performance.now(), button: e.button };
+      lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+      isDraggingOrbitRef.current = true;
+      isPointerMovedRef.current = false;
+    };
 
+    const handleSceneClick = (e) => {
       const rect = renderer.domElement.getBoundingClientRect();
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -731,7 +753,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       const intersects = raycaster.intersectObjects(scene.children, true);
 
       if (intersects.length > 0) {
-        // Priority 1: Check if ANY intersected object is a Screen (prioritize screen over doors, walls, floors)
+        // Priority 1: Check if ANY intersected object is a Screen
         for (let i = 0; i < Math.min(intersects.length, 12); i++) {
           let obj = intersects[i].object;
           while (obj && obj !== scene) {
@@ -754,7 +776,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
               const targetData = {
                 id: screenId,
-                name: screenDisplayNames[screenId] || `Office Display (${screenId})`,
+                name: screenDisplayNames[screenId] || obj.userData?.displayName || `Office Display (${screenId})`,
                 mesh: targetMesh || obj
               };
               activeScreenTargetRef.current = targetData;
@@ -839,9 +861,13 @@ export default function WorkspacePlatform({ user, onExit }) {
           while (chairObj && chairObj !== scene) {
             if (chairObj.name === 'clickable_chair' || chairObj.userData?.isChair || chairObj.name?.startsWith('chair_') || chairObj.name?.startsWith('sofa_')) {
               const chairPos = chairObj.userData?.chairPos;
+              const chairRotY = chairObj.userData?.chairRotY ?? 0;
+              const seatHeight = chairObj.userData?.seatHeight ?? 0.46;
               if (chairPos) {
                 playSound('click');
                 targetPosRef.current.copy(chairPos);
+                chairRotYRef.current = chairRotY;
+                seatHeightRef.current = seatHeight;
                 isSittingRef.current = true;
                 return;
               }
@@ -853,6 +879,8 @@ export default function WorkspacePlatform({ user, onExit }) {
               if (nearestChair && nearestChair.dist < 5.0) {
                 playSound('click');
                 targetPosRef.current.copy(nearestChair.chair.pos);
+                chairRotYRef.current = nearestChair.chair.rot ?? 0;
+                seatHeightRef.current = nearestChair.chair.seatHeight ?? 0.46;
                 isSittingRef.current = true;
                 return;
               }
@@ -970,13 +998,16 @@ export default function WorkspacePlatform({ user, onExit }) {
           isMoving = true;
         } else {
           const target = targetPosRef.current;
-          const dist = player.position.distanceTo(target);
+          const dx = target.x - player.position.x;
+          const dz = target.z - player.position.z;
+          const dist = Math.hypot(dx, dz);
 
           if (dist > 0.15) {
-            const dir = new THREE.Vector3().subVectors(target, player.position).normalize();
-            const targetAngle = Math.atan2(dir.x, dir.z);
+            const targetAngle = Math.atan2(dx, dz);
             player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.2);
-            player.position.addScaledVector(dir, Math.min(dist, delta * 6.2));
+            const step = Math.min(dist, delta * 6.2);
+            player.position.x += (dx / dist) * step;
+            player.position.z += (dz / dist) * step;
             isMoving = true;
           }
         }
@@ -984,45 +1015,18 @@ export default function WorkspacePlatform({ user, onExit }) {
         // Kinematics & Pose Animation
         if (isMoving) {
           walkCycle += delta * 12;
-          // Articulated legs alternating swing
-          if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = Math.sin(walkCycle) * 0.55;
-          if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -Math.sin(walkCycle) * 0.55;
-          // Articulated arms counter swing
-          if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = -Math.sin(walkCycle) * 0.45;
-          if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = Math.sin(walkCycle) * 0.45;
-          // Natural vertical hip bobbing
           player.position.y = Math.abs(Math.sin(walkCycle * 2)) * 0.08;
+          avatarSystem.applyAvatarPose(parts, { isMoving: true, walkCycle });
         } else if (isSittingRef.current) {
-          // Seated pose on chair cushion naturally (matches avatar system -0.18 height)
-          player.position.y = -0.18;
-          if (parts.leftLegPivot) {
-            parts.leftLegPivot.rotation.x = -Math.PI / 2;
-            parts.rightLegPivot.rotation.x = -Math.PI / 2;
-          }
-          if (parts.leftArmPivot) {
-            parts.leftArmPivot.rotation.x = -Math.PI / 3;
-            parts.rightArmPivot.rotation.x = -Math.PI / 3;
-          }
+          // Seated pose on chair cushion naturally with knee bend and outward orientation
+          player.position.y = (seatHeightRef.current || 0.46) - 0.64;
+          player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, chairRotYRef.current, 0.25);
+          avatarSystem.applyAvatarPose(parts, { isSitting: true });
         } else {
           // Idle standing pose with gentle breathing sway
           player.position.y = 0;
-          if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = 0;
-          if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = 0;
-          if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = 0;
-
-          // Emote handling
           const animState = playerAnimStateRef.current;
-          if (animState.emote === 'wave' && parts.rightArmPivot) {
-            parts.rightArmPivot.rotation.z = Math.PI * 0.75 + Math.sin(elapsed * 12) * 0.3;
-            parts.rightArmPivot.rotation.x = -0.3;
-          } else if (parts.rightArmPivot) {
-            parts.rightArmPivot.rotation.z = 0;
-            parts.rightArmPivot.rotation.x = 0;
-          }
-
-          if (parts.torsoGroup) {
-            parts.torsoGroup.position.y = 1.15 + Math.sin(elapsed * 2.5) * 0.015;
-          }
+          avatarSystem.applyAvatarPose(parts, { isMoving: false, emote: animState.emote, elapsed });
         }
       }
 
@@ -1093,12 +1097,25 @@ export default function WorkspacePlatform({ user, onExit }) {
         }
       }
 
-      // Smooth Dynamic Camera with Mouse Wheel Zoom & Orbit
-      if (playerMeshRef.current && camera) {
-        if (isTopDownBlueprint) {
+      // Smooth Dynamic Camera with Mouse Wheel Zoom & Orbit / Showcase Screen View
+      if (camera) {
+        if (showcaseScreenRef.current?.mesh) {
+          const screenMesh = showcaseScreenRef.current.mesh;
+          const sPos = new THREE.Vector3();
+          screenMesh.getWorldPosition(sPos);
+          const screenRot = screenMesh.getWorldQuaternion(new THREE.Quaternion());
+          const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(screenRot);
+          const sWidth = screenMesh.userData?.width || 4.8;
+          const viewDist = Math.max(3.2, sWidth * 1.35);
+          const camTargetPos = sPos.clone().addScaledVector(normal, viewDist);
+          camTargetPos.y = Math.max(1.6, sPos.y);
+
+          camera.position.lerp(camTargetPos, 0.08);
+          camera.lookAt(sPos);
+        } else if (isTopDownBlueprint) {
           camera.position.lerp(new THREE.Vector3(0, 68, 0), 0.08);
           camera.lookAt(0, 0, 0);
-        } else {
+        } else if (playerMeshRef.current) {
           const p = playerMeshRef.current.position;
           const dist = cameraDistanceRef.current;
           const angle = cameraOrbitAngleRef.current;
@@ -1118,31 +1135,93 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     animate();
 
-    // Mouse Wheel Zoom: Smooth distance adjustment between 6 and 65
-    const handleWheel = (e) => {
-      e.preventDefault();
-      const zoomFactor = e.deltaY * 0.025;
-      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 6, 65);
+    // Global Showcase Screen helper for automated inspection or UI buttons
+    window.__spotShowcaseScreen = (screenIdOrName) => {
+      let target = null;
+      if (typeof screenIdOrName === 'object' && screenIdOrName?.mesh) {
+        target = screenIdOrName;
+      } else {
+        const id = String(screenIdOrName || 'boardroom').replace('screen_', '').replace('casing_', '');
+        const mesh = screensRef.current?.[id] || screensRef.current?.[`screen_${id}`];
+        if (mesh) {
+          target = { id, name: mesh.userData?.displayName || id, mesh };
+        }
+      }
+      if (target) {
+        showcaseScreen(target);
+        return true;
+      }
+      return false;
     };
 
-    // Mouse Orbit Dragging (Right-click or middle-click or Alt-click drag)
+    // Global Sit helper for reliable testing & automation
+    window.__spotSitOnChair = (nameKeyword = 'Sofa') => {
+      const found = chairsRef.current.find((c) =>
+        c.name.toLowerCase().includes(nameKeyword.toLowerCase())
+      );
+      if (found) {
+        playSound('click');
+        targetPosRef.current.copy(found.pos);
+        chairRotYRef.current = found.rot ?? 0;
+        seatHeightRef.current = found.seatHeight ?? 0.46;
+        isSittingRef.current = true;
+        if (playerMeshRef.current) {
+          playerMeshRef.current.position.copy(found.pos);
+          playerMeshRef.current.position.y = (found.seatHeight ?? 0.46) - 0.64;
+          playerMeshRef.current.rotation.y = found.rot ?? 0;
+        }
+        return found;
+      }
+      return null;
+    };
+
+    // Mouse Wheel Zoom: Smooth distance adjustment between 8 and 45
+    const handleWheel = (e) => {
+      e.preventDefault();
+      if (showcaseScreenRef.current) {
+        showcaseScreenRef.current = null;
+        setShowcaseScreenTarget(null);
+      }
+      const zoomFactor = e.deltaY * 0.025;
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 8, 45);
+    };
+
+    // Mouse Orbit Dragging (Primary Left-Click Drag, Middle, Right, or Trackpad)
     const handlePointerMove = (e) => {
       if (isDraggingOrbitRef.current) {
-        const deltaX = e.clientX - lastMousePosRef.current.x;
-        const deltaY = e.clientY - lastMousePosRef.current.y;
-        lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+        const dx = e.clientX - pointerDownPosRef.current.x;
+        const dy = e.clientY - pointerDownPosRef.current.y;
+        if (Math.hypot(dx, dy) > 4) {
+          isPointerMovedRef.current = true;
+          if (showcaseScreenRef.current) {
+            showcaseScreenRef.current = null;
+            setShowcaseScreenTarget(null);
+          }
+        }
 
-        cameraOrbitAngleRef.current += deltaX * 0.006;
-        cameraPitchAngleRef.current = THREE.MathUtils.clamp(
-          cameraPitchAngleRef.current - deltaY * 0.005,
-          0.2,
-          1.4
-        );
+        if (isPointerMovedRef.current) {
+          const deltaX = e.clientX - lastMousePosRef.current.x;
+          const deltaY = e.clientY - lastMousePosRef.current.y;
+          lastMousePosRef.current = { x: e.clientX, y: e.clientY };
+
+          cameraOrbitAngleRef.current += deltaX * 0.007;
+          cameraPitchAngleRef.current = THREE.MathUtils.clamp(
+            cameraPitchAngleRef.current - deltaY * 0.005,
+            0.45,
+            1.22
+          );
+        }
       }
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e) => {
+      if (!isDraggingOrbitRef.current) return;
       isDraggingOrbitRef.current = false;
+
+      // Single click (not drag): trigger scene interaction
+      if (!isPointerMovedRef.current && pointerDownPosRef.current.button === 0) {
+        handleSceneClick(e);
+      }
     };
 
     const handleContextMenu = (e) => {
@@ -2002,15 +2081,16 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Blue Avatar / Focus Avatar View Toggle (media_1791993853484.png) */}
         <button
           onClick={() => {
-            if (playerMeshRef.current && cameraRef.current) {
-              const p = playerMeshRef.current.position;
-              cameraDistanceRef.current = 10;
-              cameraOrbitAngleRef.current = 0;
-              cameraPitchAngleRef.current = 0.45;
-              playSound('click');
+            if (showcaseScreenRef.current) {
+              showcaseScreenRef.current = null;
+              setShowcaseScreenTarget(null);
             }
+            cameraDistanceRef.current = 8.5;
+            cameraOrbitAngleRef.current = 0.15;
+            cameraPitchAngleRef.current = 0.52;
+            playSound('click');
           }}
-          title="Avatar Close Focus / First-Person"
+          title="Avatar Close Focus / Showcase Avatar"
           style={{
             width: '40px',
             height: '40px',
@@ -2031,17 +2111,19 @@ export default function WorkspacePlatform({ user, onExit }) {
           <UserCheck size={18} />
         </button>
 
-        {/* Recenter / Crosshair Target Button (media_1791993853484.png) */}
+        {/* Recenter / Dollhouse Isometric View Button (media_1791993853484.png) */}
         <button
           onClick={() => {
-            if (playerMeshRef.current && cameraRef.current) {
-              cameraDistanceRef.current = 20;
-              cameraOrbitAngleRef.current = 0;
-              cameraPitchAngleRef.current = 0.64;
-              playSound('click');
+            if (showcaseScreenRef.current) {
+              showcaseScreenRef.current = null;
+              setShowcaseScreenTarget(null);
             }
+            cameraDistanceRef.current = 16.5;
+            cameraOrbitAngleRef.current = 0.28;
+            cameraPitchAngleRef.current = 0.76; // Optimal dollhouse isometric 44° pitch
+            playSound('click');
           }}
-          title="Recenter Camera on Avatar (Target Icon)"
+          title="Recenter Camera / Optimal 3D Dollhouse View (Target Icon)"
           style={{
             width: '40px',
             height: '40px',
@@ -2060,6 +2142,37 @@ export default function WorkspacePlatform({ user, onExit }) {
           onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
         >
           <Compass size={18} />
+        </button>
+
+        {/* Showcase Room Screen View Button */}
+        <button
+          onClick={() => {
+            const screenId = currentRoomId?.replace('-', '_') || 'boardroom';
+            window.__spotShowcaseScreen?.(screenId);
+          }}
+          title="Showcase Room Presentation Screen"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: showcaseScreenTarget ? '#10b981' : '#ffffff',
+            border: '1px solid #e5e7eb',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: showcaseScreenTarget ? '#ffffff' : '#16a34a',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (!showcaseScreenTarget) e.currentTarget.style.background = '#f0fdf4';
+          }}
+          onMouseLeave={(e) => {
+            if (!showcaseScreenTarget) e.currentTarget.style.background = '#ffffff';
+          }}
+        >
+          <Tv size={18} />
         </button>
 
         {/* 3x3 Grid Icon: Apps / Blueprint Toggle (media_1791993853484.png) */}
@@ -2400,6 +2513,67 @@ export default function WorkspacePlatform({ user, onExit }) {
             <span>{av.name}</span>
           </div>
         ))}
+
+        {/* Floating Screen Toolbar for Interactive Display Configuration & Showcase */}
+        {activeScreenTarget && (
+          <ScreenDisplayManager
+            activeScreen={activeScreenTarget.id}
+            screenPos={activeScreenPos}
+            screenTitle={activeScreenTarget.name}
+            onClose={() => {
+              activeScreenTargetRef.current = null;
+              setActiveScreenTarget(null);
+              setActiveScreenPos(null);
+            }}
+            onShowcaseScreen={() => showcaseScreen(activeScreenTarget)}
+            onStartScreenShare={(id) => startScreenShare(id)}
+            onUpdateScreenContent={(screenId, contentType, data) => handleUpdateScreenContent(screenId, contentType, data)}
+          />
+        )}
+
+        {/* Floating Active Showcase Banner when in Screen Showcase View */}
+        {showcaseScreenTarget && (
+          <div style={{
+            position: 'absolute',
+            top: '72px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'rgba(15, 23, 42, 0.94)',
+            color: '#ffffff',
+            padding: '8px 18px',
+            borderRadius: '24px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            border: '1px solid #38bdf8',
+            zIndex: 100,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            backdropFilter: 'blur(8px)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Eye size={16} color="#38bdf8" />
+              <span style={{ fontSize: '13px', fontWeight: 700 }}>Showcase: {showcaseScreenTarget.name}</span>
+            </div>
+            <button
+              onClick={exitShowcaseScreen}
+              style={{
+                background: '#ef4444',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '4px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#dc2626'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#ef4444'}
+            >
+              Exit Showcase
+            </button>
+          </div>
+        )}
 
         {/* Live Camera Feed with Spot Virtual Background Engine */}
         {isVideoOn && (

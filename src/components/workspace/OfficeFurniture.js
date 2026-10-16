@@ -131,6 +131,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Helper: Cantilever Sled-Base White Conference Chair (media_1791969444037.png)
   const createCantileverChair = (cx, cz, crot, chairName = 'Conference Chair') => {
     const chair = new THREE.Group();
+    const chairPos = new THREE.Vector3(cx, 0, cz);
 
     // Chrome sled tubular base
     const skidL = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.58), chromeMat);
@@ -150,12 +151,12 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     riserR.position.set(0.25, 0.24, -0.27);
     chair.add(riserR);
 
-    // White leather cushion seat
+    // White leather cushion seat (top at y = 0.49)
     const seat = new THREE.Mesh(roundedBox(0.52, 0.08, 0.48, 0.03), whiteChairMat);
     seat.position.set(0, 0.45, 0);
     seat.castShadow = true;
     seat.name = 'clickable_chair';
-    seat.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    seat.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
     chair.add(seat);
 
     // White ribbed backrest
@@ -163,17 +164,17 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     back.position.set(0, 0.72, -0.23);
     back.castShadow = true;
     back.name = 'clickable_chair';
-    back.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    back.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
     chair.add(back);
 
     chair.position.set(cx, 0, cz);
     chair.rotation.y = crot;
     chair.name = 'clickable_chair';
-    chair.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    chair.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
     furnitureGroup.add(chair);
 
     if (chairsRef?.current) {
-      chairsRef.current.push({ name: chairName, pos: new THREE.Vector3(cx, 0, cz), rot: crot });
+      chairsRef.current.push({ name: chairName, pos: chairPos, rot: crot, seatHeight: 0.46 });
     }
     return chair;
   };
@@ -181,8 +182,13 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Helper: Black 3-Seater Sofa (media_1791969444037.png)
   const createBlackSofa = (cx, cz, crot, sofaName = 'Boardroom Sofa') => {
     const sofa = new THREE.Group();
+    const defaultCenterPos = new THREE.Vector3(
+      cx + 0.12 * Math.sin(crot),
+      0,
+      cz + 0.12 * Math.cos(crot)
+    );
     sofa.name = 'clickable_chair';
-    sofa.userData = { isChair: true, name: sofaName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    sofa.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
 
     // Base plinth
     const base = new THREE.Mesh(roundedBox(2.4, 0.22, 0.88, 0.06), blackMat);
@@ -190,14 +196,36 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     base.castShadow = true;
     sofa.add(base);
 
-    // 3 Seat Cushions
-    [-0.72, 0, 0.72].forEach((sx) => {
+    // 3 Individual Seat Cushions with accurate world positions
+    [-0.72, 0, 0.72].forEach((sx, idx) => {
+      const cosR = Math.cos(crot);
+      const sinR = Math.sin(crot);
+      const localZ = 0.08;
+      const worldX = cx + sx * cosR + localZ * sinR;
+      const worldZ = cz - sx * sinR + localZ * cosR;
+      const cushionWorldPos = new THREE.Vector3(worldX, 0, worldZ);
+
       const cushion = new THREE.Mesh(roundedBox(0.68, 0.16, 0.62, 0.05), blackLeatherMat);
       cushion.position.set(sx, 0.38, 0.08);
       cushion.castShadow = true;
       cushion.name = 'clickable_chair';
-      cushion.userData = { isChair: true, name: sofaName, chairPos: new THREE.Vector3(cx + (crot === 0 ? sx : 0), 0, cz + (crot !== 0 ? sx : 0)) };
+      cushion.userData = {
+        isChair: true,
+        name: `${sofaName} Cushion ${idx + 1}`,
+        chairPos: cushionWorldPos,
+        chairRotY: crot,
+        seatHeight: 0.46
+      };
       sofa.add(cushion);
+
+      if (chairsRef?.current) {
+        chairsRef.current.push({
+          name: `${sofaName} Cushion ${idx + 1}`,
+          pos: cushionWorldPos,
+          rot: crot,
+          seatHeight: 0.46
+        });
+      }
     });
 
     // Backrest
@@ -205,7 +233,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     back.position.set(0, 0.64, -0.32);
     back.castShadow = true;
     back.name = 'clickable_chair';
-    back.userData = { isChair: true, name: sofaName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    back.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
     sofa.add(back);
 
     // Left and right armrests
@@ -220,31 +248,29 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     sofa.rotation.y = crot;
     furnitureGroup.add(sofa);
 
-    if (chairsRef?.current) {
-      chairsRef.current.push({ name: sofaName, pos: new THREE.Vector3(cx, 0, cz), rot: crot });
-    }
     return sofa;
   };
 
   // Helper: White Tub Armchair with brass legs (media_1791969444037.png)
   const createTubArmchair = (cx, cz, crot, chairName = 'Boardroom Tub Chair') => {
     const chair = new THREE.Group();
+    const tubPos = new THREE.Vector3(cx, 0, cz);
     chair.name = 'clickable_chair';
-    chair.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    chair.userData = { isChair: true, name: chairName, chairPos: tubPos, chairRotY: crot, seatHeight: 0.46 };
 
     // Tub curved bucket seat
     const tub = new THREE.Mesh(roundedBox(0.82, 0.52, 0.78, 0.12), tubArmchairMat);
     tub.position.y = 0.42;
     tub.castShadow = true;
     tub.name = 'clickable_chair';
-    tub.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    tub.userData = { isChair: true, name: chairName, chairPos: tubPos, chairRotY: crot, seatHeight: 0.46 };
     chair.add(tub);
 
     // Deep seat cushion
     const cushion = new THREE.Mesh(roundedBox(0.64, 0.14, 0.58, 0.05), whiteMat);
     cushion.position.set(0, 0.42, 0.06);
     cushion.name = 'clickable_chair';
-    cushion.userData = { isChair: true, name: chairName, chairPos: new THREE.Vector3(cx, 0, cz) };
+    cushion.userData = { isChair: true, name: chairName, chairPos: tubPos, chairRotY: crot, seatHeight: 0.46 };
     chair.add(cushion);
 
     // 4 Splayed Brass Legs
@@ -264,7 +290,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(chair);
 
     if (chairsRef?.current) {
-      chairsRef.current.push({ name: chairName, pos: new THREE.Vector3(cx, 0, cz), rot: crot });
+      chairsRef.current.push({ name: chairName, pos: tubPos, rot: crot, seatHeight: 0.46 });
     }
     return chair;
   };
@@ -430,13 +456,21 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     riser.position.set(tx, ty, 16.0);
     riser.castShadow = true;
     riser.name = 'clickable_chair';
+    riser.userData = {
+      isChair: true,
+      name: `Auditorium Row ${tier + 1}`,
+      chairPos: new THREE.Vector3(tx, ty, 16.0),
+      chairRotY: Math.PI / 2, // Facing stage (west)
+      seatHeight: ty + 0.11
+    };
     furnitureGroup.add(riser);
 
     if (chairsRef?.current) {
       chairsRef.current.push({
         name: `Auditorium Row ${tier + 1}`,
         pos: new THREE.Vector3(tx, ty, 16.0),
-        rot: Math.PI / 2
+        rot: Math.PI / 2,
+        seatHeight: ty + 0.11
       });
     }
   }
@@ -610,10 +644,27 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
           new THREE.CylinderGeometry(0.3, 0.3, 0.38, 20),
           blackLeatherMat
         );
+        const stoolPos = new THREE.Vector3(cx + sx * 0.95, 0, 4.0 + sz * 0.95);
         stool.position.set(cx + sx * 0.95, 0.19, 4.0 + sz * 0.95);
         stool.castShadow = true;
         stool.name = 'clickable_chair';
+        const rotTowardCenter = Math.atan2(-sx, -sz);
+        stool.userData = {
+          isChair: true,
+          name: 'Cocktail Stool',
+          chairPos: stoolPos,
+          chairRotY: rotTowardCenter,
+          seatHeight: 0.38
+        };
         furnitureGroup.add(stool);
+        if (chairsRef?.current) {
+          chairsRef.current.push({
+            name: 'Cocktail Stool',
+            pos: stoolPos,
+            rot: rotTowardCenter,
+            seatHeight: 0.38
+          });
+        }
       });
     });
   });
@@ -643,10 +694,27 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
           new THREE.CylinderGeometry(0.3, 0.3, 0.38, 20),
           blackLeatherMat
         );
+        const stoolPos = new THREE.Vector3(cx + sx * 0.95, 0, 4.0 + sz * 0.95);
         stool.position.set(cx + sx * 0.95, 0.19, 4.0 + sz * 0.95);
         stool.castShadow = true;
         stool.name = 'clickable_chair';
+        const rotTowardCenter = Math.atan2(-sx, -sz);
+        stool.userData = {
+          isChair: true,
+          name: 'Cocktail Stool',
+          chairPos: stoolPos,
+          chairRotY: rotTowardCenter,
+          seatHeight: 0.38
+        };
         furnitureGroup.add(stool);
+        if (chairsRef?.current) {
+          chairsRef.current.push({
+            name: 'Cocktail Stool',
+            pos: stoolPos,
+            rot: rotTowardCenter,
+            seatHeight: 0.38
+          });
+        }
       });
     });
   });
@@ -694,13 +762,37 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // Throw cushions
   [-1.4, 0, 1.4].forEach((cx) => {
+    const c1Pos = new THREE.Vector3(23.0 + cx, 0, -1.8);
     const c1 = new THREE.Mesh(roundedBox(0.52, 0.12, 0.52, 0.04), cushionYellowMat);
     c1.position.set(23.0 + cx, 0.38, -1.8);
+    c1.name = 'clickable_chair';
+    c1.userData = {
+      isChair: true,
+      name: 'Lounge Pit Cushion',
+      chairPos: c1Pos,
+      chairRotY: 0,
+      seatHeight: 0.44
+    };
     furnitureGroup.add(c1);
+    if (chairsRef?.current) {
+      chairsRef.current.push({ name: 'Lounge Pit Cushion', pos: c1Pos, rot: 0, seatHeight: 0.44 });
+    }
 
+    const c2Pos = new THREE.Vector3(23.0 + cx, 0, 1.8);
     const c2 = new THREE.Mesh(roundedBox(0.52, 0.12, 0.52, 0.04), cushionOrangeMat);
     c2.position.set(23.0 + cx, 0.38, 1.8);
+    c2.name = 'clickable_chair';
+    c2.userData = {
+      isChair: true,
+      name: 'Lounge Pit Cushion',
+      chairPos: c2Pos,
+      chairRotY: Math.PI,
+      seatHeight: 0.44
+    };
     furnitureGroup.add(c2);
+    if (chairsRef?.current) {
+      chairsRef.current.push({ name: 'Lounge Pit Cushion', pos: c2Pos, rot: Math.PI, seatHeight: 0.44 });
+    }
   });
 
   createRoundCoffeeTable(23.0, 0, 0.9, 0.36);

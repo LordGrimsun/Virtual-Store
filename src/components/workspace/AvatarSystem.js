@@ -1,9 +1,14 @@
 import * as THREE from 'three';
 
 /**
- * Creates friendly, stylized 3D humanoid avatars with heads, facial features,
- * 3D hair/hats, clothing textures, articulated arms, and legs supporting walking,
- * seated poses, and animated gestures matching the Spot Virtual desktop reference.
+ * Creates friendly, stylized realistic 3D humanoid avatars matching the Spot Virtual desktop reference.
+ * Features:
+ * - Expressive 3D facial features (sculpted eyes with iris/pupil/glint, eyelids, nose bridge, ears, lips)
+ * - Volumetric 3D hairstyles (pompadour, layered bob, neat locks, beanie, Spot cap)
+ * - Tailored clothing (puffer jackets, flannel shirts, knit sweaters, collars, belts with buckles)
+ * - Two-segment articulated arms (shoulders + elbows + hands)
+ * - Two-segment articulated legs (hips + knees + shins + modern sneaker soles)
+ * - Real kinematic sitting where thighs rest horizontally, knees bend 90° down, and feet rest flat on the floor.
  */
 export function createAvatarSystem() {
   // 1. Shared Textures for Clothing and Facial Features
@@ -39,69 +44,14 @@ export function createAvatarSystem() {
   stripeTexture.wrapT = THREE.RepeatWrapping;
   stripeTexture.repeat.set(1, 6);
 
-  // Generic Stylized Face Decal Canvas
-  const createFaceTexture = (hasBeard = false, eyeColor = '#1e293b') => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 256;
-    const ctx = canvas.getContext('2d');
-
-    // Eyes
-    [-45, 45].forEach((eyeX) => {
-      // Sclera
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.ellipse(128 + eyeX, 110, 18, 22, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Iris & Pupil
-      ctx.fillStyle = eyeColor;
-      ctx.beginPath();
-      ctx.arc(128 + eyeX, 112, 11, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Highlight
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(128 + eyeX - 4, 108, 4, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Eyebrow
-      ctx.strokeStyle = '#334155';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(128 + eyeX, 85, 14, Math.PI * 1.1, Math.PI * 1.9);
-      ctx.stroke();
-    });
-
-    // Mouth / Smile
-    ctx.strokeStyle = '#991b1b';
-    ctx.lineWidth = 3.5;
-    ctx.beginPath();
-    ctx.arc(128, 155, 20, 0.2, Math.PI - 0.2);
-    ctx.stroke();
-
-    // Beard / Stubble
-    if (hasBeard) {
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.ellipse(128, 190, 48, 28, 0, 0, Math.PI);
-      ctx.fill();
-    }
-
-    const tex = new THREE.CanvasTexture(canvas);
-    return tex;
-  };
-
-  const defaultFaceTex = createFaceTexture(false, '#1e293b');
-  const stanFaceTex = createFaceTexture(true, '#0369a1');
-  const wesFaceTex = createFaceTexture(false, '#0284c7');
-
-  // Materials
-  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
-  const darkShoeMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.8 });
+  // Shared Materials
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
+  const darkShoeMat = new THREE.MeshStandardMaterial({ color: 0x1e242d, roughness: 0.75 });
+  const whiteSoleMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 });
+  const beltMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 });
+  const buckleMat = new THREE.MeshStandardMaterial({ color: 0xd4d4d8, metalness: 0.8, roughness: 0.2 });
   const pantsBlueMat = new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.8 });
-  const pantsDarkMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.8 });
+  const pantsDarkMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.8 });
   const pantsBeigeMat = new THREE.MeshStandardMaterial({ color: 0xd6c7b2, roughness: 0.8 });
 
   // 2. Avatar Factory
@@ -109,136 +59,261 @@ export function createAvatarSystem() {
     const root = new THREE.Group();
     root.name = `avatar_${name}`;
 
-    // Skin Material
+    const skinColor = config.skinColor || 0xf6d8c3;
     const skinMat = new THREE.MeshStandardMaterial({
-      color: config.skinColor || 0xf6d8c3,
+      color: skinColor,
       roughness: 0.55
     });
 
-    // 1. Head Assembly
+    // 1. Head Assembly (y = 1.88)
     const headGroup = new THREE.Group();
     headGroup.position.y = 1.88;
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 24, 24), skinMat);
+    // Stylized contoured head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 28, 28), skinMat);
     head.name = `avatar_head_${name}`;
     head.castShadow = true;
     headGroup.add(head);
 
-    // Face Decal Plane
-    let faceTex = defaultFaceTex;
-    if (config.hasBeard) faceTex = stanFaceTex;
-    else if (name === 'Wes') faceTex = wesFaceTex;
-
-    const faceDecal = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.46, 0.46),
-      new THREE.MeshBasicMaterial({ map: faceTex, transparent: true, opacity: 0.95 })
+    // Subtle sculpted nose
+    const nose = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.015, 0.035, 0.08, 8),
+      skinMat
     );
-    faceDecal.position.set(0, 0.02, 0.41);
-    headGroup.add(faceDecal);
+    nose.position.set(0, -0.02, 0.41);
+    nose.rotation.x = 0.2;
+    headGroup.add(nose);
 
-    // Hair / Hats
+    // Ears on both sides
+    [-0.41, 0.41].forEach((ex) => {
+      const ear = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.065, 0.065, 0.028, 12),
+        skinMat
+      );
+      ear.position.set(ex, 0, 0);
+      ear.rotation.z = Math.PI / 2;
+      headGroup.add(ear);
+    });
+
+    // 3D Expressive Eyes (Left & Right)
+    const eyeColor = config.eyeColor || (name === 'Wes' ? 0x0284c7 : (config.hasBeard ? 0x0369a1 : 0x1e293b));
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const irisMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const eyebrowMat = new THREE.MeshStandardMaterial({
+      color: config.hairColor || (config.hairType === 'blond_styled' ? 0xa16207 : 0x27272a),
+      roughness: 0.7
+    });
+
+    [-0.15, 0.15].forEach((eyeX) => {
+      const eyeGroup = new THREE.Group();
+      eyeGroup.position.set(eyeX, 0.06, 0.38);
+
+      // Sclera (White eye ball)
+      const eyeWhite = new THREE.Mesh(new THREE.SphereGeometry(0.065, 16, 16), eyeWhiteMat);
+      eyeWhite.scale.set(1.15, 0.95, 0.5);
+      eyeGroup.add(eyeWhite);
+
+      // Colored Iris
+      const iris = new THREE.Mesh(new THREE.CircleGeometry(0.038, 16), irisMat);
+      iris.position.set(0, 0, 0.035);
+      eyeGroup.add(iris);
+
+      // Dark Pupil
+      const pupil = new THREE.Mesh(new THREE.CircleGeometry(0.022, 16), pupilMat);
+      pupil.position.set(0, 0, 0.036);
+      eyeGroup.add(pupil);
+
+      // Specular highlight glint
+      const glint = new THREE.Mesh(new THREE.CircleGeometry(0.009, 8), glintMat);
+      glint.position.set(-0.012, 0.012, 0.037);
+      eyeGroup.add(glint);
+
+      // 3D Eyebrow arch
+      const brow = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.022, 0.02), eyebrowMat);
+      brow.position.set(0, 0.075, 0.03);
+      brow.rotation.z = (eyeX < 0 ? -1 : 1) * 0.08;
+      eyeGroup.add(brow);
+
+      headGroup.add(eyeGroup);
+    });
+
+    // Friendly 3D Smile / Lips
+    const lipMat = new THREE.MeshBasicMaterial({ color: 0xbe123c });
+    const smile = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.012, 8, 16, Math.PI * 0.7), lipMat);
+    smile.position.set(0, -0.16, 0.38);
+    smile.rotation.x = 0.26;
+    smile.rotation.z = Math.PI * 1.15;
+    headGroup.add(smile);
+
+    // Beard / Stubble for Stan / Phil
+    if (config.hasBeard) {
+      const beardMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+      const beard = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.38, 0.34, 0.22, 16, 1, false, -Math.PI / 2, Math.PI),
+        beardMat
+      );
+      beard.position.set(0, -0.18, 0.08);
+      headGroup.add(beard);
+    }
+
+    // Sculpted 3D Hairstyles & Headwear
     if (config.hatType === 'spot_cap') {
-      // White Spot Baseball Cap
+      // White Spot Baseball Cap with green dot
       const capDome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.7),
+        new THREE.SphereGeometry(0.44, 20, 20, 0, Math.PI * 2, 0, Math.PI / 1.7),
         whiteMat
       );
-      capDome.position.set(0, 0.12, -0.04);
+      capDome.position.set(0, 0.12, -0.03);
       headGroup.add(capDome);
 
-      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.04, 0.36), whiteMat);
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.04, 0.38), whiteMat);
       visor.position.set(0, 0.08, 0.44);
       visor.rotation.x = -0.1;
       headGroup.add(visor);
 
       const logoDot = new THREE.Mesh(
-        new THREE.CircleGeometry(0.08, 16),
+        new THREE.CircleGeometry(0.07, 16),
         new THREE.MeshBasicMaterial({ color: 0x22c55e })
       );
-      logoDot.position.set(0, 0.22, 0.42);
+      logoDot.position.set(0, 0.23, 0.42);
       logoDot.rotation.x = -0.2;
       headGroup.add(logoDot);
     } else if (config.hatType === 'beanie') {
-      const beanie = new THREE.Mesh(
-        new THREE.SphereGeometry(0.46, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5),
+      // Ribbed Knit Beanie with folded brim
+      const beanieDome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.46, 18, 18, 0, Math.PI * 2, 0, Math.PI / 1.5),
         pantsDarkMat
       );
-      beanie.position.set(0, 0.12, 0);
-      headGroup.add(beanie);
+      beanieDome.position.set(0, 0.14, 0);
+      headGroup.add(beanieDome);
+
+      const brim = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.05, 10, 24), pantsDarkMat);
+      brim.position.set(0, 0.08, 0);
+      brim.rotation.x = Math.PI / 2;
+      headGroup.add(brim);
     } else if (config.hairType === 'blond_styled') {
-      // Wes's styled blonde pompadour
-      const hairMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.5 });
+      // Wes's styled golden-blonde pompadour with swept locks
+      const hairMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.45 });
       const hairDome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.7),
+        new THREE.SphereGeometry(0.45, 18, 18, 0, Math.PI * 2, 0, Math.PI / 1.6),
         hairMat
       );
-      hairDome.position.set(0, 0.12, -0.05);
+      hairDome.position.set(0, 0.12, -0.04);
       headGroup.add(hairDome);
 
-      const quiff = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.35, 8), hairMat);
-      quiff.position.set(0.05, 0.42, 0.22);
-      quiff.rotation.x = 0.5;
-      headGroup.add(quiff);
+      // Swept pompadour volume
+      const pomp = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 0.35, 12), hairMat);
+      pomp.position.set(0.04, 0.38, 0.18);
+      pomp.rotation.x = 0.55;
+      pomp.rotation.z = -0.1;
+      headGroup.add(pomp);
+
+      // Side locks
+      [-0.38, 0.38].forEach((sx) => {
+        const sideLock = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.26, 0.2), hairMat);
+        sideLock.position.set(sx, 0.08, 0.1);
+        headGroup.add(sideLock);
+      });
     } else if (config.hairType === 'orange_bob') {
-      // Chloe's bright orange bob with fringe
+      // Chloe's bright orange layered bob with fringe
       const hairMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.5 });
       const hairDome = new THREE.Mesh(
-        new THREE.SphereGeometry(0.46, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5),
+        new THREE.SphereGeometry(0.46, 18, 18, 0, Math.PI * 2, 0, Math.PI / 1.5),
         hairMat
       );
-      hairDome.position.set(0, 0.1, -0.02);
+      hairDome.position.set(0, 0.11, -0.02);
       headGroup.add(hairDome);
 
-      [-0.32, 0.32].forEach((sx) => {
-        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.38, 0.25), hairMat);
-        strand.position.set(sx, -0.05, 0.1);
+      // Front fringe bangs
+      const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.12, 0.15), hairMat);
+      fringe.position.set(0, 0.18, 0.35);
+      fringe.rotation.x = 0.3;
+      headGroup.add(fringe);
+
+      // Left & right bob strands framing face
+      [-0.34, 0.34].forEach((sx) => {
+        const strand = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.44, 0.32), hairMat);
+        strand.position.set(sx, -0.06, 0.08);
         headGroup.add(strand);
       });
     } else {
-      const hairMat = new THREE.MeshStandardMaterial({
-        color: config.hairColor || 0x452210,
-        roughness: 0.6
-      });
-      const hair = new THREE.Mesh(
-        new THREE.SphereGeometry(0.45, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.6),
+      // Neat dark/brown textured locks
+      const hairColor = config.hairColor || 0x27272a;
+      const hairMat = new THREE.MeshStandardMaterial({ color: hairColor, roughness: 0.55 });
+      const hairDome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.45, 18, 18, 0, Math.PI * 2, 0, Math.PI / 1.6),
         hairMat
       );
-      hair.position.set(0, 0.12, -0.04);
-      headGroup.add(hair);
+      hairDome.position.set(0, 0.12, -0.03);
+      headGroup.add(hairDome);
+
+      // Textured parting crest
+      const crest = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.12, 0.36), hairMat);
+      crest.position.set(0.04, 0.34, 0.12);
+      crest.rotation.z = -0.1;
+      headGroup.add(crest);
+
+      // Natural contoured front fringe bangs
+      const bangs = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.10, 0.14), hairMat);
+      bangs.position.set(0.02, 0.22, 0.34);
+      bangs.rotation.x = 0.25;
+      bangs.rotation.z = -0.08;
+      headGroup.add(bangs);
+
+      // Sideburns framing ears
+      [-0.38, 0.38].forEach((sx) => {
+        const sideburn = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.14), hairMat);
+        sideburn.position.set(sx, 0.04, 0.14);
+        headGroup.add(sideburn);
+      });
     }
 
-    // Glasses
+    // Modern Glasses (for Phil / custom)
     if (config.hasGlasses) {
-      const frameColor = config.glassesColor || 0x0f172a;
+      const frameColor = config.glassesColor || 0xf97316;
       const gMat = new THREE.MeshBasicMaterial({ color: frameColor });
-      [-0.17, 0.17].forEach((gx) => {
-        const rim = new THREE.Mesh(new THREE.RingGeometry(0.075, 0.105, 16), gMat);
-        rim.position.set(gx, 0.03, 0.42);
+      const glassMat = new THREE.MeshBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.45 });
+
+      [-0.16, 0.16].forEach((gx) => {
+        const rim = new THREE.Mesh(new THREE.RingGeometry(0.07, 0.095, 16), gMat);
+        rim.position.set(gx, 0.05, 0.41);
         headGroup.add(rim);
+
+        const lens = new THREE.Mesh(new THREE.CircleGeometry(0.07, 16), glassMat);
+        lens.position.set(gx, 0.05, 0.41);
+        headGroup.add(lens);
       });
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.025, 0.01), gMat);
-      bridge.position.set(0, 0.03, 0.42);
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.022, 0.01), gMat);
+      bridge.position.set(0, 0.05, 0.41);
       headGroup.add(bridge);
     }
 
-    // Headphone accessory
+    // Over-Ear Studio Headphones (for Steven)
     if (config.hasHeadphones) {
-      const hpMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.03, 8, 16, Math.PI), hpMat);
-      band.position.set(0, 0.15, 0);
+      const hpMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.3 });
+      const cushionMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.9 });
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.44, 0.03, 8, 20, Math.PI), hpMat);
+      band.position.set(0, 0.16, 0);
       headGroup.add(band);
 
       [-0.43, 0.43].forEach((cupX) => {
-        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 12), hpMat);
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.06, 16), hpMat);
         cup.rotation.z = Math.PI / 2;
         cup.position.set(cupX, 0.02, 0);
         headGroup.add(cup);
+
+        const cushion = new THREE.Mesh(new THREE.TorusGeometry(0.085, 0.022, 8, 16), cushionMat);
+        cushion.rotation.y = Math.PI / 2;
+        cushion.position.set(cupX + (cupX < 0 ? 0.02 : -0.02), 0.02, 0);
+        headGroup.add(cushion);
       });
     }
 
     root.add(headGroup);
 
-    // 2. Torso Assembly
+    // 2. Torso Assembly (y = 1.15)
     const torsoGroup = new THREE.Group();
     torsoGroup.position.y = 1.15;
 
@@ -256,15 +331,22 @@ export function createAvatarSystem() {
       });
     }
 
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.36, 0.82, 16), torsoMat);
+    // Tapered humanoid torso body
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.36, 0.82, 18), torsoMat);
     torso.castShadow = true;
     torsoGroup.add(torso);
 
-    // Puffer jacket horizontal rings
+    // Shirt collar / neckline
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.035, 8, 16), torsoMat);
+    collar.position.set(0, 0.42, 0);
+    collar.rotation.x = Math.PI / 2;
+    torsoGroup.add(collar);
+
+    // Cyan Puffer jacket horizontal baffle segments
     if (config.clothing === 'cyan_puffer') {
       [-0.24, 0, 0.24].forEach((qy) => {
         const ring = new THREE.Mesh(
-          new THREE.TorusGeometry(0.35, 0.035, 8, 16),
+          new THREE.TorusGeometry(0.35, 0.035, 8, 18),
           new THREE.MeshStandardMaterial({ color: 0x0369a1 })
         );
         ring.rotation.x = Math.PI / 2;
@@ -273,29 +355,78 @@ export function createAvatarSystem() {
       });
     }
 
+    // Belt & Buckle at waist (y = -0.38)
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.365, 0.365, 0.06, 18), beltMat);
+    belt.position.y = -0.38;
+    torsoGroup.add(belt);
+
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.07, 0.02), buckleMat);
+    buckle.position.set(0, -0.38, 0.37);
+    torsoGroup.add(buckle);
+
     root.add(torsoGroup);
 
-    // 3. Articulated Arms
+    // 3. Two-Segment Articulated Arms (Shoulder -> Upper Arm -> Elbow -> Forearm -> Hand)
+    // Left Arm
     const leftArmPivot = new THREE.Group();
     leftArmPivot.position.set(-0.38, 1.48, 0);
-    const leftArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.58, 8), torsoMat);
-    leftArm.position.y = -0.28;
-    leftArm.castShadow = true;
-    leftArmPivot.add(leftArm);
-    const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), skinMat);
-    leftHand.position.y = -0.58;
-    leftArmPivot.add(leftHand);
+
+    const leftUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.072, 0.28, 10), torsoMat);
+    leftUpperArm.position.y = -0.14;
+    leftUpperArm.castShadow = true;
+    leftArmPivot.add(leftUpperArm);
+
+    const leftElbowPivot = new THREE.Group();
+    leftElbowPivot.position.set(0, -0.28, 0);
+
+    const leftForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.064, 0.26, 10), torsoMat);
+    leftForearm.position.y = -0.13;
+    leftForearm.castShadow = true;
+    leftElbowPivot.add(leftForearm);
+
+    // Left Hand with thumb
+    const leftHandGroup = new THREE.Group();
+    leftHandGroup.position.set(0, -0.29, 0);
+    const leftPalm = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), skinMat);
+    leftHandGroup.add(leftPalm);
+    const leftThumb = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 0.06, 8), skinMat);
+    leftThumb.position.set(0.04, 0, 0.02);
+    leftThumb.rotation.z = Math.PI / 4;
+    leftHandGroup.add(leftThumb);
+    leftElbowPivot.add(leftHandGroup);
+
+    leftArmPivot.add(leftElbowPivot);
     root.add(leftArmPivot);
 
+    // Right Arm
     const rightArmPivot = new THREE.Group();
     rightArmPivot.position.set(0.38, 1.48, 0);
-    const rightArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.07, 0.58, 8), torsoMat);
-    rightArm.position.y = -0.28;
-    rightArm.castShadow = true;
-    rightArmPivot.add(rightArm);
-    const rightHand = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 8), skinMat);
-    rightHand.position.y = -0.58;
-    rightArmPivot.add(rightHand);
+
+    const rightUpperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.072, 0.28, 10), torsoMat);
+    rightUpperArm.position.y = -0.14;
+    rightUpperArm.castShadow = true;
+    rightArmPivot.add(rightUpperArm);
+
+    const rightElbowPivot = new THREE.Group();
+    rightElbowPivot.position.set(0, -0.28, 0);
+
+    const rightForearm = new THREE.Mesh(new THREE.CylinderGeometry(0.072, 0.064, 0.26, 10), torsoMat);
+    rightForearm.position.y = -0.13;
+    rightForearm.castShadow = true;
+    rightElbowPivot.add(rightForearm);
+
+    // Right Hand with thumb
+    const rightHandGroup = new THREE.Group();
+    rightHandGroup.position.set(0, -0.29, 0);
+    const rightPalm = new THREE.Mesh(new THREE.SphereGeometry(0.065, 10, 10), skinMat);
+    rightHandGroup.add(rightPalm);
+    const rightThumb = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.016, 0.06, 8), skinMat);
+    rightThumb.position.set(-0.04, 0, 0.02);
+    rightThumb.rotation.z = -Math.PI / 4;
+    rightHandGroup.add(rightThumb);
+    rightElbowPivot.add(rightHandGroup);
+
+    rightArmPivot.add(rightElbowPivot);
     root.add(rightArmPivot);
 
     // Floating Waving Hand Emoji (for Sarah or waving emotes)
@@ -319,32 +450,67 @@ export function createAvatarSystem() {
       wavingHandMesh = handGroup;
     }
 
-    // 4. Articulated Legs and Shoes
-    const pantsMat = config.pantsColor === 'dark' ? pantsDarkMat : config.pantsColor === 'beige' ? pantsBeigeMat : pantsBlueMat;
+    // 4. Two-Segment Articulated Legs (Hip -> Thigh -> Knee -> Shin -> Modern Sneaker)
+    const pantsMat = config.pantsColor === 'dark' ? pantsDarkMat : (config.pantsColor === 'beige' ? pantsBeigeMat : pantsBlueMat);
 
-    const leftLegPivot = new THREE.Group();
-    leftLegPivot.position.set(-0.18, 0.74, 0);
-    const leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.68, 8), pantsMat);
-    leftLeg.position.y = -0.34;
-    leftLeg.castShadow = true;
-    leftLegPivot.add(leftLeg);
-    const leftShoe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, 0.32), darkShoeMat);
-    leftShoe.position.set(0, -0.68, 0.06);
-    leftShoe.castShadow = true;
-    leftLegPivot.add(leftShoe);
-    root.add(leftLegPivot);
+    // Helper: Build one articulated leg (thigh + knee hinge + shin + sneaker)
+    const buildLeg = (legX) => {
+      const hipPivot = new THREE.Group();
+      hipPivot.position.set(legX, 0.76, 0);
 
-    const rightLegPivot = new THREE.Group();
-    rightLegPivot.position.set(0.18, 0.74, 0);
-    const rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.09, 0.68, 8), pantsMat);
-    rightLeg.position.y = -0.34;
-    rightLeg.castShadow = true;
-    rightLegPivot.add(rightLeg);
-    const rightShoe = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.1, 0.32), darkShoeMat);
-    rightShoe.position.set(0, -0.68, 0.06);
-    rightShoe.castShadow = true;
-    rightLegPivot.add(rightShoe);
-    root.add(rightLegPivot);
+      // Thigh (length 0.38)
+      const thigh = new THREE.Mesh(new THREE.CylinderGeometry(0.098, 0.088, 0.38, 12), pantsMat);
+      thigh.position.y = -0.19;
+      thigh.castShadow = true;
+      hipPivot.add(thigh);
+
+      // Knee Joint Pivot at local y = -0.38
+      const kneePivot = new THREE.Group();
+      kneePivot.position.set(0, -0.38, 0);
+
+      // Knee joint cap
+      const kneeCap = new THREE.Mesh(new THREE.SphereGeometry(0.086, 12, 12), pantsMat);
+      kneeCap.position.set(0, 0, 0.01);
+      kneePivot.add(kneeCap);
+
+      // Shin / Calf (length 0.38)
+      const shin = new THREE.Mesh(new THREE.CylinderGeometry(0.086, 0.076, 0.38, 12), pantsMat);
+      shin.position.y = -0.19;
+      shin.castShadow = true;
+      kneePivot.add(shin);
+
+      // Modern Sneaker at bottom of shin (y = -0.38)
+      const shoeGroup = new THREE.Group();
+      shoeGroup.position.set(0, -0.38, 0);
+
+      // White rubber sole plinth
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.045, 0.32), whiteSoleMat);
+      sole.position.set(0, 0.022, 0.06);
+      sole.castShadow = true;
+      shoeGroup.add(sole);
+
+      // Sneaker Upper body
+      const shoeUpper = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.075, 0.28), darkShoeMat);
+      shoeUpper.position.set(0, 0.075, 0.04);
+      shoeUpper.castShadow = true;
+      shoeGroup.add(shoeUpper);
+
+      // White toe bumper
+      const toeBumper = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.04, 12, 1, false, 0, Math.PI), whiteSoleMat);
+      toeBumper.rotation.y = Math.PI / 2;
+      toeBumper.position.set(0, 0.04, 0.18);
+      shoeGroup.add(toeBumper);
+
+      kneePivot.add(shoeGroup);
+      hipPivot.add(kneePivot);
+
+      return { hipPivot, kneePivot };
+    };
+
+    const leftLeg = buildLeg(-0.18);
+    const rightLeg = buildLeg(0.18);
+    root.add(leftLeg.hipPivot);
+    root.add(rightLeg.hipPivot);
 
     root.position.copy(initialPos);
     if (config.initialRot) root.rotation.y = config.initialRot;
@@ -356,27 +522,101 @@ export function createAvatarSystem() {
       isPlayer: config.isPlayer || false,
       status: config.status || 'online',
       initialSitting: config.isSitting || false,
+      seatHeight: config.seatHeight || 0.46,
       parts: {
         headGroup,
         torsoGroup,
         leftArmPivot,
         rightArmPivot,
-        leftLegPivot,
-        rightLegPivot,
+        leftElbowPivot,
+        rightElbowPivot,
+        leftLegPivot: leftLeg.hipPivot,
+        rightLegPivot: rightLeg.hipPivot,
+        leftKneePivot: leftLeg.kneePivot,
+        rightKneePivot: rightLeg.kneePivot,
         wavingHandMesh
       }
     };
+  };
+
+  /**
+   * Applies realistic humanoid kinematic poses:
+   * - Walking: Natural alternating hip stride, natural knee flexion on back-swing, counter arm swings.
+   * - Sitting: Thigh horizontal forward (-1.45 rad), knee flexed 90° down (+1.45 rad), shins vertical, arms resting on thighs.
+   * - Standing Idle: Gentle breathing sway, natural relaxed posture.
+   */
+  const applyAvatarPose = (parts, { isMoving = false, walkCycle = 0, isSitting = false, emote = null, elapsed = 0 }) => {
+    if (!parts) return;
+
+    if (isMoving) {
+      // Natural walking kinematics
+      const stride = Math.sin(walkCycle);
+      if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = stride * 0.55;
+      if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -stride * 0.55;
+
+      // Knee bends backward during the back stride
+      if (parts.leftKneePivot) parts.leftKneePivot.rotation.x = Math.max(0, -stride * 0.65);
+      if (parts.rightKneePivot) parts.rightKneePivot.rotation.x = Math.max(0, stride * 0.65);
+
+      // Arm counter swing with natural slight elbow bend
+      if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = -stride * 0.45;
+      if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = stride * 0.45;
+      if (parts.leftElbowPivot) parts.leftElbowPivot.rotation.x = -0.15;
+      if (parts.rightElbowPivot) parts.rightElbowPivot.rotation.x = -0.15;
+
+      if (parts.torsoGroup) parts.torsoGroup.position.y = 1.15;
+    } else if (isSitting) {
+      // Authentic sitting kinematics:
+      // Thighs rotated forward 83° (-1.45 rad)
+      if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = -1.45;
+      if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -1.45;
+
+      // Knees bent downward 83° (+1.45 rad) so shins are perpendicular/vertical to floor
+      if (parts.leftKneePivot) parts.leftKneePivot.rotation.x = 1.45;
+      if (parts.rightKneePivot) parts.rightKneePivot.rotation.x = 1.45;
+
+      // Arms resting naturally on armrests or thighs
+      if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = -0.55;
+      if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = -0.55;
+      if (parts.leftElbowPivot) parts.leftElbowPivot.rotation.x = -0.35;
+      if (parts.rightElbowPivot) parts.rightElbowPivot.rotation.x = -0.35;
+
+      if (parts.torsoGroup) parts.torsoGroup.position.y = 1.15;
+    } else {
+      // Standing idle pose with subtle breathing sway
+      if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = 0;
+      if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = 0;
+      if (parts.leftKneePivot) parts.leftKneePivot.rotation.x = 0;
+      if (parts.rightKneePivot) parts.rightKneePivot.rotation.x = 0;
+      if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = 0;
+      if (parts.leftElbowPivot) parts.leftElbowPivot.rotation.x = 0;
+
+      // Emote wave
+      if (emote === 'wave' && parts.rightArmPivot) {
+        parts.rightArmPivot.rotation.z = Math.PI * 0.72 + Math.sin(elapsed * 12) * 0.3;
+        parts.rightArmPivot.rotation.x = -0.3;
+        if (parts.rightElbowPivot) parts.rightElbowPivot.rotation.x = -0.5;
+      } else if (parts.rightArmPivot) {
+        parts.rightArmPivot.rotation.z = 0;
+        parts.rightArmPivot.rotation.x = 0;
+        if (parts.rightElbowPivot) parts.rightElbowPivot.rotation.x = 0;
+      }
+
+      if (parts.torsoGroup) {
+        parts.torsoGroup.position.y = 1.15 + Math.sin(elapsed * 2.5) * 0.015;
+      }
+    }
   };
 
   // 3. Create Roster of 11 Characters Matching the Reference Screenshot
   const createRoster = (scene) => {
     const list = [];
 
-    // 1. Ayush (Active Player) - Boardroom (matching media_1791969444037.png & media_1791969444163.png)
+    // 1. Ayush (Active Player) - Boardroom
     const ayush = buildAvatar('Ayush (you)', new THREE.Vector3(-9.0, 0, 16.0), {
       isPlayer: true,
       hairType: 'brown_neat',
-      hairColor: 0x452211,
+      hairColor: 0x27272a,
       shirtColor: 0xb91c1c, // Burgundy / Red top matching screenshot
       pantsColor: 'dark',
       role: 'Digital Lead'
@@ -405,11 +645,12 @@ export function createAvatarSystem() {
     scene.add(stefan.mesh);
     list.push(stefan);
 
-    // 4. Phil - Long table north side (seated, facing us)
+    // 4. Phil - Long table north side (seated, facing room)
     const phil = buildAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), {
       shirtColor: 0xdc2626,
       hasGlasses: true,
       glassesColor: 0xf97316,
+      hasBeard: true,
       isSitting: true,
       role: 'Infrastructure'
     });
@@ -490,18 +731,11 @@ export function createAvatarSystem() {
     scene.add(devBot.mesh);
     list.push(devBot);
 
-    // Apply sitting kinematics to seated avatars
+    // Apply authentic sitting kinematics to all initially seated avatars
     list.forEach((av) => {
       if (av.initialSitting) {
-        av.mesh.position.y = -0.15;
-        if (av.parts.leftLegPivot) {
-          av.parts.leftLegPivot.rotation.x = -Math.PI / 2;
-          av.parts.rightLegPivot.rotation.x = -Math.PI / 2;
-        }
-        if (av.parts.leftArmPivot) {
-          av.parts.leftArmPivot.rotation.x = -Math.PI / 3;
-          av.parts.rightArmPivot.rotation.x = -Math.PI / 3;
-        }
+        av.mesh.position.y = -0.18;
+        applyAvatarPose(av.parts, { isSitting: true });
       }
     });
 
@@ -510,6 +744,7 @@ export function createAvatarSystem() {
 
   return {
     buildAvatar,
+    applyAvatarPose,
     createRoster
   };
 }

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   Monitor, Video, Image, Globe, Users, Disc, FileText,
   BarChart3, Play, Calendar, Clock, LayoutGrid, X, Check,
-  ExternalLink, Sparkles, AlertCircle, RefreshCw, Upload
+  ExternalLink, Sparkles, AlertCircle, RefreshCw, Upload, Eye
 } from 'lucide-react';
 
 /**
@@ -13,9 +13,11 @@ import {
 export default function ScreenDisplayManager({
   activeScreen,
   screenPos,
+  screenTitle,
   onClose,
   onUpdateScreenContent,
-  onStartScreenShare
+  onStartScreenShare,
+  onShowcaseScreen
 }) {
   const [selectedTool, setSelectedTool] = useState(null); // 'youtube', 'image', 'webpage', 'timer', 'document'
   const [youtubeUrl, setYoutubeUrl] = useState('');
@@ -165,6 +167,34 @@ export default function ScreenDisplayManager({
             </button>
           );
         })}
+
+        <div style={{ width: '1px', height: '18px', background: '#e5e7eb', margin: '0 2px' }} />
+
+        <button
+          onClick={() => {
+            if (onShowcaseScreen) onShowcaseScreen(activeScreen);
+          }}
+          title="Showcase View: Focus Camera Directly on Screen"
+          style={{
+            background: '#f0fdf4',
+            color: '#16a34a',
+            border: '1px solid #bbf7d0',
+            borderRadius: '4px',
+            padding: '4px 7px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '11px',
+            fontWeight: 700,
+            transition: 'all 0.12s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#dcfce7'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#f0fdf4'}
+        >
+          <Eye size={13} color="#16a34a" />
+          <span>Showcase</span>
+        </button>
 
         <div style={{ width: '1px', height: '18px', background: '#e5e7eb', margin: '0 2px' }} />
 
