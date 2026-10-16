@@ -243,6 +243,8 @@ export default function App() {
             targetRoom: guestModal.roomName,
             targetRoomId: guestModal.roomSlug,
             skinTone: guestData.skinTone,
+            avatarGender: guestData.gender,
+            hairType: guestData.hairType,
             isMicOn: guestData.isMicOn,
             isVideoOn: guestData.isVideoOn
           });

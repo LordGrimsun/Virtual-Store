@@ -657,7 +657,14 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     // Build Stylized 3D Humanoid Avatars
     const avatarSystem = createAvatarSystem();
-    const roster = avatarSystem.createRoster(scene);
+    const playerConfig = {
+      name: userName || user?.fullName || 'Ayush (you)',
+      skinColor: user?.skinTone || 0xf5d0b5,
+      gender: user?.avatarGender || 'female',
+      hairType: user?.hairType || (user?.avatarGender === 'male' ? 'pompadour' : 'spot_wavy_bob'),
+      shirtColor: user?.shirtColor || 0x93c5fd
+    };
+    const roster = avatarSystem.createRoster(scene, playerConfig);
     avatarsRef.current = roster;
 
     const playerObj = roster.find((a) => a.isPlayer);

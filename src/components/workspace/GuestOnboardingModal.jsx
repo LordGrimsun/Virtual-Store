@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Mic, MicOff, Video, VideoOff, Volume2, ChevronRight, ChevronLeft,
-  RotateCcw, Check, Loader2, ArrowLeft, Shield
+  RotateCcw, Check, Loader2, ArrowLeft, ArrowRight, Shield
 } from 'lucide-react';
+import AvatarPreview3D from './AvatarPreview3D';
 
 /**
  * GuestOnboardingModal: Reverse-engineered 4-step guest join & knock flow from Spot Virtual:
@@ -25,7 +26,8 @@ export default function GuestOnboardingModal({
   const [step, setStep] = useState('join'); // 'join' | 'customize-avatar' | 'setup-audio-video' | 'waiting-room'
   const [fullName, setFullName] = useState('');
   const [skinToneIndex, setSkinToneIndex] = useState(2);
-  const [avatarGender, setAvatarGender] = useState('male');
+  const [customSkinColor, setCustomSkinColor] = useState('');
+  const [avatarGender, setAvatarGender] = useState('female');
   const [avatarRotation, setAvatarRotation] = useState(0);
 
   // AV settings
@@ -41,9 +43,10 @@ export default function GuestOnboardingModal({
 
   const videoPreviewRef = useRef(null);
   const mediaStreamRef = useRef(null);
+  const colorPickerRef = useRef(null);
 
-  // Available skin tones matching Spot Virtual palette
-  const skinTones = ['#F9D3B4', '#E8B688', '#C68B59', '#8D5524', '#4A3121'];
+  // Available skin tones matching Spot Virtual palette (real_spot_after_continue.png)
+  const skinTones = ['#f6d5be', '#dfb18e', '#ba8659', '#8a5836', '#453328'];
 
   useEffect(() => {
     if (!isOpen) return;
@@ -130,9 +133,12 @@ export default function GuestOnboardingModal({
 
   const handleEnterSpace = () => {
     if (onComplete) {
+      const activeSkin = skinToneIndex === -1 ? (customSkinColor || '#ba8659') : skinTones[skinToneIndex];
       onComplete({
         fullName: fullName || 'Guest',
-        skinTone: skinTones[skinToneIndex],
+        skinTone: activeSkin,
+        gender: avatarGender,
+        hairType: avatarGender === 'male' ? 'pompadour' : 'spot_wavy_bob',
         isMicOn,
         isVideoOn: isCameraOn,
         spaceSlug,
@@ -392,7 +398,7 @@ export default function GuestOnboardingModal({
               marginBottom: '32px'
             }}
           >
-            {/* Left Skin Tone Palette Circles */}
+            {/* Left Skin Tone Palette Circles matching real_spot_after_continue.png */}
             <div
               style={{
                 position: 'absolute',
@@ -406,13 +412,16 @@ export default function GuestOnboardingModal({
               {skinTones.map((tone, idx) => (
                 <button
                   key={idx}
-                  onClick={() => setSkinToneIndex(idx)}
+                  onClick={() => {
+                    setSkinToneIndex(idx);
+                    setCustomSkinColor('');
+                  }}
                   style={{
-                    width: '30px',
-                    height: '30px',
+                    width: '32px',
+                    height: '32px',
                     borderRadius: '50%',
                     background: tone,
-                    border: skinToneIndex === idx ? '3px solid #0091ff' : '2px solid #ffffff',
+                    border: skinToneIndex === idx ? '3px solid #ffffff' : '2px solid #ffffff',
                     boxShadow: skinToneIndex === idx ? '0 0 0 2px #0091ff' : '0 1px 3px rgba(0,0,0,0.15)',
                     cursor: 'pointer',
                     padding: 0,
@@ -421,107 +430,60 @@ export default function GuestOnboardingModal({
                   }}
                 />
               ))}
+
+              {/* 6th Dotted Custom Color Button */}
+              <button
+                title="Custom Skin Color"
+                onClick={() => colorPickerRef.current?.click()}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: customSkinColor || '#fafafa',
+                  border: skinToneIndex === -1 ? '2px solid #0091ff' : '1.5px dashed #9ca3af',
+                  boxShadow: skinToneIndex === -1 ? '0 0 0 2px #0091ff' : 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: 0,
+                  outline: 'none'
+                }}
+              >
+                {!customSkinColor && <span style={{ fontSize: '13px', color: '#9ca3af', fontWeight: 600 }}>+</span>}
+                <input
+                  ref={colorPickerRef}
+                  type="color"
+                  value={customSkinColor || skinTones[skinToneIndex] || '#ba8659'}
+                  onChange={(e) => {
+                    setCustomSkinColor(e.target.value);
+                    setSkinToneIndex(-1);
+                  }}
+                  style={{ opacity: 0, position: 'absolute', width: 0, height: 0, pointerEvents: 'none' }}
+                />
+              </button>
             </div>
 
-            {/* Center 3D Avatar Rendering */}
+            {/* Center Interactive 3D Avatar WebGL Canvas */}
             <div
               style={{
-                width: '180px',
-                height: '320px',
+                width: '260px',
+                height: '340px',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transform: `rotate(${avatarRotation}deg)`,
-                transition: 'transform 0.25s ease'
+                position: 'relative'
               }}
             >
-              {/* Head & Hair */}
-              <div
-                style={{
-                  width: '64px',
-                  height: '72px',
-                  borderRadius: '32px 32px 28px 28px',
-                  background: skinTones[skinToneIndex],
-                  position: 'relative',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '-6px',
-                    left: '-6px',
-                    right: '-6px',
-                    height: '42px',
-                    background: '#18181b',
-                    borderRadius: '34px 34px 10px 10px'
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '36px',
-                    left: '16px',
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: '#14C939'
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '36px',
-                    right: '16px',
-                    width: '7px',
-                    height: '7px',
-                    borderRadius: '50%',
-                    background: '#14C939'
-                  }}
-                />
-              </div>
-
-              {/* Upper Body Shirt */}
-              <div
-                style={{
-                  width: '74px',
-                  height: '85px',
-                  background: avatarGender === 'male' ? '#93c5fd' : '#f472b6',
-                  borderRadius: '12px 12px 6px 6px',
-                  marginTop: '4px',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  paddingTop: '8px',
-                  position: 'relative',
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.08)'
-                }}
-              >
-                <div style={{ width: '2px', height: '100%', background: 'rgba(0,0,0,0.1)' }} />
-              </div>
-
-              {/* Pants */}
-              <div
-                style={{
-                  width: '64px',
-                  height: '95px',
-                  display: 'flex',
-                  gap: '6px',
-                  marginTop: '-2px'
-                }}
-              >
-                <div style={{ flex: 1, background: '#1e3a8a', borderRadius: '4px 4px 6px 6px' }} />
-                <div style={{ flex: 1, background: '#1e3a8a', borderRadius: '4px 4px 6px 6px' }} />
-              </div>
-
-              {/* Shoes */}
-              <div style={{ width: '68px', display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
-                <div style={{ width: '28px', height: '12px', background: '#e2e8f0', borderRadius: '4px' }} />
-                <div style={{ width: '28px', height: '12px', background: '#e2e8f0', borderRadius: '4px' }} />
-              </div>
+              <AvatarPreview3D
+                skinColor={skinToneIndex === -1 ? (customSkinColor || '#ba8659') : skinTones[skinToneIndex]}
+                gender={avatarGender}
+                rotationAngle={avatarRotation}
+                onRotationChange={(deg) => setAvatarRotation(deg)}
+              />
             </div>
 
-            {/* Right Controls */}
+            {/* Right Controls matching real_spot_after_continue.png */}
             <div
               style={{
                 position: 'absolute',
@@ -532,44 +494,57 @@ export default function GuestOnboardingModal({
                 zIndex: 10
               }}
             >
+              {/* Female Figure Silhouette Button */}
               <button
                 onClick={() => setAvatarGender('female')}
-                title="Female"
+                title="Feminine Style"
                 style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  background: avatarGender === 'female' ? '#f0fdf4' : '#ffffff',
-                  border: avatarGender === 'female' ? '2px solid #14C939' : '1px solid #e5e7eb',
+                  background: '#ffffff',
+                  border: avatarGender === 'female' ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                  boxShadow: avatarGender === 'female' ? '0 0 0 1px #0091ff' : '0 1px 2px rgba(0,0,0,0.05)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '16px'
+                  transition: 'all 0.15s ease'
                 }}
               >
-                👩
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={avatarGender === 'female' ? '#111827' : '#9ca3af'}>
+                  <circle cx="12" cy="6" r="3.2" />
+                  <path d="M12 10.5C9 10.5 7 12.8 7 15.5V22H17V15.5C17 12.8 15 10.5 12 10.5Z" />
+                  <path d="M7 6C6.5 7.5 6.5 9 7.2 10.5C7.8 9.5 8.5 8.8 9 8.5C8 7.5 7.5 6.8 7 6Z" />
+                  <path d="M17 6C17.5 7.5 17.5 9 16.8 10.5C16.2 9.5 15.5 8.8 15 8.5C16 7.5 16.5 6.8 17 6Z" />
+                </svg>
               </button>
 
+              {/* Male Figure Silhouette Button */}
               <button
                 onClick={() => setAvatarGender('male')}
-                title="Male"
+                title="Masculine Style"
                 style={{
                   width: '38px',
                   height: '38px',
                   borderRadius: '50%',
-                  background: avatarGender === 'male' ? '#f0fdf4' : '#ffffff',
-                  border: avatarGender === 'male' ? '2px solid #14C939' : '1px solid #e5e7eb',
+                  background: '#ffffff',
+                  border: avatarGender === 'male' ? '2px solid #0091ff' : '1px solid #e5e7eb',
+                  boxShadow: avatarGender === 'male' ? '0 0 0 1px #0091ff' : '0 1px 2px rgba(0,0,0,0.05)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '16px'
+                  transition: 'all 0.15s ease'
                 }}
               >
-                👨
+                <svg width="20" height="20" viewBox="0 0 24 24" fill={avatarGender === 'male' ? '#111827' : '#9ca3af'}>
+                  <circle cx="12" cy="5.8" r="3.2" />
+                  <path d="M12 10.5C8.8 10.5 6.2 13 6.2 16.2V22H17.8V16.2C17.8 13 15.2 10.5 12 10.5Z" />
+                </svg>
               </button>
 
+              {/* Rotate Right 45° */}
               <button
                 onClick={() => setAvatarRotation((r) => (r + 45) % 360)}
                 title="Rotate Right"
@@ -579,15 +554,18 @@ export default function GuestOnboardingModal({
                   borderRadius: '50%',
                   background: '#ffffff',
                   border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <ChevronRight size={18} color="#4b5563" />
+                <ArrowRight size={18} color="#4b5563" />
               </button>
 
+              {/* Rotate Left 45° */}
               <button
                 onClick={() => setAvatarRotation((r) => (r - 45 + 360) % 360)}
                 title="Rotate Left"
@@ -597,13 +575,15 @@ export default function GuestOnboardingModal({
                   borderRadius: '50%',
                   background: '#ffffff',
                   border: '1px solid #e5e7eb',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease'
                 }}
               >
-                <ChevronLeft size={18} color="#4b5563" />
+                <ArrowLeft size={18} color="#4b5563" />
               </button>
             </div>
           </div>
