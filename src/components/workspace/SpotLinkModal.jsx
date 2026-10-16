@@ -12,6 +12,7 @@ export default function SpotLinkModal({
   currentRoom = 'Conference Room B',
   workspaceSlug = '@sunnkesh-4c24f4f3d747fffc',
   spaceSlug = '@office',
+  userName = 'Ayush',
   onTeleportToRoom
 }) {
   const [copied, setCopied] = useState(false);
@@ -20,15 +21,32 @@ export default function SpotLinkModal({
 
   if (!isOpen) return null;
 
-  // Format room slug
-  const roomSlug = currentRoom.toLowerCase().includes('conference') ? '@conference-b'
-    : currentRoom.toLowerCase().includes('huddle') ? '@huddle'
-    : currentRoom.toLowerCase().includes('cafe') ? '@cafe'
-    : currentRoom.toLowerCase().includes('desks') ? '@engineering'
-    : '@workspace';
+  // Format room slug matching canonical office rooms
+  const cleanRoom = (currentRoom || '').toLowerCase();
+  let roomSlug = '@boardroom';
+  if (cleanRoom.includes('auditorium')) roomSlug = '@auditorium';
+  else if (cleanRoom.includes('boardroom')) roomSlug = '@boardroom';
+  else if (cleanRoom.includes('conference-b') || cleanRoom.includes('conference b')) roomSlug = '@conference-b';
+  else if (cleanRoom.includes('conference-a') || cleanRoom.includes('conference a')) roomSlug = '@conference-a';
+  else if (cleanRoom.includes('chat-a') || cleanRoom.includes('chat a')) roomSlug = '@chat-a';
+  else if (cleanRoom.includes('chat-b') || cleanRoom.includes('chat b')) roomSlug = '@chat-b';
+  else if (cleanRoom.includes('cubicle-1') || cleanRoom.includes('cubicle 1')) roomSlug = '@cubicle-1';
+  else if (cleanRoom.includes('cubicle-2') || cleanRoom.includes('cubicle 2')) roomSlug = '@cubicle-2';
+  else if (cleanRoom.includes('patio')) roomSlug = '@patio';
+  else if (cleanRoom.includes('lobby')) roomSlug = '@lobby';
+  else if (cleanRoom.includes('lounge-a') || cleanRoom.includes('lounge a')) roomSlug = '@lounge-a';
+  else if (cleanRoom.includes('lounge-b') || cleanRoom.includes('lounge b')) roomSlug = '@lounge-b';
+  else if (cleanRoom.includes('lounge-c') || cleanRoom.includes('lounge c')) roomSlug = '@lounge-c';
+  else if (cleanRoom.includes('workspace')) roomSlug = '@workspace-a';
 
-  const spotOriginUrl = `https://spotvirtual.com/${workspaceSlug}/${spaceSlug}/${roomSlug}`;
-  const deployedShareUrl = `https://spot-virtual.vercel.app/${workspaceSlug}/${spaceSlug}/${roomSlug}`;
+  const cleanOrg = workspaceSlug.startsWith('@') ? workspaceSlug : `@${workspaceSlug}`;
+  const cleanSpace = spaceSlug.startsWith('@') ? spaceSlug : `@${spaceSlug}`;
+  const inviteQuery = `?invitedBy=${encodeURIComponent(userName)}`;
+
+  const spotOriginUrl = `https://spotvirtual.com/${cleanOrg}/${cleanSpace}/${roomSlug}${inviteQuery}`;
+  const deployedShareUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/#/${cleanOrg}/${cleanSpace}/${roomSlug}${inviteQuery}`
+    : `https://spot-virtual.vercel.app/#/${cleanOrg}/${cleanSpace}/${roomSlug}${inviteQuery}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(deployedShareUrl);
@@ -42,20 +60,23 @@ export default function SpotLinkModal({
 
     try {
       // Parse any Spot URL
-      const clean = inputUrl.trim();
-      let targetRoomName = 'Conference Room B';
+      const clean = inputUrl.trim().toLowerCase();
+      let targetRoomName = 'Boardroom';
 
-      if (clean.includes('conference-b') || clean.includes('conference')) {
-        targetRoomName = 'Conference Room B';
-      } else if (clean.includes('huddle')) {
-        targetRoomName = 'Round Table Huddle';
-      } else if (clean.includes('cafe') || clean.includes('bar')) {
-        targetRoomName = 'Cafe / Bar';
-      } else if (clean.includes('desk') || clean.includes('engineering')) {
-        targetRoomName = 'Engineering Desks';
-      } else if (clean.includes('all-hands') || clean.includes('workspace')) {
-        targetRoomName = 'All-Hands Table';
-      }
+      if (clean.includes('auditorium')) targetRoomName = 'Auditorium';
+      else if (clean.includes('boardroom')) targetRoomName = 'Boardroom';
+      else if (clean.includes('conference-b')) targetRoomName = 'Conference B';
+      else if (clean.includes('conference-a')) targetRoomName = 'Conference A';
+      else if (clean.includes('chat-a')) targetRoomName = 'Chat A';
+      else if (clean.includes('chat-b')) targetRoomName = 'Chat B';
+      else if (clean.includes('cubicle-1')) targetRoomName = 'Focus Cubicle 1';
+      else if (clean.includes('cubicle-2')) targetRoomName = 'Focus Cubicle 2';
+      else if (clean.includes('patio')) targetRoomName = 'Patio';
+      else if (clean.includes('lobby')) targetRoomName = 'Lobby';
+      else if (clean.includes('workspace')) targetRoomName = 'Workspace A';
+      else if (clean.includes('lounge-a')) targetRoomName = 'Lounge A';
+      else if (clean.includes('lounge-b')) targetRoomName = 'Lounge B';
+      else if (clean.includes('lounge-c')) targetRoomName = 'Lounge C';
 
       onTeleportToRoom(targetRoomName);
       onClose();

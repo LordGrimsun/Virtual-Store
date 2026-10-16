@@ -370,16 +370,76 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     return doorGroup;
   };
 
+  // Helper: Interactive Single Doorway for private focus cubicles & chat booths
+  const createSingleDoor = (x, z, rotY = 0) => {
+    const doorGroup = new THREE.Group();
+    doorGroup.name = 'doorway_group';
+
+    // Single door frame
+    const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
+    frameLeft.position.set(-0.75, 1.2, 0);
+    doorGroup.add(frameLeft);
+
+    const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
+    frameRight.position.set(0.75, 1.2, 0);
+    doorGroup.add(frameRight);
+
+    const frameTop = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.1, 0.36), materials.doorFrameMat);
+    frameTop.position.set(0, 2.4, 0);
+    doorGroup.add(frameTop);
+
+    // Single Door Leaf mounted on Hinge Pivot at -0.70
+    const doorPivot = new THREE.Group();
+    doorPivot.position.set(-0.70, 0, 0);
+
+    const doorLeaf = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.08), materials.doorMat);
+    doorLeaf.position.set(0.68, 1.14, 0);
+    doorLeaf.castShadow = true;
+    doorLeaf.name = 'interactive_door_leaf';
+    doorPivot.add(doorLeaf);
+
+    // Brass handles on interior and exterior
+    [-0.055, 0.055].forEach((hz) => {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.40, 12), materials.brassHandleMat);
+      handle.rotation.z = Math.PI / 2;
+      handle.position.set(1.20, 1.05, hz);
+      handle.name = 'interactive_door_leaf';
+      doorPivot.add(handle);
+    });
+
+    doorGroup.add(doorPivot);
+    doorGroup.position.set(x, 0, z);
+    doorGroup.rotation.y = rotY;
+
+    doorGroup.userData = {
+      isInteractiveDoor: true,
+      isOpen: false,
+      currentAngle: 0,
+      targetAngle: 0,
+      doorLPivot: doorPivot,
+      doorRPivot: null,
+      center: new THREE.Vector3(x, 1.2, z),
+      width: 1.5,
+      depth: 0.4,
+      toggleDoor: (forceOpen) => {
+        const nextState = forceOpen !== undefined ? forceOpen : !doorGroup.userData.isOpen;
+        doorGroup.userData.isOpen = nextState;
+        doorGroup.userData.targetAngle = nextState ? Math.PI * 0.48 : 0;
+        return nextState;
+      }
+    };
+
+    environmentGroup.add(doorGroup);
+    doorsList.push(doorGroup);
+    return doorGroup;
+  };
+
   // 5. Build the Exact 12-Room Wall Blueprint (media_1791969443822.png)
   // Overall interior dimensions: X = [-32, +32], Z = [-24, +24]
 
   // Outer Perimeter Walls:
-  // South Wall (Z = +24): Glass clerestory looking out onto the south sidewalk/trees!
-  // North Wall (Z = -24): Glass clerestory looking out onto Seattle street!
-  // West Wall (Z = -32): Solid exterior wall + monolith
-  createWall(-32, 0, WALL_THICKNESS, 48);
-  // East Wall (Z = +32): Solid exterior wall
-  createWall(32, 0, WALL_THICKNESS, 48);
+  createWall(-32, 0, WALL_THICKNESS, 48); // West Wall
+  createWall(32, 0, WALL_THICKNESS, 48);  // East Wall
 
   // Transparent Clerestory Windows with mullions on North & South Perimeters
   const createClerestoryFacade = (zPos) => {
@@ -405,25 +465,36 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   // Internal Horizontal Dividers:
   // Divider between Row 3 (North) and Row 2 (Middle): Z = -8
-  // Patio partition (X = -32 to -14)
-  createWall(-23, -8, 18, WALL_THICKNESS);
+  // Patio partition (X = -32 to -14) with double doors leading out to terrace
+  createWall(-28, -8, 8, WALL_THICKNESS);
+  createDoubleDoor(-22, -8, 0); // Double doors into Patio Terrace
+  createWall(-16.5, -8, 5, WALL_THICKNESS);
+
   // Workspace A partition (X = -14 to +14, with entryway openings at -3 and +3)
   createWall(-8.5, -8, 11, WALL_THICKNESS);
   createWall(8.5, -8, 11, WALL_THICKNESS);
-  // Lobby partition (X = +14 to +32, with doorway)
-  createWall(23, -8, 18, WALL_THICKNESS);
+
+  // Lobby partition (X = +14 to +32, with double doors)
+  createWall(17.5, -8, 7, WALL_THICKNESS);
+  createDoubleDoor(23, -8, 0); // Double doors into Lobby
+  createWall(28.5, -8, 7, WALL_THICKNESS);
 
   // Divider between Row 2 (Middle) and Row 1 (South): Z = +8
-  // Auditorium north wall (X = -32 to -16)
-  createWall(-24, 8, 16, WALL_THICKNESS);
+  // Auditorium north wall with double doors (X = -32 to -16):
+  createWall(-29, 8, 6, WALL_THICKNESS);
+  createDoubleDoor(-24, 8, 0); // Double doors into Auditorium
+  createWall(-18.5, 8, 5, WALL_THICKNESS);
+
   // Boardroom north wall with double door (X = -16 to -2):
   createWall(-14, 8, 4, WALL_THICKNESS);
   createDoubleDoor(-9, 8, 0); // Double doors into Boardroom
   createWall(-4, 8, 4, WALL_THICKNESS);
+
   // Conference B north wall with double door (X = -2 to +12):
   createWall(0.5, 8, 5, WALL_THICKNESS);
   createDoubleDoor(5, 8, 0);  // Double doors into Conference B
   createWall(9.5, 8, 5, WALL_THICKNESS);
+
   // Conference A north wall with double door (X = +12 to +26):
   createWall(14.5, 8, 5, WALL_THICKNESS);
   createDoubleDoor(19, 8, 0); // Double doors into Conference A
@@ -447,18 +518,37 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   // In Row 2 (Middle Row):
   // Between Lounge C and Lounge B (X = -10, Z = -8 to +8, with central open portal)
-  createWall(-10, -5, WALL_THICKNESS, 6);
-  createWall(-10, 5, WALL_THICKNESS, 6);
+  createWall(-10, -5.5, WALL_THICKNESS, 5);
+  createWall(-10, 5.5, WALL_THICKNESS, 5);
 
-  // Chat A and Chat B Private Booth Enclosures (X: +8 to +16):
-  // West wall of Chat pods (X = +8, Z = -8 to +8)
-  createWall(8, -4, WALL_THICKNESS, 8);
-  createWall(8, 4, WALL_THICKNESS, 8);
+  // Chat A and Chat B Private Booth Enclosures (X: +8 to +16) with Single Doors:
+  createWall(8, -6.5, WALL_THICKNESS, 3);
+  createSingleDoor(8, -4, Math.PI / 2); // Single door into Chat A
+  createWall(8, -1.5, WALL_THICKNESS, 3);
+
+  createWall(8, 1.5, WALL_THICKNESS, 3);
+  createSingleDoor(8, 4, Math.PI / 2);  // Single door into Chat B
+  createWall(8, 6.5, WALL_THICKNESS, 3);
+
   // Partition dividing Chat A and Chat B (Z = 0, X = +8 to +16)
   createWall(12, 0, 8, WALL_THICKNESS);
+
   // East wall of Chat pods (X = +16, Z = -8 to +8)
   createWall(16, -4, WALL_THICKNESS, 8);
   createWall(16, 4, WALL_THICKNESS, 8);
+
+  // Dedicated Coworking Focus Cubicles in Lounge C:
+  // Cubicle 1 (North pod at Z = -4, X = -17 to -12)
+  createWall(-14.5, -2.0, 5.0, WALL_THICKNESS); // South divider
+  createWall(-12, -4.8, WALL_THICKNESS, 1.8);
+  createSingleDoor(-12, -3.4, Math.PI / 2);      // Private door to Cubicle 1
+  createWall(-12, -2.2, WALL_THICKNESS, 0.6);
+
+  // Cubicle 2 (South pod at Z = +4, X = -17 to -12)
+  createWall(-14.5, 2.0, 5.0, WALL_THICKNESS);  // North divider
+  createWall(-12, 2.2, WALL_THICKNESS, 0.6);
+  createSingleDoor(-12, 3.4, Math.PI / 2);       // Private door to Cubicle 2
+  createWall(-12, 4.8, WALL_THICKNESS, 1.8);
 
   // Door openings into Chat A and Chat B (sliding glass / open portal)
   // Lounge A is located to the right of Chat A & B (X = +16 to +32, Z = -8 to +8)

@@ -35,6 +35,8 @@ export default function SpacesSidebar({
     { id: 'chat-b', name: 'Chat B', badge: null },
     { id: 'conference-a', name: 'Conference A', badge: null },
     { id: 'conference-b', name: 'Conference B', badge: null },
+    { id: 'cubicle-1', name: 'Focus Cubicle 1', badge: '🎧' },
+    { id: 'cubicle-2', name: 'Focus Cubicle 2', badge: '🎧' },
     { id: 'lobby', name: 'Lobby', badge: '🌐', isGlobe: true },
     { id: 'lounge-a', name: 'Lounge A', badge: '((•))', isBroadcast: true },
     { id: 'lounge-b', name: 'Lounge B', badge: '((•))', isBroadcast: true },
@@ -86,6 +88,8 @@ export default function SpacesSidebar({
     if (clean.includes('chat b')) return 'chat-b';
     if (clean.includes('conference a')) return 'conference-a';
     if (clean.includes('conference b')) return 'conference-b';
+    if (clean.includes('cubicle 1') || clean.includes('cubicle-1')) return 'cubicle-1';
+    if (clean.includes('cubicle 2') || clean.includes('cubicle-2')) return 'cubicle-2';
     if (clean.includes('lobby')) return 'lobby';
     if (clean.includes('lounge a')) return 'lounge-a';
     if (clean.includes('lounge b')) return 'lounge-b';

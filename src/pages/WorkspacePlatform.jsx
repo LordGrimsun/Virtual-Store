@@ -21,6 +21,7 @@ import ConnectFourWidget from '../components/workspace/widgets/ConnectFourWidget
 import SpinWheelWidget from '../components/workspace/widgets/SpinWheelWidget';
 import WatercoolerWidget from '../components/workspace/widgets/WatercoolerWidget';
 import SpotLinkModal from '../components/workspace/SpotLinkModal';
+import ChessGameWidget from '../components/workspace/widgets/ChessGameWidget';
 
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
@@ -76,6 +77,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isSpinWheelOpen, setIsSpinWheelOpen] = useState(false);
   const [isWatercoolerOpen, setIsWatercoolerOpen] = useState(false);
   const [isSpotLinkModalOpen, setIsSpotLinkModalOpen] = useState(false);
+  const [isChessOpen, setIsChessOpen] = useState(false);
 
   // Interactive Object Modals
   const [activeModal, setActiveModal] = useState(null);
@@ -611,6 +613,12 @@ export default function WorkspacePlatform({ user, onExit }) {
         setShowNameplates((prev) => !prev);
       }
 
+      if (e.code === 'Escape') {
+        if (showcaseScreenRef.current) {
+          exitShowcaseScreen();
+        }
+      }
+
       if (e.code === 'Space' && !e.repeat) {
         e.preventDefault();
         setPushToTalkActive(true);
@@ -873,6 +881,14 @@ export default function WorkspacePlatform({ user, onExit }) {
           target.set(-23, 0, -16);
           slug = 'patio';
           formattedName = 'Patio';
+        } else if (clean.includes('cubicle-1') || clean.includes('cubicle 1')) {
+          target.set(-12, 0, -3.4);
+          slug = 'cubicle-1';
+          formattedName = 'Focus Cubicle 1';
+        } else if (clean.includes('cubicle-2') || clean.includes('cubicle 2')) {
+          target.set(-12, 0, 3.4);
+          slug = 'cubicle-2';
+          formattedName = 'Focus Cubicle 2';
         } else if (clean.includes('workspace')) {
           target.set(0, 0, -16);
           slug = 'workspace-a';
@@ -995,6 +1011,11 @@ export default function WorkspacePlatform({ user, onExit }) {
               setIsWatercoolerOpen(true);
               return;
             }
+            if (clickedObj.name === 'clickable_chessboard' || clickedObj.userData?.isChessboard) {
+              playSound('chime');
+              setIsChessOpen(true);
+              return;
+            }
             if (clickedObj.name === 'confAudioPuck') {
               playSound('click');
               setIsMuted((prev) => !prev);
@@ -1023,7 +1044,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             if (doorObj.userData?.isInteractiveDoor || doorObj.name === 'doorway_group') {
               playSound('click');
               const nowOpen = doorObj.userData?.toggleDoor ? doorObj.userData.toggleDoor() : false;
-              setToastMessage(nowOpen ? 'Opened office double door! 🚪' : 'Closed office double door! 🚪');
+              setToastMessage(nowOpen ? 'Opened office door! 🚪' : 'Closed office door! 🚪');
               setTimeout(() => setToastMessage(null), 2500);
               return;
             }
@@ -1031,7 +1052,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
         }
 
-        // Priority 3: Responsive Click-to-Sit on chairs, armchairs, and sofas
+        // Priority 3: Responsive Click-to-Sit on chairs, armchairs, and sofas (zero fluctuation snap)
         for (let i = 0; i < Math.min(intersects.length, 6); i++) {
           let chairObj = intersects[i].object;
           while (chairObj && chairObj !== scene) {
@@ -1041,7 +1062,11 @@ export default function WorkspacePlatform({ user, onExit }) {
               const seatHeight = chairObj.userData?.seatHeight ?? 0.46;
               if (chairPos) {
                 playSound('click');
-                targetPosRef.current.copy(chairPos);
+                if (playerMeshRef.current) {
+                  playerMeshRef.current.position.set(chairPos.x, seatHeight - 0.40, chairPos.z);
+                  playerMeshRef.current.rotation.y = chairRotY;
+                }
+                targetPosRef.current.set(chairPos.x, 0, chairPos.z);
                 chairRotYRef.current = chairRotY;
                 seatHeightRef.current = seatHeight;
                 isSittingRef.current = true;
@@ -1054,9 +1079,16 @@ export default function WorkspacePlatform({ user, onExit }) {
 
               if (nearestChair && nearestChair.dist < 5.0) {
                 playSound('click');
-                targetPosRef.current.copy(nearestChair.chair.pos);
-                chairRotYRef.current = nearestChair.chair.rot ?? 0;
-                seatHeightRef.current = nearestChair.chair.seatHeight ?? 0.46;
+                const nPos = nearestChair.chair.pos;
+                const nRot = nearestChair.chair.rot ?? 0;
+                const nSeatHeight = nearestChair.chair.seatHeight ?? 0.46;
+                if (playerMeshRef.current) {
+                  playerMeshRef.current.position.set(nPos.x, nSeatHeight - 0.40, nPos.z);
+                  playerMeshRef.current.rotation.y = nRot;
+                }
+                targetPosRef.current.set(nPos.x, 0, nPos.z);
+                chairRotYRef.current = nRot;
+                seatHeightRef.current = nSeatHeight;
                 isSittingRef.current = true;
                 return;
               }
@@ -1066,11 +1098,14 @@ export default function WorkspacePlatform({ user, onExit }) {
         }
 
         const point = intersects[0].point;
+        if (isSittingRef.current && playerMeshRef.current) {
+          playerMeshRef.current.position.y = 0;
+        }
         targetPosRef.current.set(point.x, 0, point.z);
         isSittingRef.current = false;
         playSound('click');
 
-        // Authentic 12 canonical Spot rooms detection based on floor coordinates
+        // Authentic 12 canonical Spot rooms + Focus Cubicles detection based on floor coordinates
         let detectedRoom = 'Boardroom';
         let detectedSlug = 'boardroom';
 
@@ -1102,10 +1137,18 @@ export default function WorkspacePlatform({ user, onExit }) {
             detectedSlug = 'lobby';
           }
         } else {
-          // Central wing (Lounge C, Lounge B, Chat A, Chat B, Lounge A)
+          // Central wing (Focus Cubicles, Lounge C, Lounge B, Chat A, Chat B, Lounge A)
           if (point.x < -10) {
-            detectedRoom = 'Lounge C';
-            detectedSlug = 'lounge-c';
+            if (point.x >= -14.6 && point.x <= -9.4 && point.z >= -5.6 && point.z <= -1.2) {
+              detectedRoom = 'Focus Cubicle 1';
+              detectedSlug = 'cubicle-1';
+            } else if (point.x >= -14.6 && point.x <= -9.4 && point.z >= 1.2 && point.z <= 5.6) {
+              detectedRoom = 'Focus Cubicle 2';
+              detectedSlug = 'cubicle-2';
+            } else {
+              detectedRoom = 'Lounge C';
+              detectedSlug = 'lounge-c';
+            }
           } else if (point.x < 10) {
             detectedRoom = 'Lounge B';
             detectedSlug = 'lounge-b';
@@ -1156,14 +1199,16 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (doors && doors.length > 0) {
         for (let d = 0; d < doors.length; d++) {
           const dg = doors[d];
-          if (dg.userData?.doorLPivot && dg.userData?.doorRPivot) {
+          if (dg.userData?.doorLPivot) {
             dg.userData.currentAngle = THREE.MathUtils.lerp(
               dg.userData.currentAngle,
               dg.userData.targetAngle || 0,
               0.14
             );
             dg.userData.doorLPivot.rotation.y = -dg.userData.currentAngle;
-            dg.userData.doorRPivot.rotation.y = dg.userData.currentAngle;
+            if (dg.userData.doorRPivot) {
+              dg.userData.doorRPivot.rotation.y = dg.userData.currentAngle;
+            }
           }
 
           if (playerMeshRef.current && dg.userData?.center) {
@@ -1256,6 +1301,15 @@ export default function WorkspacePlatform({ user, onExit }) {
 
         if (moveVec.lengthSq() > 0) {
           moveVec.normalize();
+          if (isSittingRef.current) {
+            isSittingRef.current = false;
+            const forwardX = Math.sin(player.rotation.y) * 0.45;
+            const forwardZ = Math.cos(player.rotation.y) * 0.45;
+            player.position.x += forwardX;
+            player.position.z += forwardZ;
+            player.position.y = 0;
+            targetPosRef.current.copy(player.position);
+          }
           const stepX = moveVec.x * delta * 6.5;
           const stepZ = moveVec.z * delta * 6.5;
           const resolved = resolveWallCollision(player.position.x, player.position.z, stepX, stepZ);
@@ -1292,7 +1346,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           avatarSystem.applyAvatarPose(parts, { isMoving: true, walkCycle });
         } else if (isSittingRef.current) {
           // Seated pose on chair cushion naturally with knee bend and outward orientation
-          player.position.y = (seatHeightRef.current || 0.46) - 0.64;
+          player.position.y = (seatHeightRef.current || 0.46) - 0.40;
           player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, chairRotYRef.current, 0.25);
           avatarSystem.applyAvatarPose(parts, { isSitting: true });
         } else {
@@ -1328,15 +1382,53 @@ export default function WorkspacePlatform({ user, onExit }) {
         });
         setScreenAvatars(projected);
 
-        // Proximity Detection
+        // Proximity Detection with Acoustic Zone Isolation
         if (playerMeshRef.current) {
           const pPos = playerMeshRef.current.position;
+
+          const getAcousticZone = (pos) => {
+            const { x, z } = pos;
+            if (x >= -14.6 && x <= -9.4 && z >= -5.6 && z <= -1.2) return 'cubicle-1';
+            if (x >= -14.6 && x <= -9.4 && z >= 1.2 && z <= 5.6) return 'cubicle-2';
+            if (z > 8) {
+              if (x < -18) return 'auditorium';
+              if (x < -2) return 'boardroom';
+              if (x < 12) return 'conference-b';
+              return 'conference-a';
+            }
+            if (x >= 4 && x <= 16) {
+              if (z >= -7 && z <= -1) return 'chat-a';
+              if (z >= 1 && z <= 7) return 'chat-b';
+            }
+            if (z < -8) {
+              if (x < -12) return 'patio';
+              if (x < 10) return 'workspace-a';
+              return 'lobby';
+            }
+            return 'open-floor';
+          };
+
+          const playerZone = getAcousticZone(pPos);
+          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'conference-a', 'chat-a', 'chat-b'];
+          const isPlayerInPrivateRoom = privateZones.includes(playerZone);
+
           const nearby = [];
           avatarsRef.current.forEach((av) => {
-            if (!av.isPlayer) {
-              const d = pPos.distanceTo(av.mesh.position);
-              if (d < spatialFalloff) {
-                nearby.push(av.name.replace(' (AI)', ''));
+            if (!av.isPlayer && av.mesh) {
+              const avZone = getAcousticZone(av.mesh.position);
+              const isAvInPrivateRoom = privateZones.includes(avZone);
+
+              if (isPlayerInPrivateRoom) {
+                if (avZone === playerZone) {
+                  nearby.push(av.name.replace(' (AI)', ''));
+                }
+              } else {
+                if (!isAvInPrivateRoom) {
+                  const d = pPos.distanceTo(av.mesh.position);
+                  if (d < spatialFalloff) {
+                    nearby.push(av.name.replace(' (AI)', ''));
+                  }
+                }
               }
             }
           });
@@ -1379,12 +1471,13 @@ export default function WorkspacePlatform({ user, onExit }) {
           const screenRot = screenMesh.getWorldQuaternion(new THREE.Quaternion());
           const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(screenRot);
           const sWidth = screenMesh.userData?.width || 4.8;
-          const viewDist = Math.max(3.2, sWidth * 1.35);
+          const sHeight = screenMesh.userData?.height || 2.7;
+          const viewDist = Math.max(2.6, Math.min(sWidth * 1.05, 11.5));
           const camTargetPos = sPos.clone().addScaledVector(normal, viewDist);
-          camTargetPos.y = Math.max(1.6, sPos.y);
+          camTargetPos.y = sPos.y + Math.max(1.1, sHeight * 0.22);
 
           camera.position.lerp(camTargetPos, 0.08);
-          camera.lookAt(sPos);
+          camera.lookAt(sPos.x, sPos.y, sPos.z);
         } else if (isTopDownBlueprint) {
           camera.position.lerp(new THREE.Vector3(0, 68, 0), 0.08);
           camera.lookAt(0, 0, 0);
@@ -1450,6 +1543,23 @@ export default function WorkspacePlatform({ user, onExit }) {
         }
       }
 
+      // Avatar Translucency during Screen Showcase: prevents avatar heads and bodies from ever blocking the screen
+      const isShowcaseActive = Boolean(showcaseScreenRef.current?.mesh);
+      avatarsRef.current.forEach((av) => {
+        if (av.mesh) {
+          av.mesh.traverse((child) => {
+            if (child.isMesh && child.material && !child.userData?.isSpotScreen) {
+              const targetOpacity = isShowcaseActive ? 0.20 : 1.0;
+              const mat = child.material;
+              if (Math.abs(mat.opacity - targetOpacity) > 0.02) {
+                mat.transparent = true;
+                mat.opacity = THREE.MathUtils.lerp(mat.opacity, targetOpacity, 0.25);
+              }
+            }
+          });
+        }
+      });
+
       renderer.render(scene, camera);
     };
 
@@ -1495,7 +1605,7 @@ export default function WorkspacePlatform({ user, onExit }) {
         isSittingRef.current = true;
         if (playerMeshRef.current) {
           playerMeshRef.current.position.copy(found.pos);
-          playerMeshRef.current.position.y = (found.seatHeight ?? 0.46) - 0.64;
+          playerMeshRef.current.position.y = (found.seatHeight ?? 0.46) - 0.40;
           playerMeshRef.current.rotation.y = found.rot ?? 0;
         }
         return found;
@@ -1503,15 +1613,31 @@ export default function WorkspacePlatform({ user, onExit }) {
       return null;
     };
 
-    // Mouse Wheel Zoom: Smooth distance adjustment between 6 and 38
+    window.__spotJumpToRoom = (roomName) => {
+      jumpToRoom(roomName);
+    };
+
+    window.__spotOpenChess = () => {
+      setIsChessOpen(true);
+    };
+
+    window.__spotCloseChess = () => {
+      setIsChessOpen(false);
+    };
+
+    window.__spotOpenInvite = () => {
+      setIsSpotLinkModalOpen(true);
+    };
+
+    window.__spotCloseInvite = () => {
+      setIsSpotLinkModalOpen(false);
+    };
+
+    // Mouse Wheel Zoom: Smooth distance adjustment between 2.5 and 38
     const handleWheel = (e) => {
       e.preventDefault();
-      if (showcaseScreenRef.current) {
-        showcaseScreenRef.current = null;
-        setShowcaseScreenTarget(null);
-      }
       const zoomFactor = e.deltaY * 0.025;
-      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 6, 38);
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 2.5, 38);
     };
 
     // Mouse Orbit Dragging (Primary Left-Click Drag, Middle, Right, or Trackpad)
@@ -1660,6 +1786,14 @@ export default function WorkspacePlatform({ user, onExit }) {
       target.set(-23, 0, -16);
       slug = 'patio';
       formattedName = 'Patio';
+    } else if (clean.includes('cubicle-1') || clean.includes('cubicle 1')) {
+      target.set(-12, 0, -3.4);
+      slug = 'cubicle-1';
+      formattedName = 'Focus Cubicle 1';
+    } else if (clean.includes('cubicle-2') || clean.includes('cubicle 2')) {
+      target.set(-12, 0, 3.4);
+      slug = 'cubicle-2';
+      formattedName = 'Focus Cubicle 2';
     } else if (clean.includes('workspace')) {
       target.set(0, 0, -16);
       slug = 'workspace-a';
@@ -3769,12 +3903,19 @@ export default function WorkspacePlatform({ user, onExit }) {
           onClose={() => setIsWatercoolerOpen(false)}
         />
 
-        {/* 14. Spot Room Link Modal & Deep Link Teleport */}
+        {/* 14. Terrace Giant Chessboard Widget (spotvirtual.com ChessGameWidget) */}
+        <ChessGameWidget
+          isOpen={isChessOpen}
+          onClose={() => setIsChessOpen(false)}
+        />
+
+        {/* 15. Spot Room Link Modal & Deep Link Teleport */}
         <SpotLinkModal
           isOpen={isSpotLinkModalOpen}
           onClose={() => setIsSpotLinkModalOpen(false)}
           currentRoom={currentRoom}
           workspaceSlug={workspaceSlug}
+          userName={userName}
           onTeleportToRoom={jumpToRoom}
         />
       </main>

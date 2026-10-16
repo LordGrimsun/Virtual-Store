@@ -20,11 +20,14 @@ export default function GuestOnboardingModal({
   spaceSlug = 'office',
   roomName = 'Lobby',
   roomSlug = 'lobby',
+  invitedBy = '',
   onComplete,
   onClose
 }) {
-  const [step, setStep] = useState('join'); // 'join' | 'customize-avatar' | 'setup-audio-video' | 'waiting-room'
+  const [step, setStep] = useState('join'); // 'join' | 'customize-avatar' | 'choose-area' | 'setup-audio-video' | 'waiting-room'
   const [fullName, setFullName] = useState('');
+  const [selectedRoomSlug, setSelectedRoomSlug] = useState(roomSlug || 'lobby');
+  const [selectedRoomName, setSelectedRoomName] = useState(roomName || 'Lobby');
   const [skinToneIndex, setSkinToneIndex] = useState(0); // Default peach skin (#f6d5be) matching reference image!
   const [customSkinColor, setCustomSkinColor] = useState('');
   const [avatarGender, setAvatarGender] = useState('male');
@@ -142,6 +145,10 @@ export default function GuestOnboardingModal({
   };
 
   const handleAvatarContinue = () => {
+    setStep('choose-area');
+  };
+
+  const handleAreaContinue = () => {
     setStep('setup-audio-video');
   };
 
@@ -170,7 +177,8 @@ export default function GuestOnboardingModal({
         isMicOn,
         isVideoOn: isCameraOn,
         spaceSlug,
-        roomSlug
+        roomSlug: selectedRoomSlug,
+        roomName: selectedRoomName
       });
     }
   };
@@ -271,6 +279,28 @@ export default function GuestOnboardingModal({
             }}
           >
             <SpotBrandHeader marginBottom="24px" />
+
+            {invitedBy && (
+              <div
+                style={{
+                  marginBottom: '20px',
+                  padding: '12px 16px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  color: '#15803d',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>👋</span>
+                <span>You were invited by <strong>{invitedBy}</strong> to join <strong>{roomName || 'the workspace'}</strong>!</span>
+              </div>
+            )}
 
             <h1
               style={{
@@ -1421,6 +1451,152 @@ export default function GuestOnboardingModal({
         );
       })()}
 
+      {/* ================= STEP 2.5: CHOOSE STARTING AREA ================= */}
+      {step === 'choose-area' && (
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '720px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '36px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center'
+          }}
+        >
+          <SpotBrandHeader marginBottom="16px" />
+
+          <h2
+            style={{
+              fontSize: '26px',
+              fontWeight: 700,
+              color: '#111827',
+              margin: '0 0 8px 0',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            Choose Your Starting Location
+          </h2>
+          <p
+            style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              margin: '0 0 24px 0',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            Select where your avatar will spawn inside the virtual office.
+          </p>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '12px',
+              width: '100%',
+              marginBottom: '28px'
+            }}
+          >
+            {[
+              { slug: 'auditorium', name: 'Auditorium', icon: '🎬', desc: 'Cinema Stage & Stadium Seating' },
+              { slug: 'boardroom', name: 'Boardroom', icon: '💼', desc: 'Executive Sofas & Starry Wall Screen' },
+              { slug: 'workspace-a', name: 'Workspace A', icon: '💻', desc: 'Team Desks & Facing Dual Monitors' },
+              { slug: 'conference-b', name: 'Conference B', icon: '📊', desc: 'Sprint Standup & White Sled Chairs' },
+              { slug: 'cubicle-1', name: 'Focus Cubicle 1', icon: '🎧', desc: 'Private Sound-Isolated Workstation' },
+              { slug: 'cubicle-2', name: 'Focus Cubicle 2', icon: '🎧', desc: 'Private Sound-Isolated Workstation' },
+              { slug: 'patio', name: 'Patio Terrace', icon: '♟️', desc: 'Interactive Chessboard & City Skyline' },
+              { slug: 'lobby', name: 'Lobby', icon: '🌐', desc: 'Reception & Visitor Greeting Area' },
+              { slug: 'lounge-c', name: 'Lounge C', icon: '☕', desc: 'Casual Breakout Sofas & Coffee Bar' }
+            ].map((area) => {
+              const isSelected = selectedRoomSlug === area.slug;
+              return (
+                <div
+                  key={area.slug}
+                  onClick={() => {
+                    setSelectedRoomSlug(area.slug);
+                    setSelectedRoomName(area.name);
+                  }}
+                  style={{
+                    padding: '16px 14px',
+                    borderRadius: '12px',
+                    border: isSelected ? '2px solid #10b981' : '1px solid #e2e8f0',
+                    background: isSelected ? '#f0fdf4' : '#ffffff',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? '0 4px 12px rgba(16, 185, 129, 0.15)' : '0 1px 3px rgba(0,0,0,0.02)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '24px' }}>{area.icon}</span>
+                    {isSelected && (
+                      <span style={{
+                        background: '#10b981',
+                        color: '#fff',
+                        borderRadius: '50%',
+                        width: '18px',
+                        height: '18px',
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: 700
+                      }}>✓</span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{area.name}</span>
+                  <span style={{ fontSize: '12px', color: '#64748b', lineHeight: 1.3 }}>{area.desc}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={handleAreaContinue}
+            style={{
+              width: '100%',
+              maxWidth: '320px',
+              height: '46px',
+              background: '#14C939',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '15px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              marginBottom: '16px',
+              boxShadow: '0 2px 8px rgba(20, 201, 57, 0.3)',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            Continue to Device Setup
+          </button>
+
+          <button
+            onClick={() => setStep('customize-avatar')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#0091ff',
+              fontSize: '14px',
+              fontWeight: 500,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontFamily: 'Inter, sans-serif'
+            }}
+          >
+            <ArrowLeft size={14} /> Back to Avatar Customization
+          </button>
+        </div>
+      )}
+
       {/* ================= STEP 3: AUDIO & VIDEO SETUP ================= */}
       {step === 'setup-audio-video' && (
         <div
@@ -1652,7 +1828,7 @@ export default function GuestOnboardingModal({
           </button>
 
           <button
-            onClick={() => setStep('customize-avatar')}
+            onClick={() => setStep('choose-area')}
             style={{
               background: 'transparent',
               border: 'none',

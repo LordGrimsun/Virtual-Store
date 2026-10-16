@@ -434,57 +434,135 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // ==========================================
   // 4. AUDITORIUM 🏠 (x: -24, z: 16)
-  // Matching 7 tiers of stadium seating in blueprint
+  // Massive IMAX-Scale Cinema Presentation Stage matching Spot Virtual reference
   // ==========================================
-  // Giant vertical screen on west wall
+  // Elevated Stage Platform
+  const stagePlatform = new THREE.Mesh(
+    roundedBox(3.4, 0.4, 15.6, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.8 })
+  );
+  stagePlatform.position.set(-30.0, 0.2, 16.0);
+  stagePlatform.receiveShadow = true;
+  furnitureGroup.add(stagePlatform);
+
+  // Speaker Lectern / Podium on Stage
+  const lectern = new THREE.Mesh(
+    roundedBox(0.65, 1.1, 0.55, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5, metalness: 0.3 })
+  );
+  lectern.position.set(-28.6, 0.75, 16.0);
+  lectern.castShadow = true;
+  furnitureGroup.add(lectern);
+
+  // Massive IMAX-Scale Cinema Screen (13.6m wide x 6.8m high)
   createSpotWallScreen(
-    -31.8, 1.85, 16, 5.2, 2.7, Math.PI / 2, 'auditorium',
+    -31.7, 3.8, 16.0, 13.6, 6.8, Math.PI / 2, 'auditorium',
     screenTextures?.createAuditoriumKeynoteTexture ? screenTextures.createAuditoriumKeynoteTexture() : screenTextures?.starryLogoTexture,
-    'Auditorium Main Stage Display'
+    'Auditorium Cinema Keynote Display'
   );
 
-  // 7 Tiers of black bench seating facing the stage (west)
-  for (let tier = 0; tier < 7; tier++) {
-    const tx = -25.5 + tier * 1.5;
-    const ty = 0.2 + tier * 0.28;
-    const benchWidth = 11.0;
+  // Helper: Individual Deluxe Theater Chair with padded cushion, armrests and cup holders
+  const createTheaterSeat = (sx, sy, sz, seatName = 'Theater Seat') => {
+    const seatGrp = new THREE.Group();
+    const seatWorldPos = new THREE.Vector3(sx, sy, sz);
+    const facingScreenRot = -Math.PI / 2; // Facing west toward stage screen
 
-    const riser = new THREE.Mesh(
-      roundedBox(0.85, 0.22, benchWidth, 0.04),
-      blackLeatherMat
-    );
-    riser.position.set(tx, ty, 16.0);
-    riser.castShadow = true;
-    riser.name = 'clickable_chair';
-    riser.userData = {
+    // Chair frame & pedestal
+    const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.35, 10), chromeMat);
+    pedestal.position.set(0, sy + 0.18, 0);
+    seatGrp.add(pedestal);
+
+    // Thick padded cushion seat
+    const seatCushion = new THREE.Mesh(roundedBox(0.56, 0.10, 0.52, 0.04), blackLeatherMat);
+    seatCushion.position.set(0, sy + 0.40, 0);
+    seatCushion.castShadow = true;
+    seatGrp.add(seatCushion);
+
+    // High ergonomic backrest
+    const backrest = new THREE.Mesh(roundedBox(0.54, 0.62, 0.08, 0.04), blackLeatherMat);
+    backrest.position.set(0.24, sy + 0.70, 0);
+    backrest.castShadow = true;
+    seatGrp.add(backrest);
+
+    // Left & right armrests
+    [-0.30, 0.30].forEach((az) => {
+      const arm = new THREE.Mesh(roundedBox(0.44, 0.06, 0.08, 0.02), blackMat);
+      arm.position.set(0.02, sy + 0.56, az);
+      seatGrp.add(arm);
+    });
+
+    seatGrp.name = 'clickable_chair';
+    seatGrp.userData = {
       isChair: true,
-      name: `Auditorium Row ${tier + 1}`,
-      chairPos: new THREE.Vector3(tx, ty, 16.0),
-      chairRotY: Math.PI / 2, // Facing stage (west)
-      seatHeight: ty + 0.11
+      name: seatName,
+      chairPos: seatWorldPos,
+      chairRotY: facingScreenRot,
+      seatHeight: sy + 0.46
     };
-    furnitureGroup.add(riser);
+    seatCushion.userData = seatGrp.userData;
+    seatCushion.name = 'clickable_chair';
+
+    furnitureGroup.add(seatGrp);
 
     if (chairsRef?.current) {
       chairsRef.current.push({
-        name: `Auditorium Row ${tier + 1}`,
-        pos: new THREE.Vector3(tx, ty, 16.0),
-        rot: Math.PI / 2,
-        seatHeight: ty + 0.11
+        name: seatName,
+        pos: seatWorldPos,
+        rot: facingScreenRot,
+        seatHeight: sy + 0.46
       });
     }
-  }
+    return seatGrp;
+  };
+
+  // 4 Orderly Tiers of Stable Deluxe Theater Seats facing the Cinema Screen
+  const tiersConfig = [
+    { x: -25.8, y: 0.00, count: 8, riserH: 0 },
+    { x: -23.4, y: 0.32, count: 8, riserH: 0.32 },
+    { x: -21.0, y: 0.64, count: 8, riserH: 0.64 },
+    { x: -18.6, y: 0.96, count: 8, riserH: 0.96 }
+  ];
+
+  tiersConfig.forEach((tier, tIdx) => {
+    // Stepped concrete/carpet riser floor
+    if (tier.riserH > 0) {
+      const riserStep = new THREE.Mesh(
+        new THREE.BoxGeometry(2.3, tier.riserH, 15.0),
+        new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9 })
+      );
+      riserStep.position.set(tier.x, tier.riserH / 2, 16.0);
+      riserStep.receiveShadow = true;
+      furnitureGroup.add(riserStep);
+    }
+
+    // 8 Seats spaced across z: 10.5 to 21.5
+    for (let s = 0; s < tier.count; s++) {
+      const sz = 10.8 + s * 1.5;
+      createTheaterSeat(tier.x, tier.y, sz, `Auditorium Tier ${tIdx + 1} Seat ${s + 1}`);
+    }
+  });
 
   // ==========================================
   // 5. PATIO ((•)) (x: -23, z: -16)
-  // Outdoor terrace with giant chessboard and sunken pool
+  // Outdoor terrace with interactive giant chessboard and sunken pool
   // ==========================================
-  // Giant 8x8 Chessboard (x: -26, z: -19)
+  // Giant 8x8 Interactive Chessboard (x: -25.5, z: -18.5)
   const chessGrp = new THREE.Group();
+  chessGrp.name = 'clickable_chessboard';
+  chessGrp.userData = { isChessboard: true, name: 'Giant Terrace Chessboard' };
+
   const boardSize = 5.2;
   const squareSize = boardSize / 8;
   const whiteTileMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.6 });
   const blackTileMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.7 });
+
+  // Outer border trim
+  const border = new THREE.Mesh(
+    roundedBox(boardSize + 0.3, 0.05, boardSize + 0.3, 0.04),
+    brassGoldMat
+  );
+  border.position.y = 0.015;
+  chessGrp.add(border);
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
@@ -494,6 +572,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
         isBlack ? blackTileMat : whiteTileMat
       );
       tile.position.set((c - 3.5) * squareSize, 0.03, (r - 3.5) * squareSize);
+      tile.name = 'clickable_chessboard';
+      tile.userData = { isChessboard: true, row: r, col: c };
       chessGrp.add(tile);
 
       // Low-poly chess pieces on starting ranks
@@ -505,6 +585,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
         );
         piece.position.set((c - 3.5) * squareSize, 0.25, (r - 3.5) * squareSize);
         piece.castShadow = true;
+        piece.name = 'clickable_chessboard';
+        piece.userData = { isChessboard: true };
         chessGrp.add(piece);
       }
     }
@@ -529,7 +611,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // ==========================================
   // 6. WORKSPACE A (x: 0, z: -16)
-  // 4 Engineering workstation desk clusters
+  // 4 Engineering workstation desk clusters with properly oriented monitors
   // ==========================================
   const createDeskPod = (px, pz, podId = 1) => {
     const pod = new THREE.Group();
@@ -548,39 +630,39 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     divider.position.set(0, 0.98, 0);
     pod.add(divider);
 
-    // 4 Modern Interactive Workstation Monitors (Exact match to media_1792034444310.png)
-    // North monitors (facing south, rotY = 0)
+    // 4 Modern Interactive Workstation Monitors correctly oriented toward chairs
+    // North monitors face North (rotY = Math.PI) toward chairs at pz - 1.4
     createWorkstationMonitor(
-      px - 0.9, 0.78, pz - 0.28, 0,
+      px - 0.9, 0.78, pz - 0.28, Math.PI,
       `desk_${podId}_n_left`,
       screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('WorkspacePlatform.jsx') : screenTextures?.chartTexture,
       `Engineering Pod ${podId} (IDE Display)`
     );
     createWorkstationMonitor(
-      px + 0.9, 0.78, pz - 0.28, 0,
+      px + 0.9, 0.78, pz - 0.28, Math.PI,
       `desk_${podId}_n_right`,
       screenTextures?.createTerminalLogsTexture ? screenTextures.createTerminalLogsTexture() : screenTextures?.kpiTexture,
       `Engineering Pod ${podId} (DevOps Terminal)`
     );
 
-    // South monitors (facing north, rotY = Math.PI)
+    // South monitors face South (rotY = 0) toward chairs at pz + 1.4
     createWorkstationMonitor(
-      px - 0.9, 0.78, pz + 0.28, Math.PI,
+      px - 0.9, 0.78, pz + 0.28, 0,
       `desk_${podId}_s_left`,
       screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.featTexture,
       `Engineering Pod ${podId} (Figma UI Canvas)`
     );
     createWorkstationMonitor(
-      px + 0.9, 0.78, pz + 0.28, Math.PI,
+      px + 0.9, 0.78, pz + 0.28, 0,
       `desk_${podId}_s_right`,
       screenTextures?.createTelecastLiveTexture ? screenTextures.createTelecastLiveTexture(`Pod ${podId} Station`, 'Ayush (you)') : screenTextures?.starryLogoTexture,
       `Engineering Pod ${podId} (Workstation Telecast)`
     );
 
-    // Task chairs
+    // Task chairs facing the desk
     [-0.9, 0.9].forEach((dx) => {
-      createCantileverChair(px + dx, pz - 1.4, Math.PI, 'Workstation Chair');
-      createCantileverChair(px + dx, pz + 1.4, 0, 'Workstation Chair');
+      createCantileverChair(px + dx, pz - 1.4, 0, `Engineering Pod ${podId} North Chair`);
+      createCantileverChair(px + dx, pz + 1.4, Math.PI, `Engineering Pod ${podId} South Chair`);
     });
 
     pod.position.set(px, 0, pz);
@@ -592,6 +674,33 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createDeskPod(-6, -13, 3);
   createDeskPod(6, -13, 4);
 
+  // Dedicated Private Coworking Focus Cubicles in Lounge C:
+  // Cubicle 1 (North pod at x = -15, z = -4)
+  const cubicle1Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
+  cubicle1Desk.position.set(-15.0, 0.74, -4.0);
+  furnitureGroup.add(cubicle1Desk);
+
+  createWorkstationMonitor(
+    -15.0, 0.78, -4.25, 0,
+    'desk_cubicle_1',
+    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('FocusProject.rs') : screenTextures?.codeEditorTexture,
+    'Focus Cubicle 1 Workstation'
+  );
+  createCantileverChair(-15.0, -3.2, Math.PI, 'Focus Cubicle 1 Chair');
+
+  // Cubicle 2 (South pod at x = -15, z = 4)
+  const cubicle2Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
+  cubicle2Desk.position.set(-15.0, 0.74, 4.0);
+  furnitureGroup.add(cubicle2Desk);
+
+  createWorkstationMonitor(
+    -15.0, 0.78, 4.25, Math.PI,
+    'desk_cubicle_2',
+    screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.chartTexture,
+    'Focus Cubicle 2 Workstation'
+  );
+  createCantileverChair(-15.0, 3.2, 0, 'Focus Cubicle 2 Chair');
+
   // ==========================================
   // 7. LOBBY 🌐 (x: 22, z: -16)
   // Reception desk and waiting area
@@ -602,15 +711,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   recepDesk.castShadow = true;
   furnitureGroup.add(recepDesk);
 
-  // Interactive Reception Monitor
+  // Interactive Reception Monitor facing receptionist
   createWorkstationMonitor(
-    22.0, 1.05, -21.0, -Math.PI / 2,
+    22.0, 1.05, -21.2, 0,
     'desk_reception',
     screenTextures?.schedTexture,
     'Lobby Reception Guest Monitor'
   );
 
-  createCantileverChair(22.0, -22.2, 0, 'Receptionist Chair');
+  createCantileverChair(22.0, -20.2, Math.PI, 'Receptionist Chair');
 
   // Waiting lounge
   createRoundCoffeeTable(22.0, -13.0, 0.9, 0.38);
@@ -743,7 +852,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       isChatA ? 'Chat A Huddle Workstation' : 'Chat B Huddle Workstation'
     );
 
-    createCantileverChair(12.0, cz + 0.6, 0, `Chat ${isChatA ? 'A' : 'B'} Chair`);
+    createCantileverChair(12.0, cz + 0.6, Math.PI, `Chat ${isChatA ? 'A' : 'B'} Chair`);
   });
 
   // ==========================================

@@ -43,6 +43,10 @@ export default function App() {
       // Check if pathname or hash matches Spot URL structure (/@org/@space/@room)
       if (pathname.includes('/@') || hash.includes('/@') || hash.includes('@conference') || hash.includes('spotvirtual.com')) {
         const fullUri = pathname.includes('/@') ? pathname : hash;
+        const searchStr = window.location.search || (hash.includes('?') ? hash.substring(hash.indexOf('?')) : '');
+        const searchParams = new URLSearchParams(searchStr);
+        const invitedBy = searchParams.get('invitedBy') || '';
+
         let wsName = 'Sunnkesh';
         let wsSlug = 'sunnkesh-4c24f4f3d747fffc';
         let spaceSlug = 'office';
@@ -55,6 +59,12 @@ export default function App() {
           spaceName = 'ser';
           targetRoom = 'Office A';
           roomSlug = 'office-a';
+        } else if (fullUri.includes('cubicle-1')) {
+          targetRoom = 'Focus Cubicle 1';
+          roomSlug = 'cubicle-1';
+        } else if (fullUri.includes('cubicle-2')) {
+          targetRoom = 'Focus Cubicle 2';
+          roomSlug = 'cubicle-2';
         } else if (fullUri.includes('boardroom')) {
           targetRoom = 'Boardroom';
           roomSlug = 'boardroom';
@@ -101,7 +111,8 @@ export default function App() {
           spaceName: spaceName,
           spaceSlug: spaceSlug,
           roomName: targetRoom,
-          roomSlug: roomSlug
+          roomSlug: roomSlug,
+          invitedBy: invitedBy
         });
         return;
       }
@@ -230,6 +241,7 @@ export default function App() {
         spaceSlug={guestModal.spaceSlug}
         roomName={guestModal.roomName}
         roomSlug={guestModal.roomSlug}
+        invitedBy={guestModal.invitedBy}
         onClose={() => setGuestModal((prev) => ({ ...prev, isOpen: false }))}
         onComplete={(guestData) => {
           setGuestModal((prev) => ({ ...prev, isOpen: false }));
@@ -240,8 +252,8 @@ export default function App() {
             workspaceSlug: '@sunnkesh-4c24f4f3d747fffc',
             spaceSlug: guestData.spaceSlug || guestModal.spaceSlug,
             spaceName: guestModal.spaceName,
-            targetRoom: guestModal.roomName,
-            targetRoomId: guestModal.roomSlug,
+            targetRoom: guestData.roomName || guestModal.roomName,
+            targetRoomId: guestData.roomSlug || guestModal.roomSlug,
             skinTone: guestData.skinTone,
             avatarGender: guestData.gender,
             hairType: guestData.hairType,
