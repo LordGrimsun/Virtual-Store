@@ -168,7 +168,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
   // Dynamic Camera Orbit, Zoom & Showcase Screen Presentation
   const cameraDistanceRef = useRef(4.8);
-  const cameraOrbitAngleRef = useRef(0.28);
+  const cameraOrbitAngleRef = useRef(0);
   const cameraPitchAngleRef = useRef(0.20); // GTA San Andreas third-person chase cam ~11.5° pitch
   const cameraTargetYOffsetRef = useRef(0);
   const isDraggingOrbitRef = useRef(false);
@@ -1055,17 +1055,29 @@ export default function WorkspacePlatform({ user, onExit }) {
         setCurrentRoom(formattedName);
         setCurrentRoomId(slug);
         if (slug === 'auditorium') {
-          cameraOrbitAngleRef.current = -Math.PI / 2;
-          cameraPitchAngleRef.current = 0.26;
-          cameraDistanceRef.current = 8.0;
+          playerObj.mesh.rotation.y = Math.PI / 2; // Face East towards cinema stage and screen
+          cameraOrbitAngleRef.current = -Math.PI / 2; // Camera behind player (West), looking East
+          cameraPitchAngleRef.current = 0.22;
+          cameraDistanceRef.current = 6.0;
           cameraTargetYOffsetRef.current = 0;
-        } else {
-          cameraOrbitAngleRef.current = 0.28;
+          camera.position.set(target.x - 5.8, 2.4, target.z);
+          camera.lookAt(target.x + 2.5, 1.45, target.z);
+        } else if (slug === 'conference-a') {
+          playerObj.mesh.rotation.y = Math.PI / 2; // Face East towards promenade windows
+          cameraOrbitAngleRef.current = -Math.PI / 2;
           cameraPitchAngleRef.current = 0.20;
           cameraDistanceRef.current = 4.8;
           cameraTargetYOffsetRef.current = 0;
-          camera.position.set(target.x + 1.2, 2.4, target.z + 4.6);
-          camera.lookAt(target.x, 1.45, target.z);
+          camera.position.set(target.x - 4.6, 2.4, target.z);
+          camera.lookAt(target.x + 2.0, 1.45, target.z);
+        } else {
+          playerObj.mesh.rotation.y = Math.PI; // Face North into room (away from camera)
+          cameraOrbitAngleRef.current = 0; // Camera at South, behind player looking North
+          cameraPitchAngleRef.current = 0.20;
+          cameraDistanceRef.current = 4.8;
+          cameraTargetYOffsetRef.current = 0;
+          camera.position.set(target.x, 2.4, target.z + 4.6);
+          camera.lookAt(target.x, 1.45, target.z - 2.5);
         }
       }
     }
@@ -1499,18 +1511,30 @@ export default function WorkspacePlatform({ user, onExit }) {
           const normFwd = inputForward / inputLen;
           const normRight = inputRight / inputLen;
 
-          // Camera horizontal angle (yaw)
-          const camAngle = cameraOrbitAngleRef.current;
-          // Forward unit vector in world XZ (away from camera sightline)
-          const fwdX = -Math.sin(camAngle);
-          const fwdZ = -Math.cos(camAngle);
-          // Right unit vector in world XZ (perpendicular to forward, screen right)
-          const rightX = Math.cos(camAngle);
-          const rightZ = -Math.sin(camAngle);
+          // Camera horizontal forward vector (sightline into scene)
+          const camFwd = new THREE.Vector3();
+          if (camera) {
+            camera.getWorldDirection(camFwd);
+            camFwd.y = 0;
+            if (camFwd.lengthSq() > 0.0001) {
+              camFwd.normalize();
+            } else {
+              camFwd.set(0, 0, -1);
+            }
+          } else {
+            camFwd.set(0, 0, -1);
+          }
 
-          // Combined movement direction relative to camera
-          const moveX = fwdX * normFwd + rightX * normRight;
-          const moveZ = fwdZ * normFwd + rightZ * normRight;
+          // Camera horizontal right vector (perpendicular to sightline, pointing screen right)
+          const camRight = new THREE.Vector3(-camFwd.z, 0, camFwd.x);
+
+          // Combined movement direction relative to camera viewpoint:
+          // W / Up: Moves FORWARD along camera sightline into screen
+          // S / Down: Moves BACKWARD towards camera / player
+          // D / Right: Moves RIGHT on screen
+          // A / Left: Moves LEFT on screen
+          const moveX = camFwd.x * normFwd + camRight.x * normRight;
+          const moveZ = camFwd.z * normFwd + camRight.z * normRight;
 
           if (isSittingRef.current) {
             isSittingRef.current = false;
@@ -1539,15 +1563,6 @@ export default function WorkspacePlatform({ user, onExit }) {
 
           isSittingRef.current = false;
           isMoving = true;
-
-          // GTA San Andreas smooth camera follow behind player when moving forward
-          if (!isDraggingOrbitRef.current && inputForward > 0) {
-            const behindAngle = player.rotation.y + Math.PI;
-            let camDiff = behindAngle - cameraOrbitAngleRef.current;
-            while (camDiff < -Math.PI) camDiff += Math.PI * 2;
-            while (camDiff > Math.PI) camDiff -= Math.PI * 2;
-            cameraOrbitAngleRef.current += camDiff * 0.032;
-          }
         } else {
           const target = targetPosRef.current;
           const dx = target.x - player.position.x;
@@ -1959,7 +1974,7 @@ export default function WorkspacePlatform({ user, onExit }) {
               8.0
             );
           } else {
-            cameraOrbitAngleRef.current += deltaX * 0.005;
+            cameraOrbitAngleRef.current -= deltaX * 0.005;
             // Dragging UP (deltaY < 0) tilts camera UP towards eye-level / sky
             // Dragging DOWN (deltaY > 0) elevates camera overhead
             cameraPitchAngleRef.current = THREE.MathUtils.clamp(
@@ -2123,18 +2138,42 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     if (playerMeshRef.current) {
       playerMeshRef.current.position.copy(target);
+      if (slug === 'auditorium' || slug === 'conference-a') {
+        playerMeshRef.current.rotation.y = Math.PI / 2; // Face East towards stage/promenade
+      } else {
+        playerMeshRef.current.rotation.y = Math.PI; // Face North into room
+      }
     }
 
-    cameraDistanceRef.current = 4.8;
-    cameraOrbitAngleRef.current = 0.28;
-    cameraPitchAngleRef.current = 0.20;
-    cameraTargetYOffsetRef.current = 0;
+    if (slug === 'auditorium') {
+      cameraDistanceRef.current = 6.0;
+      cameraOrbitAngleRef.current = -Math.PI / 2;
+      cameraPitchAngleRef.current = 0.22;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x - 5.8, 2.4, target.z);
+        cameraRef.current.lookAt(target.x + 2.5, 1.45, target.z);
+      }
+    } else if (slug === 'conference-a') {
+      cameraDistanceRef.current = 4.8;
+      cameraOrbitAngleRef.current = -Math.PI / 2;
+      cameraPitchAngleRef.current = 0.20;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x - 4.6, 2.4, target.z);
+        cameraRef.current.lookAt(target.x + 2.0, 1.45, target.z);
+      }
+    } else {
+      cameraDistanceRef.current = 4.8;
+      cameraOrbitAngleRef.current = 0;
+      cameraPitchAngleRef.current = 0.20;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 2.4, target.z + 4.6);
+        cameraRef.current.lookAt(target.x, 1.45, target.z - 2.5);
+      }
+    }
     isSittingRef.current = false;
-
-    if (cameraRef.current && !isTopDownBlueprint) {
-      cameraRef.current.position.set(target.x + 1.2, 2.4, target.z + 4.6);
-      cameraRef.current.lookAt(target.x, 1.45, target.z);
-    }
 
     try {
       const sp = (currentSpace === 'ser-emY' || currentSpace === 'ser') ? 'ser-emY' : 'office';
