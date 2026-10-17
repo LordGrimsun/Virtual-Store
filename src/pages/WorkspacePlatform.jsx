@@ -167,9 +167,9 @@ export default function WorkspacePlatform({ user, onExit }) {
   const keysPressedRef = useRef({});
 
   // Dynamic Camera Orbit, Zoom & Showcase Screen Presentation
-  const cameraDistanceRef = useRef(16.5);
+  const cameraDistanceRef = useRef(12.5);
   const cameraOrbitAngleRef = useRef(0.28);
-  const cameraPitchAngleRef = useRef(0.76); // Optimal dollhouse isometric 44° pitch
+  const cameraPitchAngleRef = useRef(0.38); // Natural third-person eye-level ~22° pitch
   const cameraTargetYOffsetRef = useRef(0);
   const isDraggingOrbitRef = useRef(false);
   const pointerDownPosRef = useRef({ x: 0, y: 0, time: 0, button: 0 });
@@ -1061,8 +1061,12 @@ export default function WorkspacePlatform({ user, onExit }) {
           cameraDistanceRef.current = 8.5;
           cameraTargetYOffsetRef.current = 0;
         } else {
-          camera.position.set(target.x + 3.5, 14.0, target.z + 12.0);
-          camera.lookAt(target.x, 1.5, target.z);
+          cameraOrbitAngleRef.current = 0.28;
+          cameraPitchAngleRef.current = 0.38;
+          cameraDistanceRef.current = 12.5;
+          cameraTargetYOffsetRef.current = 0;
+          camera.position.set(target.x + 3.5, 5.0, target.z + 11.5);
+          camera.lookAt(target.x, 1.6, target.z);
         }
       }
     }
@@ -1698,15 +1702,21 @@ export default function WorkspacePlatform({ user, onExit }) {
             camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
             camera.lookAt(screenX, lookY, screenZ);
           } else {
+            // Forward room target offset: keeps avatar in the lower-third foreground
+            // so the forward view (screens, desks, walls, teammates) is centered in the viewport
+            const fwdDist = Math.min(dist * 0.35, 4.5);
+            const lookTargetX = p.x - Math.sin(angle) * fwdDist;
+            const lookTargetZ = p.z - Math.cos(angle) * fwdDist;
             const baseLookY = isAuditorium ? 2.4 : 1.5;
-            const lookY = baseLookY + (cameraTargetYOffsetRef.current || 0);
+            const eyeLift = Math.max(0, (0.75 - pitch) * 1.1);
+            const lookY = baseLookY + eyeLift + (cameraTargetYOffsetRef.current || 0);
 
             const camX = p.x + Math.sin(angle) * dist * Math.cos(pitch);
-            const camY = Math.max(2.2, dist * Math.sin(pitch));
+            const camY = Math.max(1.6, dist * Math.sin(pitch));
             const camZ = p.z + Math.cos(angle) * dist * Math.cos(pitch);
 
             camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
-            camera.lookAt(p.x, lookY, p.z);
+            camera.lookAt(lookTargetX, lookY, lookTargetZ);
           }
         }
       }
@@ -1854,11 +1864,29 @@ export default function WorkspacePlatform({ user, onExit }) {
       setIsSpotLinkModalOpen(false);
     };
 
-    // Mouse Wheel Zoom: Smooth distance adjustment between 0.85 (deep PC/seat zoom) and 38
+    // Mouse Wheel Zoom: Smooth distance adjustment between 0.85 (deep PC/seat zoom) and 36,
+    // and naturally levels camera towards eye-level when scrolling UP so forward room is seen
     const handleWheel = (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY * 0.025;
-      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 0.85, 38);
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 0.85, 36);
+
+      // Scrolling UP (deltaY < 0): zoom in AND smoothly level camera towards eye-level
+      // so whatever is in front of the avatar comes directly into view
+      if (e.deltaY < 0) {
+        cameraPitchAngleRef.current = THREE.MathUtils.clamp(
+          cameraPitchAngleRef.current - 0.035,
+          0.08,
+          1.15
+        );
+      } else if (e.deltaY > 0) {
+        // Scrolling DOWN (deltaY > 0): zoom out AND gently raise pitch for room overview
+        cameraPitchAngleRef.current = THREE.MathUtils.clamp(
+          cameraPitchAngleRef.current + 0.025,
+          0.08,
+          1.15
+        );
+      }
     };
 
     // Mouse Orbit Dragging, Vertical Pan & Pointer Cursor Detection
@@ -1889,10 +1917,12 @@ export default function WorkspacePlatform({ user, onExit }) {
             );
           } else {
             cameraOrbitAngleRef.current += deltaX * 0.007;
+            // Dragging UP (deltaY < 0) tilts camera UP towards eye-level (lowering pitch angle)
+            // Dragging DOWN (deltaY > 0) elevates camera overhead
             cameraPitchAngleRef.current = THREE.MathUtils.clamp(
-              cameraPitchAngleRef.current - deltaY * 0.005,
-              0.05,
-              1.35
+              cameraPitchAngleRef.current + deltaY * 0.005,
+              0.08,
+              1.15
             );
           }
         }
@@ -2052,13 +2082,14 @@ export default function WorkspacePlatform({ user, onExit }) {
       playerMeshRef.current.position.copy(target);
     }
 
-    cameraDistanceRef.current = 18;
+    cameraDistanceRef.current = 12.5;
     cameraOrbitAngleRef.current = 0.28;
-    cameraPitchAngleRef.current = 0.78;
+    cameraPitchAngleRef.current = 0.38;
+    cameraTargetYOffsetRef.current = 0;
     isSittingRef.current = false;
 
     if (cameraRef.current && !isTopDownBlueprint) {
-      cameraRef.current.position.set(target.x, 14.0, target.z + 16.0);
+      cameraRef.current.position.set(target.x + 3.5, 5.0, target.z + 11.5);
       cameraRef.current.lookAt(target.x, 1.6, target.z);
     }
 
@@ -2760,7 +2791,8 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Zoom In Button */}
         <button
           onClick={() => {
-            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current - 4, 6, 65);
+            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current - 3, 1.2, 40);
+            cameraPitchAngleRef.current = THREE.MathUtils.clamp(cameraPitchAngleRef.current - 0.05, 0.10, 1.15);
             playSound('click');
           }}
           title="Zoom In (+)"
@@ -2787,7 +2819,8 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Zoom Out Button */}
         <button
           onClick={() => {
-            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + 4, 6, 65);
+            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + 3, 1.2, 40);
+            cameraPitchAngleRef.current = THREE.MathUtils.clamp(cameraPitchAngleRef.current + 0.04, 0.10, 1.15);
             playSound('click');
           }}
           title="Zoom Out (−)"
@@ -2818,9 +2851,10 @@ export default function WorkspacePlatform({ user, onExit }) {
               showcaseScreenRef.current = null;
               setShowcaseScreenTarget(null);
             }
-            cameraDistanceRef.current = 8.5;
+            cameraDistanceRef.current = 6.5;
             cameraOrbitAngleRef.current = 0.15;
-            cameraPitchAngleRef.current = 0.52;
+            cameraPitchAngleRef.current = 0.28;
+            cameraTargetYOffsetRef.current = 0;
             playSound('click');
           }}
           title="Avatar Close Focus / Showcase Avatar"
@@ -2851,12 +2885,13 @@ export default function WorkspacePlatform({ user, onExit }) {
               showcaseScreenRef.current = null;
               setShowcaseScreenTarget(null);
             }
-            cameraDistanceRef.current = 16.5;
+            cameraDistanceRef.current = 12.5;
             cameraOrbitAngleRef.current = 0.28;
-            cameraPitchAngleRef.current = 0.76; // Optimal dollhouse isometric 44° pitch
+            cameraPitchAngleRef.current = 0.38;
+            cameraTargetYOffsetRef.current = 0;
             playSound('click');
           }}
-          title="Recenter Camera / Optimal 3D Dollhouse View (Target Icon)"
+          title="Recenter Camera / Natural View (Target Icon)"
           style={{
             width: '40px',
             height: '40px',
