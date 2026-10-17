@@ -54,7 +54,7 @@
   position: relative;
   overflow: hidden;
   border: 1px solid #334155;
-  cursor: crosshair;
+  cursor: pointer;
 }
 
 .Sandbox_zone {

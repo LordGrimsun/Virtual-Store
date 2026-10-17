@@ -964,6 +964,7 @@ export default function WorkspacePlatform({ user, onExit }) {
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.08;
+    renderer.domElement.style.cursor = 'grab';
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
@@ -1098,6 +1099,10 @@ export default function WorkspacePlatform({ user, onExit }) {
       lastMousePosRef.current = { x: e.clientX, y: e.clientY };
       isDraggingOrbitRef.current = true;
       isPointerMovedRef.current = false;
+      if (renderer?.domElement) {
+        renderer.domElement.style.cursor = 'grabbing';
+      }
+      document.body.style.cursor = 'grabbing';
     };
 
     const handleSceneClick = (e) => {
@@ -1949,8 +1954,58 @@ export default function WorkspacePlatform({ user, onExit }) {
 
     // Mouse Orbit Dragging, Vertical Pan & Pointer Cursor Detection
     let lastHoverCheck = 0;
+    const checkInteractiveHover = (clientX, clientY) => {
+      if (!renderer || !renderer.domElement || !camera || !scene) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+        return;
+      }
+      mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(scene.children, true);
+      let isInteractive = false;
+      for (let i = 0; i < Math.min(hits.length, 10); i++) {
+        let obj = hits[i].object;
+        while (obj && obj !== scene) {
+          if (
+            obj.userData?.isSpotScreen ||
+            obj.name?.startsWith('screen_') ||
+            obj.name?.startsWith('casing_screen_') ||
+            obj.userData?.isChair ||
+            obj.name === 'clickable_chair' ||
+            obj.name?.startsWith('chair_') ||
+            obj.name?.startsWith('sofa_') ||
+            obj.userData?.chairPos ||
+            obj.userData?.isInteractiveDoor ||
+            obj.name === 'doorway_group' ||
+            obj.userData?.isAvatar ||
+            obj.name?.startsWith('avatar_') ||
+            obj.userData?.isChessboard ||
+            obj.name === 'clickable_chessboard' ||
+            obj.name?.startsWith('widget_') ||
+            obj.name === 'doughnutPlate' ||
+            obj.name === 'appleBowl' ||
+            obj.name === 'confAudioPuck'
+          ) {
+            isInteractive = true;
+            break;
+          }
+          obj = obj.parent;
+        }
+        if (isInteractive) break;
+      }
+
+      renderer.domElement.style.cursor = isInteractive ? 'pointer' : 'grab';
+    };
+
     const handlePointerMove = (e) => {
       if (isDraggingOrbitRef.current) {
+        if (renderer?.domElement) {
+          renderer.domElement.style.cursor = 'grabbing';
+        }
+        document.body.style.cursor = 'grabbing';
+
         const dx = e.clientX - pointerDownPosRef.current.x;
         const dy = e.clientY - pointerDownPosRef.current.y;
         if (Math.hypot(dx, dy) > 4) {
@@ -1985,33 +2040,11 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
         }
       } else {
-        // Throttled hover check for chairs/sofas (clean pointer cursor without intrusive popups)
+        // Throttled hover check for interactive elements vs canvas navigation
         const now = performance.now();
-        if (now - lastHoverCheck > 40) {
+        if (now - lastHoverCheck > 30) {
           lastHoverCheck = now;
-          const rect = renderer.domElement.getBoundingClientRect();
-          mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-          mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-          raycaster.setFromCamera(mouse, camera);
-          const hits = raycaster.intersectObjects(scene.children, true);
-          let foundChair = null;
-          for (let i = 0; i < Math.min(hits.length, 6); i++) {
-            let obj = hits[i].object;
-            while (obj && obj !== scene) {
-              if (obj.name === 'clickable_chair' || obj.userData?.isChair || obj.name?.startsWith('chair_') || obj.name?.startsWith('sofa_')) {
-                foundChair = obj;
-                break;
-              }
-              obj = obj.parent;
-            }
-            if (foundChair) break;
-          }
-
-          if (foundChair) {
-            renderer.domElement.style.cursor = 'pointer';
-          } else {
-            renderer.domElement.style.cursor = 'crosshair';
-          }
+          checkInteractiveHover(e.clientX, e.clientY);
         }
       }
     };
@@ -2019,10 +2052,24 @@ export default function WorkspacePlatform({ user, onExit }) {
     const handlePointerUp = (e) => {
       if (!isDraggingOrbitRef.current) return;
       isDraggingOrbitRef.current = false;
+      document.body.style.cursor = '';
+      if (renderer?.domElement) {
+        renderer.domElement.style.cursor = 'grab';
+      }
 
       // Single click (not drag): trigger scene interaction
       if (!isPointerMovedRef.current && pointerDownPosRef.current.button === 0) {
         handleSceneClick(e);
+      }
+
+      if (e && typeof e.clientX === 'number') {
+        checkInteractiveHover(e.clientX, e.clientY);
+      }
+    };
+
+    const handlePointerLeave = () => {
+      if (!isDraggingOrbitRef.current && renderer?.domElement) {
+        renderer.domElement.style.cursor = 'grab';
       }
     };
 
@@ -2033,7 +2080,9 @@ export default function WorkspacePlatform({ user, onExit }) {
     renderer.domElement.addEventListener('pointerdown', handlePointerDown);
     renderer.domElement.addEventListener('wheel', handleWheel, { passive: false });
     renderer.domElement.addEventListener('pointermove', handlePointerMove);
+    renderer.domElement.addEventListener('pointerleave', handlePointerLeave);
     window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointercancel', handlePointerUp);
     renderer.domElement.addEventListener('contextmenu', handleContextMenu);
 
     const handleResize = () => {
@@ -2052,8 +2101,11 @@ export default function WorkspacePlatform({ user, onExit }) {
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
       renderer.domElement.removeEventListener('wheel', handleWheel);
       renderer.domElement.removeEventListener('pointermove', handlePointerMove);
+      renderer.domElement.removeEventListener('pointerleave', handlePointerLeave);
       window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerUp);
       renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
+      document.body.style.cursor = '';
       cancelAnimationFrame(animId);
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
@@ -3330,7 +3382,7 @@ export default function WorkspacePlatform({ user, onExit }) {
 
       {/* 2. Main 3D Viewport */}
       <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'crosshair' }} />
+        <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
 
         {/* Projected 2D Floating Nameplates */}
         {showNameplates && screenAvatars.map((av, idx) => (
@@ -3777,7 +3829,7 @@ export default function WorkspacePlatform({ user, onExit }) {
               background: '#1e293b',
               borderRadius: '6px',
               position: 'relative',
-              cursor: 'crosshair',
+              cursor: 'pointer',
               overflow: 'hidden'
             }}
           >
