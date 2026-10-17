@@ -2161,11 +2161,11 @@ export default function WorkspacePlatform({ user, onExit }) {
       slug = 'game-zone';
       formattedName = 'Arcade & Game Zone';
     } else if (clean.includes('cabin') || clean.includes('executive')) {
-      target.set(-50, 0, -15);
+      target.set(-50, 0, -32);
       slug = 'executive-cabins';
       formattedName = 'Executive Cabins';
     } else if (clean.includes('atrium') || clean.includes('grand')) {
-      target.set(0, 0, -2);
+      target.set(0, 0, 2);
       slug = 'grand-atrium';
       formattedName = 'Grand Central Atrium';
     } else if (clean.includes('office-a') || clean.includes('office a')) {

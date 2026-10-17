@@ -889,16 +889,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createWall(-58, 0, WALL_THICKNESS, 92); // Far West Wall (X = -58)
   createWall(58, -20, WALL_THICKNESS, 52); // Far East Wall behind Auditorium (X = +58, Z: -46 to +6)
 
-  // Interior Connecting Wall at X = -32 between Central Core and West Wing (Executive Cabins & Gym)
-  createWall(-32, -35, WALL_THICKNESS, 22); // North partition
-  createDoubleDoor(-32, -16, Math.PI / 2, 'Executive Suite West Door'); // Doorway from Boardroom into Executive Cabins
-  createWall(-32, 0, WALL_THICKNESS, 16); // Center solid wall behind Chat cabins
-  createDoubleDoor(-32, 16, Math.PI / 2, 'Gym Concourse Door'); // Doorway from Patio into Fitness Gym
-  createWall(-32, 35, WALL_THICKNESS, 22); // South partition
-
-  // Interior Connecting Wall at X = +32 between Central Core and East Wing (Swimming Pool & Auditorium)
-  createWall(32, -10, WALL_THICKNESS, 28); // Wall behind Auditorium Stage (X = +32, Z: -24 to +4)
-  createGlassDoubleDoor(32, 14, Math.PI / 2, 'Pool Deck French Doors'); // Grand glass French doors onto Pool Deck
+  // Solid Wall behind Auditorium Stage (X = +32, Z: -24 to +4, total span = 28m)
+  createWall(32, -10, WALL_THICKNESS, 28);
 
   // Transparent Clerestory Windows with mullions on North and South Horizons:
   const createClerestoryFacade = (zPos, startX = -56, endX = 56) => {
@@ -1012,36 +1004,100 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   // =========================================================================
   // ROW 4: EXECUTIVE CABINS WING (X = -58 to -26, Z = -46 to -8)
+  // Area: 32m x 38m. Grand Concourse Entrance at X = -26, Z = -16.
   // =========================================================================
-  // North-South dividing wall at X = -42 between Cabins 1/2 and 3/4
-  createWall(-42, -35, WALL_THICKNESS, 22);
-  createSingleDoor(-42, -24, Math.PI / 2, 'Executive Cabin Connecting Door');
-  createWall(-42, -16, WALL_THICKNESS, 16);
 
-  // East-West dividing wall at Z = -27
-  createWall(-50, -27, 16, WALL_THICKNESS);
-  createSingleDoor(-42, -27, 0, 'CEO Cabin Door');
-  createWall(-34, -27, 16, WALL_THICKNESS);
+  // South Enclosing Wall (Z = -8, span X = -58 to -26, length = 32m)
+  createWall(-42, -8, 32, WALL_THICKNESS);
+
+  // East Wall along X = -26 with Grand Double Door Entrance into Executive Corridor
+  // Total span Z = -46 to -8 (38m). Double Door at Z = -16 (outer frame: -17.51 to -14.49)
+  createWall(-26, -31.755, WALL_THICKNESS, 28.49); // North segment: -46 to -17.51
+  createDoubleDoor(-26, -16, Math.PI / 2, 'Executive Wing Grand Entrance');
+  createWall(-26, -11.245, WALL_THICKNESS, 6.49); // South segment: -14.49 to -8
+
+  // Central Corridor Dividing Wall along Z = -26 (separating North CEO/VP from South Director/Boardroom suites)
+  // CEO Suite Single Door at X = -48 (outer frame: -48.81 to -47.19)
+  createWall(-53.405, -26, 9.19, WALL_THICKNESS); // Far West segment: -58 to -48.81
+  createSingleDoor(-48, -26, 0, 'CEO Executive Suite Door');
+  createWall(-44.595, -26, 5.19, WALL_THICKNESS); // Segment between door and center divider: -47.19 to -42
+
+  // Center Dividing Wall at X = -42 (North: dividing CEO from VP, Z: -46 to -26, span 20m)
+  createWall(-42, -36, WALL_THICKNESS, 20);
+
+  // VP Suite Single Door at X = -36 (outer frame: -36.81 to -35.19)
+  createWall(-39.405, -26, 5.19, WALL_THICKNESS); // Segment between center divider and VP door: -42 to -36.81
+  createSingleDoor(-36, -26, 0, 'VP Executive Suite Door');
+  createWall(-30.595, -26, 9.19, WALL_THICKNESS); // Segment from VP door to East wall: -35.19 to -26
+
+  // Center Dividing Wall at X = -42 (South: dividing Principal Suite from Meeting Suite, Z: -26 to -8, span 18m)
+  // Single Door at Z = -16 (outer frame: -16.81 to -15.19)
+  createWall(-42, -21.405, WALL_THICKNESS, 9.19); // North segment: -26 to -16.81
+  createSingleDoor(-42, -16, Math.PI / 2, 'Principal Suite Door');
+  createWall(-42, -11.595, WALL_THICKNESS, 7.19); // South segment: -15.19 to -8
 
   // =========================================================================
   // ROW 5: FITNESS & GYM CENTER (X = -58 to -26, Z = +8 to +46)
+  // Area: 32m x 38m. Grand Concourse Entrance at X = -42, Z = +8.
   // =========================================================================
-  // North Gym Entrance Wall at Z = +8 (from X = -58 to -26, span = 32m)
-  createWall(-50, 8, 16, WALL_THICKNESS);
-  createGlassDoubleDoor(-42, 8, 0, 'Fitness Gym Glass Entrance');
-  createWall(-34, 8, 16, WALL_THICKNESS);
 
-  // East Gym Wall at X = -26 (separating Gym from Game Zone)
+  // North Wall along Z = +8 (from X = -58 to -26, span = 32m)
+  // Glass Double Door at X = -42 (outer frame: -43.51 to -40.49)
+  createWall(-50.755, 8, 14.49, WALL_THICKNESS); // West wall: -58 to -43.51
+  createGlassDoubleDoor(-42, 8, 0, 'Fitness Gym Glass Entrance');
+  createWall(-33.245, 8, 14.49, WALL_THICKNESS); // East wall: -40.49 to -26
+
+  // East Wall along X = -26 (separating Gym from Arcade & Concourse, Z: +8 to +46, span = 38m)
   createGlassPartition(-26, 27, WALL_THICKNESS, 38);
 
-  // West Wall Large Gym Mirrored Panels
+  // West Wall Large Gym Mirrored Panels along X = -57.8 (span = 32m)
   const gymMirror = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.4, 32), materials.mirrorMat);
   gymMirror.position.set(-57.8, 1.3, 27);
   environmentGroup.add(gymMirror);
 
   // =========================================================================
-  // ROW 6: LUXURY SWIMMING POOL & RESORT DECK (X = +26 to +58, Z = +8 to +46)
+  // ROW 6: MEGA ARCADE & ENTERTAINMENT GAME ZONE (X = -24 to +24, Z = +20 to +46)
+  // Area: 48m x 26m. North Entrance from Concourse at X = 0, Z = +20.
   // =========================================================================
+
+  // North Enclosing Wall along Z = +20 (from X = -24 to +24, span = 48m)
+  // Central Double Door at X = 0 (outer frame: -1.51 to +1.51)
+  createWall(-12.755, 20, 22.49, WALL_THICKNESS); // West segment: -24 to -1.51
+  createDoubleDoor(0, 20, 0, 'Arcade Main Entrance');
+  createWall(12.755, 20, 22.49, WALL_THICKNESS); // East segment: +1.51 to +24
+
+  // Glowing Neon Portal Frame across X = -1.8 to +1.8 at Z = 20 over the door
+  const portalMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+  const portalL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
+  portalL.position.set(-1.8, 1.4, 20.08);
+  environmentGroup.add(portalL);
+  const portalR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
+  portalR.position.set(1.8, 1.4, 20.08);
+  environmentGroup.add(portalR);
+  const portalTop = new THREE.Mesh(new THREE.BoxGeometry(3.72, 0.12, 0.12), portalMat);
+  portalTop.position.set(0, 2.8, 20.08);
+  environmentGroup.add(portalTop);
+
+  // West Wall along X = -24 (from Z = 20 to 46, span = 26m, center Z = 33)
+  createWall(-24, 33, WALL_THICKNESS, 26);
+
+  // East Wall along X = +24 (from Z = 20 to 46, span = 26m)
+  // Glass French Double Doors connecting Arcade to Pool Sun Deck at Z = 33 (outer frame: 31.49 to 34.51)
+  createWall(24, 25.745, WALL_THICKNESS, 11.49); // North segment: 20 to 31.49
+  createGlassDoubleDoor(24, 33, Math.PI / 2, 'Arcade to Pool French Doors');
+  createWall(24, 40.255, WALL_THICKNESS, 11.49); // South segment: 34.51 to 46
+
+  // =========================================================================
+  // ROW 7: LUXURY SWIMMING POOL & RESORT DECK (X = +26 to +58, Z = +8 to +46)
+  // Area: 32m x 38m. North Entrance from Promenade at X = +42, Z = +8.
+  // =========================================================================
+
+  // North Enclosing Wall along Z = +8 (from X = +26 to +58, span = 32m)
+  // French Glass Double Door at X = +42 (outer frame: 40.49 to 43.51)
+  createWall(33.245, 8, 14.49, WALL_THICKNESS); // West segment: 26 to 40.49
+  createGlassDoubleDoor(42, 8, 0, 'Pool Deck French Doors');
+  createWall(50.755, 8, 14.49, WALL_THICKNESS); // East segment: 43.51 to 58
+
   // Helper: Modern Glass Resort Balustrade
   const createGlassBalustrade = (bx, bz, length, rotY = 0) => {
     const bGrp = new THREE.Group();
@@ -1067,27 +1123,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createGlassBalustrade(58, 27, 38, Math.PI / 2); // East Resort Railing overlooking Skyline
   createGlassBalustrade(42, 46, 32, 0); // South Resort Railing
 
-  // Decorative Planter dividing line between Pool Deck and Central Area
-  createLowPlanter(26, 27, 34, 0.65, Math.PI / 2);
-
-  // =========================================================================
-  // ROW 7: MEGA ARCADE & ENTERTAINMENT GAME ZONE (X = -20 to +20, Z = +20 to +46)
-  // =========================================================================
-  // North Entrance from Central Concourse: Open Neon Arched Portal at Z = 20
-  createWall(-14, 20, 12, WALL_THICKNESS);
-  createWall(14, 20, 12, WALL_THICKNESS);
-
-  // Glowing Neon Portal Frame across X = -4 to +4 at Z = 20
-  const portalMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
-  const portalL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
-  portalL.position.set(-4, 1.4, 20);
-  environmentGroup.add(portalL);
-  const portalR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
-  portalR.position.set(4, 1.4, 20);
-  environmentGroup.add(portalR);
-  const portalTop = new THREE.Mesh(new THREE.BoxGeometry(8.12, 0.12, 0.12), portalMat);
-  portalTop.position.set(0, 2.8, 20);
-  environmentGroup.add(portalTop);
+  // Decorative Planter dividing line between Pool Deck and Lobby (Z: 8 to 20 at X = 26)
+  createLowPlanter(26, 14, 12, 0.65, Math.PI / 2);
 
   // 7. Seattle Environment: Asphalt Roads, Sidewalks, Park Benches, Trees & City
   const seattleGroup = new THREE.Group();

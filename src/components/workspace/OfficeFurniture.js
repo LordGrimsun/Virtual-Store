@@ -1625,9 +1625,37 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(es);
   };
 
-  createExecutiveSuite(-50, -18, 0, 'CEO Executive Suite', 'ceo_screen');
-  createExecutiveSuite(-34, -18, 0, 'VP Executive Suite', 'vp_screen');
-  createExecutiveSuite(-50, -36, 0, 'Principal Suite', 'principal_screen');
+  // 1. CEO Executive Penthouse Suite (North-West)
+  createExecutiveSuite(-50, -36, 0, 'CEO Executive Suite', 'ceo_screen');
+  // 2. VP Executive Suite (North-East of Wing)
+  createExecutiveSuite(-34, -36, 0, 'VP Executive Suite', 'vp_screen');
+  // 3. Principal Director Suite (South-West of Wing)
+  createExecutiveSuite(-50, -17, 0, 'Principal Suite', 'principal_screen');
+
+  // 4. Executive Private Board Meeting Suite (South-East of Wing: -34, -17)
+  const execBoard = new THREE.Group();
+  const confTable = new THREE.Mesh(roundedBox(3.8, 0.74, 1.8, 0.06), new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.55 }));
+  confTable.position.set(0, 0.37, 0);
+  confTable.castShadow = true;
+  execBoard.add(confTable);
+
+  // 6 Conference Leather Chairs
+  [-1.2, 0, 1.2].forEach((cx) => {
+    [1.25, -1.25].forEach((cz, idx) => {
+      const c = new THREE.Mesh(roundedBox(0.60, 0.10, 0.55, 0.04), blackLeatherMat);
+      c.position.set(cx, 0.46, cz);
+      c.castShadow = true;
+      execBoard.add(c);
+      chairsRef.current.push({
+        name: `Executive Board Chair`,
+        pos: new THREE.Vector3(-34 + cx, 0.46, -17 + cz),
+        rot: idx === 0 ? Math.PI : 0,
+        seatHeight: 0.46
+      });
+    });
+  });
+  execBoard.position.set(-34, 0, -17);
+  furnitureGroup.add(execBoard);
 
   return { ...screensMap, furnitureGroup };
 }
