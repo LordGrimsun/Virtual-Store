@@ -146,7 +146,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       return new THREE.Vector3(18, 0, -10);
     }
     if (tr.includes('lounge c') || tr.includes('lounge-c') || tr.includes('concourse')) {
-      return new THREE.Vector3(-10, 0, 4);
+      return new THREE.Vector3(-10, 0, 1.5);
     }
     if (tr.includes('lobby')) {
       return new THREE.Vector3(16, 0, 18);
@@ -167,9 +167,9 @@ export default function WorkspacePlatform({ user, onExit }) {
   const keysPressedRef = useRef({});
 
   // Dynamic Camera Orbit, Zoom & Showcase Screen Presentation
-  const cameraDistanceRef = useRef(12.5);
+  const cameraDistanceRef = useRef(4.8);
   const cameraOrbitAngleRef = useRef(0.28);
-  const cameraPitchAngleRef = useRef(0.38); // Natural third-person eye-level ~22° pitch
+  const cameraPitchAngleRef = useRef(0.20); // GTA San Andreas third-person chase cam ~11.5° pitch
   const cameraTargetYOffsetRef = useRef(0);
   const isDraggingOrbitRef = useRef(false);
   const pointerDownPosRef = useRef({ x: 0, y: 0, time: 0, button: 0 });
@@ -947,14 +947,13 @@ export default function WorkspacePlatform({ user, onExit }) {
     scene.fog = new THREE.FogExp2(0xc9e0e8, 0.0042);
     sceneRef.current = scene;
 
-    // Elevated three-quarter view: keep the same working distance, but tilt down
-    // more so the office fills the viewport and the distant landscape stays secondary.
+    // Authentic GTA San Andreas third-person gameplay camera with 54° FOV and cinematic depth
     const aspect = width / height;
-    const camera = new THREE.PerspectiveCamera(34, aspect, 0.5, 600);
-    // Perspective view focusing on initial target room
+    const camera = new THREE.PerspectiveCamera(54, aspect, 0.2, 600);
+    // Initial third-person chase camera position
     const initPos = targetPosRef.current;
-    camera.position.set(initPos.x, 15.0, initPos.z + 15.0);
-    camera.lookAt(initPos.x, 1.8, initPos.z);
+    camera.position.set(initPos.x + 1.2, 2.4, initPos.z + 4.6);
+    camera.lookAt(initPos.x, 1.45, initPos.z);
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
@@ -1027,7 +1026,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           slug = 'conference-a';
           formattedName = 'Window Promenade';
         } else if (clean.includes('lounge c') || clean.includes('concourse')) {
-          target.set(-10, 0, 4);
+          target.set(-10, 0, 1.5);
           slug = 'lounge-c';
           formattedName = 'Lounge C';
         } else if (clean.includes('patio') || clean.includes('terrace')) {
@@ -1057,16 +1056,16 @@ export default function WorkspacePlatform({ user, onExit }) {
         setCurrentRoomId(slug);
         if (slug === 'auditorium') {
           cameraOrbitAngleRef.current = -Math.PI / 2;
-          cameraPitchAngleRef.current = 0.28;
-          cameraDistanceRef.current = 8.5;
+          cameraPitchAngleRef.current = 0.26;
+          cameraDistanceRef.current = 8.0;
           cameraTargetYOffsetRef.current = 0;
         } else {
           cameraOrbitAngleRef.current = 0.28;
-          cameraPitchAngleRef.current = 0.38;
-          cameraDistanceRef.current = 12.5;
+          cameraPitchAngleRef.current = 0.20;
+          cameraDistanceRef.current = 4.8;
           cameraTargetYOffsetRef.current = 0;
-          camera.position.set(target.x + 3.5, 5.0, target.z + 11.5);
-          camera.lookAt(target.x, 1.6, target.z);
+          camera.position.set(target.x + 1.2, 2.4, target.z + 4.6);
+          camera.lookAt(target.x, 1.45, target.z);
         }
       }
     }
@@ -1480,21 +1479,39 @@ export default function WorkspacePlatform({ user, onExit }) {
         return { x: curX, z: curZ };
       };
 
-      // Process Keyboard WASD Movement
+      // Process Keyboard WASD Movement (GTA San Andreas camera-relative movement)
       const keys = keysPressedRef.current;
-      const moveVec = new THREE.Vector3(0, 0, 0);
-      if (keys['KeyW'] || keys['ArrowUp']) moveVec.z -= 1;
-      if (keys['KeyS'] || keys['ArrowDown']) moveVec.z += 1;
-      if (keys['KeyA'] || keys['ArrowLeft']) moveVec.x -= 1;
-      if (keys['KeyD'] || keys['ArrowRight']) moveVec.x += 1;
+      let inputForward = 0; // W / Up = +1 (Forward), S / Down = -1 (Backward)
+      let inputRight = 0;   // D / Right = +1 (Right), A / Left = -1 (Left)
+      if (keys['KeyW'] || keys['ArrowUp']) inputForward += 1;
+      if (keys['KeyS'] || keys['ArrowDown']) inputForward -= 1;
+      if (keys['KeyA'] || keys['ArrowLeft']) inputRight -= 1;
+      if (keys['KeyD'] || keys['ArrowRight']) inputRight += 1;
 
       if (playerMeshRef.current && playerPartsRef.current) {
         const player = playerMeshRef.current;
         const parts = playerPartsRef.current;
         let isMoving = false;
 
-        if (moveVec.lengthSq() > 0) {
-          moveVec.normalize();
+        if (inputForward !== 0 || inputRight !== 0) {
+          // Normalize input so diagonal movement speed is uniform
+          const inputLen = Math.hypot(inputForward, inputRight);
+          const normFwd = inputForward / inputLen;
+          const normRight = inputRight / inputLen;
+
+          // Camera horizontal angle (yaw)
+          const camAngle = cameraOrbitAngleRef.current;
+          // Forward unit vector in world XZ (away from camera sightline)
+          const fwdX = -Math.sin(camAngle);
+          const fwdZ = -Math.cos(camAngle);
+          // Right unit vector in world XZ (perpendicular to forward, screen right)
+          const rightX = Math.cos(camAngle);
+          const rightZ = -Math.sin(camAngle);
+
+          // Combined movement direction relative to camera
+          const moveX = fwdX * normFwd + rightX * normRight;
+          const moveZ = fwdZ * normFwd + rightZ * normRight;
+
           if (isSittingRef.current) {
             isSittingRef.current = false;
             const forwardX = Math.sin(player.rotation.y) * 0.45;
@@ -1504,16 +1521,33 @@ export default function WorkspacePlatform({ user, onExit }) {
             player.position.y = 0;
             targetPosRef.current.copy(player.position);
           }
-          const stepX = moveVec.x * delta * 6.5;
-          const stepZ = moveVec.z * delta * 6.5;
+
+          const moveSpeed = 6.8;
+          const stepX = moveX * delta * moveSpeed;
+          const stepZ = moveZ * delta * moveSpeed;
           const resolved = resolveWallCollision(player.position.x, player.position.z, stepX, stepZ);
           player.position.x = resolved.x;
           player.position.z = resolved.z;
           targetPosRef.current.copy(player.position);
-          const angle = Math.atan2(moveVec.x, moveVec.z);
-          player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, angle, 0.25);
+
+          // GTA San Andreas smooth character rotation towards movement direction
+          const targetRot = Math.atan2(moveX, moveZ);
+          let rotDiff = targetRot - player.rotation.y;
+          while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
+          while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
+          player.rotation.y += rotDiff * 0.28;
+
           isSittingRef.current = false;
           isMoving = true;
+
+          // GTA San Andreas smooth camera follow behind player when moving forward
+          if (!isDraggingOrbitRef.current && inputForward > 0) {
+            const behindAngle = player.rotation.y + Math.PI;
+            let camDiff = behindAngle - cameraOrbitAngleRef.current;
+            while (camDiff < -Math.PI) camDiff += Math.PI * 2;
+            while (camDiff > Math.PI) camDiff -= Math.PI * 2;
+            cameraOrbitAngleRef.current += camDiff * 0.032;
+          }
         } else {
           const target = targetPosRef.current;
           const dx = target.x - player.position.x;
@@ -1522,7 +1556,11 @@ export default function WorkspacePlatform({ user, onExit }) {
 
           if (dist > 0.15) {
             const targetAngle = Math.atan2(dx, dz);
-            player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, targetAngle, 0.2);
+            let rotDiff = targetAngle - player.rotation.y;
+            while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
+            while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
+            player.rotation.y += rotDiff * 0.22;
+
             const step = Math.min(dist, delta * 6.2);
             const stepX = (dx / dist) * step;
             const stepZ = (dz / dist) * step;
@@ -1702,20 +1740,20 @@ export default function WorkspacePlatform({ user, onExit }) {
             camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
             camera.lookAt(screenX, lookY, screenZ);
           } else {
-            // Forward room target offset: keeps avatar in the lower-third foreground
-            // so the forward view (screens, desks, walls, teammates) is centered in the viewport
-            const fwdDist = Math.min(dist * 0.35, 4.5);
+            // GTA San Andreas Third-Person Chase Cam
+            // Follows right behind the avatar at shoulder level, framing the character in lower-third
+            // and the world ahead in full 3D perspective
+            const fwdDist = Math.min(dist * 0.40, 3.2);
             const lookTargetX = p.x - Math.sin(angle) * fwdDist;
             const lookTargetZ = p.z - Math.cos(angle) * fwdDist;
-            const baseLookY = isAuditorium ? 2.4 : 1.5;
-            const eyeLift = Math.max(0, (0.75 - pitch) * 1.1);
-            const lookY = baseLookY + eyeLift + (cameraTargetYOffsetRef.current || 0);
+            const baseLookY = isAuditorium ? 2.0 : 1.40;
+            const lookY = p.y + baseLookY + (cameraTargetYOffsetRef.current || 0);
 
             const camX = p.x + Math.sin(angle) * dist * Math.cos(pitch);
-            const camY = Math.max(1.6, dist * Math.sin(pitch));
+            const camY = Math.max(0.6, p.y + 1.45 + dist * Math.sin(pitch));
             const camZ = p.z + Math.cos(angle) * dist * Math.cos(pitch);
 
-            camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
+            camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.14);
             camera.lookAt(lookTargetX, lookY, lookTargetZ);
           }
         }
@@ -1746,9 +1784,15 @@ export default function WorkspacePlatform({ user, onExit }) {
             // Project wall onto camera-to-target sightline
             const projDist = toWallX * rayDirX + toWallZ * rayDirZ;
 
-            // Check if wall is positioned between camera and target
+            // Check if wall is positioned between camera and target or if camera is inside wall bounds
             let isOccluding = false;
-            if (projDist > 0.8 && projDist < targetDist - 0.5) {
+            const camInsideWall = (
+              Math.abs(camPos.x - w.center.x) <= (w.width / 2 + 0.45) &&
+              Math.abs(camPos.z - w.center.z) <= (w.depth / 2 + 0.45)
+            );
+            if (camInsideWall) {
+              isOccluding = true;
+            } else if (projDist > 0.15 && projDist < targetDist - 0.2) {
               const perpDistSq = (toWallX * toWallX + toWallZ * toWallZ) - (projDist * projDist);
               const perpDist = perpDistSq > 0 ? Math.sqrt(perpDistSq) : 0;
               const threshold = Math.max(1.8, Math.min(w.width, w.depth) / 2 + 1.2);
@@ -1864,27 +1908,26 @@ export default function WorkspacePlatform({ user, onExit }) {
       setIsSpotLinkModalOpen(false);
     };
 
-    // Mouse Wheel Zoom: Smooth distance adjustment between 0.85 (deep PC/seat zoom) and 36,
-    // and naturally levels camera towards eye-level when scrolling UP so forward room is seen
+    // Mouse Wheel Zoom: GTA San Andreas zoom range between 1.2m (close over-shoulder) and 16.0m (tactical chase)
     const handleWheel = (e) => {
       e.preventDefault();
-      const zoomFactor = e.deltaY * 0.025;
-      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 0.85, 36);
+      const zoomFactor = e.deltaY * 0.015;
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 1.2, 16.0);
 
       // Scrolling UP (deltaY < 0): zoom in AND smoothly level camera towards eye-level
       // so whatever is in front of the avatar comes directly into view
       if (e.deltaY < 0) {
         cameraPitchAngleRef.current = THREE.MathUtils.clamp(
-          cameraPitchAngleRef.current - 0.035,
-          0.08,
-          1.15
+          cameraPitchAngleRef.current - 0.025,
+          -0.12,
+          0.95
         );
       } else if (e.deltaY > 0) {
-        // Scrolling DOWN (deltaY > 0): zoom out AND gently raise pitch for room overview
+        // Scrolling DOWN (deltaY > 0): zoom out AND gently raise pitch for tactical chase overview
         cameraPitchAngleRef.current = THREE.MathUtils.clamp(
-          cameraPitchAngleRef.current + 0.025,
-          0.08,
-          1.15
+          cameraPitchAngleRef.current + 0.020,
+          -0.12,
+          0.95
         );
       }
     };
@@ -1916,13 +1959,13 @@ export default function WorkspacePlatform({ user, onExit }) {
               8.0
             );
           } else {
-            cameraOrbitAngleRef.current += deltaX * 0.007;
-            // Dragging UP (deltaY < 0) tilts camera UP towards eye-level (lowering pitch angle)
+            cameraOrbitAngleRef.current += deltaX * 0.005;
+            // Dragging UP (deltaY < 0) tilts camera UP towards eye-level / sky
             // Dragging DOWN (deltaY > 0) elevates camera overhead
             cameraPitchAngleRef.current = THREE.MathUtils.clamp(
-              cameraPitchAngleRef.current + deltaY * 0.005,
-              0.08,
-              1.15
+              cameraPitchAngleRef.current + deltaY * 0.004,
+              -0.15,
+              0.95
             );
           }
         }
@@ -2049,7 +2092,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       slug = 'conference-a';
       formattedName = 'Window Promenade';
     } else if (clean.includes('lounge c') || clean.includes('concourse')) {
-      target.set(-10, 0, 4);
+      target.set(-10, 0, 1.5);
       slug = 'lounge-c';
       formattedName = 'Lounge C';
     } else if (clean.includes('patio') || clean.includes('terrace')) {
@@ -2082,15 +2125,15 @@ export default function WorkspacePlatform({ user, onExit }) {
       playerMeshRef.current.position.copy(target);
     }
 
-    cameraDistanceRef.current = 12.5;
+    cameraDistanceRef.current = 4.8;
     cameraOrbitAngleRef.current = 0.28;
-    cameraPitchAngleRef.current = 0.38;
+    cameraPitchAngleRef.current = 0.20;
     cameraTargetYOffsetRef.current = 0;
     isSittingRef.current = false;
 
     if (cameraRef.current && !isTopDownBlueprint) {
-      cameraRef.current.position.set(target.x + 3.5, 5.0, target.z + 11.5);
-      cameraRef.current.lookAt(target.x, 1.6, target.z);
+      cameraRef.current.position.set(target.x + 1.2, 2.4, target.z + 4.6);
+      cameraRef.current.lookAt(target.x, 1.45, target.z);
     }
 
     try {
@@ -2791,8 +2834,8 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Zoom In Button */}
         <button
           onClick={() => {
-            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current - 3, 1.2, 40);
-            cameraPitchAngleRef.current = THREE.MathUtils.clamp(cameraPitchAngleRef.current - 0.05, 0.10, 1.15);
+            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current - 0.8, 1.2, 16.0);
+            cameraPitchAngleRef.current = THREE.MathUtils.clamp(cameraPitchAngleRef.current - 0.03, -0.12, 0.95);
             playSound('click');
           }}
           title="Zoom In (+)"
@@ -2819,8 +2862,8 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Zoom Out Button */}
         <button
           onClick={() => {
-            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + 3, 1.2, 40);
-            cameraPitchAngleRef.current = THREE.MathUtils.clamp(cameraPitchAngleRef.current + 0.04, 0.10, 1.15);
+            cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + 0.8, 1.2, 16.0);
+            cameraPitchAngleRef.current = THREE.MathUtils.clamp(cameraPitchAngleRef.current + 0.02, -0.12, 0.95);
             playSound('click');
           }}
           title="Zoom Out (−)"
@@ -2851,13 +2894,15 @@ export default function WorkspacePlatform({ user, onExit }) {
               showcaseScreenRef.current = null;
               setShowcaseScreenTarget(null);
             }
-            cameraDistanceRef.current = 6.5;
-            cameraOrbitAngleRef.current = 0.15;
-            cameraPitchAngleRef.current = 0.28;
+            cameraDistanceRef.current = 2.4;
+            if (playerMeshRef.current) {
+              cameraOrbitAngleRef.current = playerMeshRef.current.rotation.y + Math.PI;
+            }
+            cameraPitchAngleRef.current = 0.14;
             cameraTargetYOffsetRef.current = 0;
             playSound('click');
           }}
-          title="Avatar Close Focus / Showcase Avatar"
+          title="Avatar Close Focus / Over-the-Shoulder"
           style={{
             width: '40px',
             height: '40px',
@@ -2878,20 +2923,22 @@ export default function WorkspacePlatform({ user, onExit }) {
           <UserCheck size={18} />
         </button>
 
-        {/* Recenter / Dollhouse Isometric View Button (media_1791993853484.png) */}
+        {/* Recenter / GTA San Andreas Chase View Button */}
         <button
           onClick={() => {
             if (showcaseScreenRef.current) {
               showcaseScreenRef.current = null;
               setShowcaseScreenTarget(null);
             }
-            cameraDistanceRef.current = 12.5;
-            cameraOrbitAngleRef.current = 0.28;
-            cameraPitchAngleRef.current = 0.38;
+            cameraDistanceRef.current = 4.8;
+            if (playerMeshRef.current) {
+              cameraOrbitAngleRef.current = playerMeshRef.current.rotation.y + Math.PI;
+            }
+            cameraPitchAngleRef.current = 0.20;
             cameraTargetYOffsetRef.current = 0;
             playSound('click');
           }}
-          title="Recenter Camera / Natural View (Target Icon)"
+          title="Recenter Camera / GTA Chase Cam (Target Icon)"
           style={{
             width: '40px',
             height: '40px',
