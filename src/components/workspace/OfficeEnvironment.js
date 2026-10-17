@@ -301,10 +301,46 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     return wall;
   };
 
+  // Helper: Modern Glass Partition Wall with dark base sill and top header trim (media_1792165933867.png)
+  const createGlassPartition = (x, z, width, depth, height = WALL_HEIGHT) => {
+    // Bottom sill/baseboard
+    const baseSill = new THREE.Mesh(
+      new THREE.BoxGeometry(width, 0.16, depth),
+      materials.doorFrameMat
+    );
+    baseSill.position.set(x, 0.08, z);
+    environmentGroup.add(baseSill);
+
+    // Tempered glass panel
+    const glassPane = new THREE.Mesh(
+      new THREE.BoxGeometry(width, height - 0.24, depth * 0.4),
+      materials.glassMat
+    );
+    glassPane.position.set(x, (height - 0.24) / 2 + 0.16, z);
+    environmentGroup.add(glassPane);
+
+    // Top header/sill
+    const topSill = new THREE.Mesh(
+      new THREE.BoxGeometry(width + 0.02, 0.08, depth + 0.02),
+      materials.wallTrimMat
+    );
+    topSill.position.set(x, height + 0.04, z);
+    environmentGroup.add(topSill);
+
+    wallsList.push({
+      mesh: glassPane,
+      trimMesh: topSill,
+      center: new THREE.Vector3(x, height / 2, z),
+      width,
+      depth,
+      radius: Math.hypot(width, depth) / 2
+    });
+  };
+
   const doorsList = [];
 
-  // Helper: Interactive Double Doorway with swinging hinge pivots & brass handles
-  const createDoubleDoor = (x, z, rotY = 0) => {
+  // Helper: Interactive Double Doorway with swinging hinge pivots, brass handles & wall lintel
+  const createDoubleDoor = (x, z, rotY = 0, doorName = 'Double Door') => {
     const doorGroup = new THREE.Group();
     doorGroup.name = 'doorway_group';
 
@@ -323,6 +359,23 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     frameTop.position.set(0, 2.4, 0);
     frameTop.name = 'doorway_frame';
     doorGroup.add(frameTop);
+
+    // Solid Wall Lintel / Transom above door frame spanning to WALL_HEIGHT (eliminates all gaps above doors!)
+    const lintelH = WALL_HEIGHT - 2.45;
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(3.02, lintelH, WALL_THICKNESS),
+      materials.wallMat
+    );
+    lintel.position.set(0, 2.45 + lintelH / 2, 0);
+    lintel.castShadow = true;
+    doorGroup.add(lintel);
+
+    const lintelTrim = new THREE.Mesh(
+      new THREE.BoxGeometry(3.02 + 0.02, 0.08, WALL_THICKNESS + 0.02),
+      materials.wallTrimMat
+    );
+    lintelTrim.position.set(0, WALL_HEIGHT + 0.04, 0);
+    doorGroup.add(lintelTrim);
 
     // Left Door Leaf mounted on Hinge Pivot at -1.38
     const doorLPivot = new THREE.Group();
@@ -369,9 +422,9 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     doorGroup.position.set(x, 0, z);
     doorGroup.rotation.y = rotY;
 
-    // Interactive state for smooth animation and collision checking
     doorGroup.userData = {
       isInteractiveDoor: true,
+      name: doorName,
       isOpen: false,
       currentAngle: 0,
       targetAngle: 0,
@@ -393,8 +446,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     return doorGroup;
   };
 
-  // Helper: Interactive Single Doorway for private focus cubicles & chat booths
-  const createSingleDoor = (x, z, rotY = 0) => {
+  // Helper: Interactive Single Doorway for private focus cubicles & booths
+  const createSingleDoor = (x, z, rotY = 0, doorName = 'Single Door') => {
     const doorGroup = new THREE.Group();
     doorGroup.name = 'doorway_group';
 
@@ -410,6 +463,23 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     const frameTop = new THREE.Mesh(new THREE.BoxGeometry(1.62, 0.1, 0.36), materials.doorFrameMat);
     frameTop.position.set(0, 2.4, 0);
     doorGroup.add(frameTop);
+
+    // Solid Wall Lintel / Transom above single door frame
+    const lintelH = WALL_HEIGHT - 2.45;
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(1.62, lintelH, WALL_THICKNESS),
+      materials.wallMat
+    );
+    lintel.position.set(0, 2.45 + lintelH / 2, 0);
+    lintel.castShadow = true;
+    doorGroup.add(lintel);
+
+    const lintelTrim = new THREE.Mesh(
+      new THREE.BoxGeometry(1.62 + 0.02, 0.08, WALL_THICKNESS + 0.02),
+      materials.wallTrimMat
+    );
+    lintelTrim.position.set(0, WALL_HEIGHT + 0.04, 0);
+    doorGroup.add(lintelTrim);
 
     // Single Door Leaf mounted on Hinge Pivot at -0.70
     const doorPivot = new THREE.Group();
@@ -436,6 +506,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
     doorGroup.userData = {
       isInteractiveDoor: true,
+      name: doorName,
       isOpen: false,
       currentAngle: 0,
       targetAngle: 0,
@@ -443,6 +514,105 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
       doorRPivot: null,
       center: new THREE.Vector3(x, 1.2, z),
       width: 1.5,
+      depth: 0.4,
+      toggleDoor: (forceOpen) => {
+        const nextState = forceOpen !== undefined ? forceOpen : !doorGroup.userData.isOpen;
+        doorGroup.userData.isOpen = nextState;
+        doorGroup.userData.targetAngle = nextState ? Math.PI * 0.48 : 0;
+        return nextState;
+      }
+    };
+
+    environmentGroup.add(doorGroup);
+    doorsList.push(doorGroup);
+    return doorGroup;
+  };
+
+  // Helper: Interactive Modern Double Glass Doors (Patio Terrace & Main Lobby)
+  const createGlassDoubleDoor = (x, z, rotY = 0, doorName = 'Glass Door') => {
+    const doorGroup = new THREE.Group();
+    doorGroup.name = 'doorway_group';
+
+    // Metal frame
+    const frameLeft = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
+    frameLeft.position.set(-1.45, 1.2, 0);
+    doorGroup.add(frameLeft);
+
+    const frameRight = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.36), materials.doorFrameMat);
+    frameRight.position.set(1.45, 1.2, 0);
+    doorGroup.add(frameRight);
+
+    const frameTop = new THREE.Mesh(new THREE.BoxGeometry(3.02, 0.1, 0.36), materials.doorFrameMat);
+    frameTop.position.set(0, 2.4, 0);
+    doorGroup.add(frameTop);
+
+    // Wall lintel above glass door
+    const lintelH = WALL_HEIGHT - 2.45;
+    const lintel = new THREE.Mesh(
+      new THREE.BoxGeometry(3.02, lintelH, WALL_THICKNESS),
+      materials.wallMat
+    );
+    lintel.position.set(0, 2.45 + lintelH / 2, 0);
+    lintel.castShadow = true;
+    doorGroup.add(lintel);
+
+    const lintelTrim = new THREE.Mesh(
+      new THREE.BoxGeometry(3.02 + 0.02, 0.08, WALL_THICKNESS + 0.02),
+      materials.wallTrimMat
+    );
+    lintelTrim.position.set(0, WALL_HEIGHT + 0.04, 0);
+    doorGroup.add(lintelTrim);
+
+    const glassMat = materials.glassMat.clone();
+    glassMat.opacity = 0.38;
+
+    // Left glass leaf
+    const doorLPivot = new THREE.Group();
+    doorLPivot.position.set(-1.38, 0, 0);
+    const doorL = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.06), glassMat);
+    doorL.position.set(0.68, 1.14, 0);
+    doorL.castShadow = true;
+    doorL.name = 'interactive_door_leaf';
+    doorLPivot.add(doorL);
+
+    [-0.05, 0.05].forEach((hz) => {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.55, 12), materials.doorFrameMat);
+      handle.position.set(1.20, 1.05, hz);
+      handle.name = 'interactive_door_leaf';
+      doorLPivot.add(handle);
+    });
+    doorGroup.add(doorLPivot);
+
+    // Right glass leaf
+    const doorRPivot = new THREE.Group();
+    doorRPivot.position.set(1.38, 0, 0);
+    const doorR = new THREE.Mesh(new THREE.BoxGeometry(1.36, 2.28, 0.06), glassMat);
+    doorR.position.set(-0.68, 1.14, 0);
+    doorR.castShadow = true;
+    doorR.name = 'interactive_door_leaf';
+    doorRPivot.add(doorR);
+
+    [-0.05, 0.05].forEach((hz) => {
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.55, 12), materials.doorFrameMat);
+      handle.position.set(-1.20, 1.05, hz);
+      handle.name = 'interactive_door_leaf';
+      doorRPivot.add(handle);
+    });
+    doorGroup.add(doorRPivot);
+
+    doorGroup.position.set(x, 0, z);
+    doorGroup.rotation.y = rotY;
+
+    doorGroup.userData = {
+      isInteractiveDoor: true,
+      name: doorName,
+      isOpen: false,
+      currentAngle: 0,
+      targetAngle: 0,
+      doorLPivot,
+      doorRPivot,
+      center: new THREE.Vector3(x, 1.2, z),
+      width: 2.8,
       depth: 0.4,
       toggleDoor: (forceOpen) => {
         const nextState = forceOpen !== undefined ? forceOpen : !doorGroup.userData.isOpen;
@@ -570,27 +740,26 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // Dividing wall between Boardroom and Meeting Cabin (X = -14, Z = -24 to -8)
   createWall(-14, -16, WALL_THICKNESS, 16);
 
-  // South wall of Boardroom with Double Doors at X = -23, Z = -8
-  createWall(-28.25, -8, 7.5, WALL_THICKNESS);
-  createDoubleDoor(-23, -8, 0); // Double doors with brass handles into Boardroom
-  createWall(-17.75, -8, 7.5, WALL_THICKNESS);
+  // South wall of Boardroom (Z = -8, total span: X = -32 to -14, exactly 18m)
+  // Double Door at X = -23 (outer frame: -24.51 to -21.49)
+  createWall(-28.255, -8, 7.49, WALL_THICKNESS); // Left solid wall: -32.0 to -24.51 (0.000 gap)
+  createDoubleDoor(-23, -8, 0, 'Boardroom Double Door'); // Double doors with brass handles & lintel
+  createGlassPartition(-17.745, -8, 7.49, WALL_THICKNESS); // Right glass wall: -21.49 to -14.00 (0.000 gap)
 
   // 2. MEETING CABIN / PRIVATE LOUNGE (North-Center: X = -14 to +6, Z = -24 to -8)
   // Dividing wall between Meeting Cabin and Auditorium (X = +6, Z = -24 to -8)
   createWall(6, -16, WALL_THICKNESS, 16);
 
-  // South wall of Meeting Cabin with Double Doors at X = -4, Z = -8
-  createWall(-9.75, -8, 8.5, WALL_THICKNESS);
-  createDoubleDoor(-4, -8, 0); // Double doors with brass handles into Meeting Cabin
-  createWall(1.75, -8, 8.5, WALL_THICKNESS);
+  // South wall of Meeting Cabin (Z = -8, total span: X = -14 to +6, exactly 20m)
+  // Double Door at X = -4 (outer frame: -5.51 to -2.49)
+  createWall(-9.755, -8, 8.49, WALL_THICKNESS); // Left solid wall: -14.0 to -5.51 (0.000 gap)
+  createDoubleDoor(-4, -8, 0, 'Meeting Cabin Double Door'); // Double doors with brass handles & lintel
+  createWall(1.755, -8, 8.49, WALL_THICKNESS); // Right ribbed wall: -2.49 to +6.00 (0.000 gap)
 
   // 3. AUDITORIUM OPEN ATRIUM (East: X = +6 to +32, Z = -24 to +4)
   // Open layout: Framed by stylish low black planters with tall green reeds (media_1792165933867.png & media_1792165933914.png)
-  // West boundary planter along X = +6 from Z = -8 to Z = +4
-  createLowPlanter(6, -2, 12, 0.65, Math.PI / 2);
-
-  // South boundary planter along Z = +4 from X = +6 to X = +18
-  createLowPlanter(12, 4, 12, 0.65, 0);
+  createLowPlanter(6, -2, 12, 0.65, Math.PI / 2); // West boundary planter along X = +6 from Z = -8 to Z = +4
+  createLowPlanter(12, 4, 12, 0.65, 0); // South boundary planter along Z = +4 from X = +6 to X = +18
   // Wide open walkway opening at X = 18 to 22 allows walking freely into the stadium seating tiers!
 
   // =========================================================================
@@ -602,22 +771,53 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // ROW 3: SOUTH ROOMS & COLLABORATION WING (Z = +8 to +24)
   // =========================================================================
 
-  // Focus Cubicle 1 & 2 Front Wall (Z = 8, X = -26 to -14) with Private Single Doors
-  createWall(-25.25, 8, 2.5, WALL_THICKNESS);
-  createSingleDoor(-22.5, 8, 0); // Single door into Focus Cubicle 1
-  createWall(-19.5, 8, 3.5, WALL_THICKNESS);
-  createSingleDoor(-16.2, 8, 0); // Single door into Focus Cubicle 2
-  createWall(-14.4, 8, 1.2, WALL_THICKNESS);
+  // A. FOCUS CUBICLES 1 & 2 (X = -26 to -14, Z = 8 to 14) - Fully Enclosed with Zero Gaps
+  // Outer West Wall (X = -26, Z = 8 to 14)
+  createWall(-26, 11, WALL_THICKNESS, 6);
 
-  // Divider between Cubicle 1 and Cubicle 2 (X = -19.5, Z = 8 to 14)
+  // Focus Cubicle 1 Front Wall (Z = 8, X = -26 to -19.5, span = 6.5m)
+  // Single door at X = -22.75 (outer frame: -23.56 to -21.94)
+  createWall(-24.78, 8, 2.44, WALL_THICKNESS); // Left wall: -26.0 to -23.56 (0.000 gap)
+  createSingleDoor(-22.75, 8, 0, 'Focus Cubicle 1 Door');
+  createWall(-20.72, 8, 2.44, WALL_THICKNESS); // Right wall: -21.94 to -19.50 (0.000 gap)
+
+  // Center divider between Cubicle 1 and 2 (X = -19.5, Z = 8 to 14)
   createWall(-19.5, 11, WALL_THICKNESS, 6);
 
-  // Back wall of Cubicles (Z = 14, X = -26 to -14)
+  // Focus Cubicle 2 Front Wall (Z = 8, X = -19.5 to -14.0, span = 5.5m)
+  // Single door at X = -16.75 (outer frame: -17.56 to -15.94)
+  createWall(-18.53, 8, 1.94, WALL_THICKNESS); // Left wall: -19.50 to -17.56 (0.000 gap)
+  createSingleDoor(-16.75, 8, 0, 'Focus Cubicle 2 Door');
+  createWall(-14.97, 8, 1.94, WALL_THICKNESS); // Right wall: -15.94 to -14.00 (0.000 gap)
+
+  // Outer East Wall of Cubicles (X = -14, Z = 8 to 14)
+  createWall(-14, 11, WALL_THICKNESS, 6);
+
+  // Back Wall of Cubicles (Z = 14, X = -26 to -14, span = 12m)
   createWall(-20, 14, 12, WALL_THICKNESS);
 
-  // Workspace A & Reception divider (X = 14, Z = 8 to 24 with open portal at Z = 16)
-  createWall(14, 10.5, WALL_THICKNESS, 5);
-  createWall(14, 21.5, WALL_THICKNESS, 5);
+  // B. WORKSPACE A & COLLABORATION SUITE (X = -14 to +14, Z = 8 to 24) - Fully Enclosed
+  // Front Wall along Z = 8 (from X = -14 to +14, total span = 28m)
+  // Central Double Door at X = 0 (outer frame: -1.51 to +1.51)
+  createWall(-7.755, 8, 12.49, WALL_THICKNESS); // Left front wall: -14.0 to -1.51 (0.000 gap)
+  createDoubleDoor(0, 8, 0, 'Workspace A Concourse Door'); // Central Double Doors from Lounge C concourse
+  createWall(7.755, 8, 12.49, WALL_THICKNESS); // Right front wall: +1.51 to +14.0 (0.000 gap)
+
+  // West Divider Wall with Outdoor Patio (X = -14, Z = 14 to 24, span = 10m)
+  // Double Glass Sliding Doors at Z = 19 (outer frame: 17.49 to 20.51)
+  createWall(-14, 15.745, WALL_THICKNESS, 3.49); // North wall: 14.0 to 17.49 (0.000 gap)
+  createGlassDoubleDoor(-14, 19, Math.PI / 2, 'Patio Terrace Glass Door'); // Glass doors to outdoor game terrace
+  createWall(-14, 22.255, WALL_THICKNESS, 3.49); // South wall: 20.51 to 24.0 (0.000 gap)
+
+  // East Divider Wall with Promenade / Lobby (X = 14, Z = 8 to 24, span = 16m)
+  // Double Doors at Z = 16 (outer frame: 14.49 to 17.51)
+  createWall(14, 11.245, WALL_THICKNESS, 6.49); // North wall: 8.0 to 14.49 (0.000 gap)
+  createDoubleDoor(14, 16, Math.PI / 2, 'Workspace A East Door'); // Doors to East Promenade
+  createWall(14, 20.755, WALL_THICKNESS, 6.49); // South wall: 17.51 to 24.0 (0.000 gap)
+
+  // C. MAIN LOBBY & ENTRANCE (X = 14 to 32, Z = 8 to 24)
+  // South Wall Entrance Double Glass Doors at X = 22, Z = 24
+  createGlassDoubleDoor(22, 24, 0, 'Main Office Entrance');
 
   // 6. Giant Spot Vertical Signboard / Monolith (East entranceway outside Auditorium)
   const monolithGrp = new THREE.Group();

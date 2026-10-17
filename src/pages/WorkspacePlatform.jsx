@@ -1400,8 +1400,12 @@ export default function WorkspacePlatform({ user, onExit }) {
             const dg = doorsList[j];
             if (!dg.userData?.isOpen && dg.userData?.center) {
               const dc = dg.userData.center;
-              const hw = (dg.userData.width || 2.8) / 2 + playerRadius;
-              const hd = (dg.userData.depth || 0.4) / 2 + playerRadius;
+              const rot = dg.rotation.y || 0;
+              const isRotated = Math.abs(Math.sin(rot)) > 0.5;
+              const dWidth = isRotated ? (dg.userData.depth || 0.4) : (dg.userData.width || 2.8);
+              const dDepth = isRotated ? (dg.userData.width || 2.8) : (dg.userData.depth || 0.4);
+              const hw = dWidth / 2 + playerRadius;
+              const hd = dDepth / 2 + playerRadius;
               if (
                 px >= dc.x - hw &&
                 px <= dc.x + hw &&
@@ -1552,7 +1556,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           };
 
           const playerZone = getAcousticZone(pPos);
-          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b'];
+          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'workspace-a', 'patio'];
           const isPlayerInPrivateRoom = privateZones.includes(playerZone);
 
           const nearby = [];
