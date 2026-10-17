@@ -1322,11 +1322,27 @@ export default function WorkspacePlatform({ user, onExit }) {
         isSittingRef.current = false;
         playSound('click');
 
-        // Authentic Spot Virtual rooms detection based on floor coordinates (media_1792165933867.png)
-        let detectedRoom = 'Lounge C';
-        let detectedSlug = 'lounge-c';
+        // Authentic Spot Virtual rooms detection based on floor coordinates (Mega-Campus layout)
+        let detectedRoom = 'Grand Central Atrium';
+        let detectedSlug = 'grand-atrium';
 
-        if (point.z < -8) {
+        // Check new Mega-Campus wings first
+        if (point.x < -26 && point.z > 8) {
+          detectedRoom = 'Fitness & Gym Center';
+          detectedSlug = 'gym';
+        } else if (point.x > 26 && point.z > 8) {
+          detectedRoom = 'Swimming Pool & Sun Deck';
+          detectedSlug = 'swimming-pool';
+        } else if (point.x >= -20 && point.x <= 20 && point.z > 20) {
+          detectedRoom = 'Arcade & Game Zone';
+          detectedSlug = 'game-zone';
+        } else if (point.x < -26 && point.z < -8) {
+          detectedRoom = 'Executive Cabins';
+          detectedSlug = 'executive-cabins';
+        } else if (point.x >= -16 && point.x <= 16 && point.z >= -8 && point.z <= 16) {
+          detectedRoom = 'Grand Central Atrium';
+          detectedSlug = 'grand-atrium';
+        } else if (point.z < -8) {
           // North wing (Boardroom, Meeting Cabin, Auditorium)
           if (point.x < -14) {
             detectedRoom = 'Boardroom';
@@ -1400,6 +1416,11 @@ export default function WorkspacePlatform({ user, onExit }) {
         wavingHandMeshRef.current.rotation.z = Math.sin(elapsed * 5) * 0.22;
       }
 
+      // Swimming Pool Water Gentle Ripples
+      if (scene.userData.poolWaterMesh) {
+        scene.userData.poolWaterMesh.position.y = -0.15 + Math.sin(elapsed * 2.2) * 0.025;
+      }
+
       // Animate interactive doors & proximity opening
       const doors = scene.userData.interactiveDoors;
       if (doors && doors.length > 0) {
@@ -1436,9 +1457,9 @@ export default function WorkspacePlatform({ user, onExit }) {
         const doorsList = scene.userData.interactiveDoors || [];
 
         const collidesAt = (px, pz) => {
-          // Perimeter limits (allow passing into patio/terrace through west doorway)
-          if (pz > 23.4 || pz < -23.4) return true;
-          if (px > 31.4 || (px < -31.4 && (pz < -24 || pz > -8))) return true;
+          // Perimeter boundaries for 120m x 96m Mega-Campus (X: ±58, Z: ±46)
+          if (Math.abs(pz) > 45.4) return true;
+          if (Math.abs(px) > 57.4) return true;
 
           // Check interior walls
           for (let i = 0; i < walls.length; i++) {
@@ -1640,6 +1661,11 @@ export default function WorkspacePlatform({ user, onExit }) {
 
           const getAcousticZone = (pos) => {
             const { x, z } = pos;
+            if (x < -26 && z > 8) return 'gym';
+            if (x > 26 && z > 8) return 'swimming-pool';
+            if (x >= -20 && x <= 20 && z > 20) return 'game-zone';
+            if (x < -26 && z < -8) return 'executive-cabins';
+            if (x >= -16 && x <= 16 && z >= -8 && z <= 16) return 'grand-atrium';
             if (x >= -26 && x <= -14 && z >= 8 && z <= 14) {
               return x < -19.5 ? 'cubicle-1' : 'cubicle-2';
             }
@@ -1658,7 +1684,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           };
 
           const playerZone = getAcousticZone(pPos);
-          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'workspace-a', 'patio'];
+          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'workspace-a', 'patio', 'executive-cabins', 'gym', 'swimming-pool', 'game-zone'];
           const isPlayerInPrivateRoom = privateZones.includes(playerZone);
 
           const nearby = [];
@@ -2122,7 +2148,27 @@ export default function WorkspacePlatform({ user, onExit }) {
     let slug = 'boardroom';
     let formattedName = 'Boardroom';
 
-    if (clean.includes('office-a') || clean.includes('office a')) {
+    if (clean.includes('swimming') || clean.includes('pool') || clean.includes('deck')) {
+      target.set(42, 0, 24);
+      slug = 'swimming-pool';
+      formattedName = 'Swimming Pool & Sun Deck';
+    } else if (clean.includes('gym') || clean.includes('fitness')) {
+      target.set(-42, 0, 24);
+      slug = 'gym';
+      formattedName = 'Fitness & Gym Center';
+    } else if (clean.includes('arcade') || clean.includes('game')) {
+      target.set(0, 0, 28);
+      slug = 'game-zone';
+      formattedName = 'Arcade & Game Zone';
+    } else if (clean.includes('cabin') || clean.includes('executive')) {
+      target.set(-50, 0, -15);
+      slug = 'executive-cabins';
+      formattedName = 'Executive Cabins';
+    } else if (clean.includes('atrium') || clean.includes('grand')) {
+      target.set(0, 0, -2);
+      slug = 'grand-atrium';
+      formattedName = 'Grand Central Atrium';
+    } else if (clean.includes('office-a') || clean.includes('office a')) {
       target.set(-8, 0, 14);
       slug = 'office-a';
       formattedName = 'Office A';
@@ -2150,7 +2196,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       target.set(-23, 0, -12.5);
       slug = 'boardroom';
       formattedName = 'Boardroom';
-    } else if (clean.includes('conference b') || clean.includes('cabin') || clean.includes('conference')) {
+    } else if (clean.includes('conference b') || clean.includes('conference')) {
       target.set(-4, 0, -11.5);
       slug = 'conference-b';
       formattedName = 'Meeting Cabin';
@@ -2162,7 +2208,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       target.set(-10, 0, 1.5);
       slug = 'lounge-c';
       formattedName = 'Lounge C';
-    } else if (clean.includes('patio') || clean.includes('terrace')) {
+    } else if (clean.includes('patio')) {
       target.set(-23, 0, 19);
       slug = 'patio';
       formattedName = 'Patio';
@@ -2192,6 +2238,8 @@ export default function WorkspacePlatform({ user, onExit }) {
       playerMeshRef.current.position.copy(target);
       if (slug === 'auditorium' || slug === 'conference-a') {
         playerMeshRef.current.rotation.y = Math.PI / 2; // Face East towards stage/promenade
+      } else if (slug === 'swimming-pool' || slug === 'gym' || slug === 'game-zone' || slug === 'grand-atrium') {
+        playerMeshRef.current.rotation.y = 0; // Face South into feature activity area
       } else {
         playerMeshRef.current.rotation.y = Math.PI; // Face North into room
       }
@@ -2214,6 +2262,51 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (cameraRef.current && !isTopDownBlueprint) {
         cameraRef.current.position.set(target.x - 4.6, 2.4, target.z);
         cameraRef.current.lookAt(target.x + 2.0, 1.45, target.z);
+      }
+    } else if (slug === 'swimming-pool') {
+      cameraDistanceRef.current = 6.5;
+      cameraOrbitAngleRef.current = Math.PI;
+      cameraPitchAngleRef.current = 0.32;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 3.2, target.z - 5.8);
+        cameraRef.current.lookAt(target.x, 1.0, target.z + 8.0);
+      }
+    } else if (slug === 'game-zone') {
+      cameraDistanceRef.current = 6.5;
+      cameraOrbitAngleRef.current = Math.PI;
+      cameraPitchAngleRef.current = 0.28;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 3.0, target.z - 5.5);
+        cameraRef.current.lookAt(target.x, 1.2, target.z + 6.0);
+      }
+    } else if (slug === 'gym') {
+      cameraDistanceRef.current = 5.6;
+      cameraOrbitAngleRef.current = Math.PI;
+      cameraPitchAngleRef.current = 0.24;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 2.8, target.z - 5.2);
+        cameraRef.current.lookAt(target.x, 1.4, target.z + 2.5);
+      }
+    } else if (slug === 'executive-cabins') {
+      cameraDistanceRef.current = 4.8;
+      cameraOrbitAngleRef.current = 0;
+      cameraPitchAngleRef.current = 0.22;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 2.4, target.z + 4.5);
+        cameraRef.current.lookAt(target.x, 1.35, target.z - 3.0);
+      }
+    } else if (slug === 'grand-atrium') {
+      cameraDistanceRef.current = 6.0;
+      cameraOrbitAngleRef.current = Math.PI;
+      cameraPitchAngleRef.current = 0.24;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 2.8, target.z - 5.5);
+        cameraRef.current.lookAt(target.x, 1.4, target.z + 5.0);
       }
     } else {
       cameraDistanceRef.current = 4.8;
@@ -3817,8 +3910,8 @@ export default function WorkspacePlatform({ user, onExit }) {
               const rect = e.currentTarget.getBoundingClientRect();
               const mx = (e.clientX - rect.left) / rect.width;
               const my = (e.clientY - rect.top) / rect.height;
-              const wx = (mx - 0.5) * 55;
-              const wz = (my - 0.5) * 35;
+              const wx = (mx - 0.5) * 116;
+              const wz = (my - 0.5) * 92;
               targetPosRef.current.set(wx, 0, wz);
               isSittingRef.current = false;
               playSound('click');
@@ -3826,26 +3919,50 @@ export default function WorkspacePlatform({ user, onExit }) {
             style={{
               width: '100%',
               height: '82px',
-              background: '#1e293b',
+              background: '#0f172a',
               borderRadius: '6px',
               position: 'relative',
               cursor: 'pointer',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              border: '1px solid #1e293b'
             }}
           >
-            <div style={{ position: 'absolute', left: '10%', top: '15%', width: '30%', height: '35%', border: '1px dashed #475569', borderRadius: 2 }} />
-            <div style={{ position: 'absolute', right: '10%', top: '15%', width: '40%', height: '70%', border: '1px dashed #475569', borderRadius: 2 }} />
+            {/* Mega-Campus Zone Outlines */}
+            {/* Executive Cabins (Top-Left) */}
+            <div title="Executive Cabins" style={{ position: 'absolute', left: '2%', top: '2%', width: '26%', height: '40%', border: '1px dashed #64748b', borderRadius: 2, background: 'rgba(51, 65, 85, 0.3)' }}>
+              <span style={{ fontSize: '6px', color: '#94a3b8', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>CABINS</span>
+            </div>
+            {/* Auditorium (Top-Right) */}
+            <div title="Auditorium" style={{ position: 'absolute', right: '2%', top: '2%', width: '38%', height: '40%', border: '1px dashed #38bdf8', borderRadius: 2, background: 'rgba(14, 165, 233, 0.12)' }}>
+              <span style={{ fontSize: '6px', color: '#38bdf8', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>AUDITORIUM</span>
+            </div>
+            {/* Central Atrium */}
+            <div title="Grand Central Atrium" style={{ position: 'absolute', left: '34%', top: '38%', width: '28%', height: '26%', border: '1px dotted #475569', borderRadius: 2 }}>
+              <span style={{ fontSize: '5.5px', color: '#64748b', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>ATRIUM</span>
+            </div>
+            {/* Fitness Gym (Bottom-Left) */}
+            <div title="Fitness Gym" style={{ position: 'absolute', left: '2%', bottom: '2%', width: '26%', height: '40%', border: '1px dashed #f43f5e', borderRadius: 2, background: 'rgba(244, 63, 94, 0.15)' }}>
+              <span style={{ fontSize: '6px', color: '#f43f5e', position: 'absolute', bottom: '1px', left: '2px', fontWeight: 700 }}>GYM</span>
+            </div>
+            {/* Arcade & Game Zone (Bottom-Center) */}
+            <div title="Arcade & Game Zone" style={{ position: 'absolute', left: '32%', bottom: '2%', width: '32%', height: '32%', border: '1px dashed #a855f7', borderRadius: 2, background: 'rgba(168, 85, 247, 0.15)' }}>
+              <span style={{ fontSize: '6px', color: '#c084fc', position: 'absolute', bottom: '1px', left: '2px', fontWeight: 700 }}>ARCADE</span>
+            </div>
+            {/* Swimming Pool & Sun Deck (Bottom-Right) */}
+            <div title="Swimming Pool & Sun Deck" style={{ position: 'absolute', right: '2%', bottom: '2%', width: '30%', height: '40%', border: '1px dashed #06b6d4', borderRadius: 2, background: 'rgba(6, 182, 212, 0.22)' }}>
+              <span style={{ fontSize: '6px', color: '#22d3ee', position: 'absolute', bottom: '1px', left: '2px', fontWeight: 700 }}>POOL</span>
+            </div>
 
             {avatarsRef.current.filter((a) => !a.isPlayer).map((av, idx) => {
-              const mx = ((av.mesh.position.x / 55) + 0.5) * 100;
-              const my = ((av.mesh.position.z / 35) + 0.5) * 100;
+              const mx = ((av.mesh.position.x / 116) + 0.5) * 100;
+              const my = ((av.mesh.position.z / 92) + 0.5) * 100;
               return (
                 <div
                   key={idx}
                   style={{
                     position: 'absolute',
-                    left: `${Math.max(5, Math.min(95, mx))}%`,
-                    top: `${Math.max(5, Math.min(95, my))}%`,
+                    left: `${Math.max(4, Math.min(96, mx))}%`,
+                    top: `${Math.max(4, Math.min(96, my))}%`,
                     width: 5,
                     height: 5,
                     borderRadius: '50%',
@@ -3858,8 +3975,8 @@ export default function WorkspacePlatform({ user, onExit }) {
 
             <div style={{
               position: 'absolute',
-              left: `${Math.max(5, Math.min(95, ((playerCoord.x / 55) + 0.5) * 100))}%`,
-              top: `${Math.max(5, Math.min(95, ((playerCoord.z / 35) + 0.5) * 100))}%`,
+              left: `${Math.max(4, Math.min(96, ((playerCoord.x / 116) + 0.5) * 100))}%`,
+              top: `${Math.max(4, Math.min(96, ((playerCoord.z / 92) + 0.5) * 100))}%`,
               width: 8,
               height: 8,
               borderRadius: '50%',

@@ -27,10 +27,15 @@ export default function SpacesSidebar({
   const isSerSpace = currentSpace === 'ser-emY' || currentSpace === '@ser-emY' || currentSpace === 'ser';
   const spaceDisplayName = isSerSpace ? 'ser' : 'Office';
 
-  // The 12 canonical rooms for Office space matching Spot Virtual blueprint (media_1791969443822.png)
+  // The canonical rooms for Office space matching Spot Virtual blueprint and Mega-Campus
   const officeRooms = [
     { id: 'auditorium', name: 'Auditorium', badge: '🏠', isHome: true },
     { id: 'boardroom', name: 'Boardroom', badge: null },
+    { id: 'swimming-pool', name: 'Swimming Pool & Sun Deck', badge: '🏊', isPool: true },
+    { id: 'gym', name: 'Fitness & Gym Center', badge: '🏋️', isGym: true },
+    { id: 'game-zone', name: 'Arcade & Game Zone', badge: '🎮', isGame: true },
+    { id: 'executive-cabins', name: 'Executive Cabins', badge: '👔', isCabin: true },
+    { id: 'grand-atrium', name: 'Grand Central Atrium', badge: '🏢', isAtrium: true },
     { id: 'chat-a', name: 'Chat A', badge: null },
     { id: 'chat-b', name: 'Chat B', badge: null },
     { id: 'conference-a', name: 'Conference A', badge: null },
@@ -77,6 +82,11 @@ export default function SpacesSidebar({
   const normalizeRoomName = (name) => {
     if (!name) return isSerSpace ? 'office-a' : 'boardroom';
     const clean = name.toLowerCase();
+    if (clean.includes('swimming') || clean.includes('pool')) return 'swimming-pool';
+    if (clean.includes('gym') || clean.includes('fitness')) return 'gym';
+    if (clean.includes('arcade') || clean.includes('game')) return 'game-zone';
+    if (clean.includes('cabin') || clean.includes('executive')) return 'executive-cabins';
+    if (clean.includes('atrium') || clean.includes('grand')) return 'grand-atrium';
     if (clean.includes('office-a') || clean.includes('office a')) return 'office-a';
     if (clean.includes('focus-pod-1') || clean.includes('focus pod 1')) return 'focus-pod-1';
     if (clean.includes('focus-pod-2') || clean.includes('focus pod 2')) return 'focus-pod-2';

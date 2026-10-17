@@ -32,6 +32,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const turquoiseMat = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.65 });
   const cushionYellowMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.8 });
   const cushionOrangeMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.8 });
+  const billiardGreenMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.85 });
+  const pingPongBlueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.6 });
+  const woodTeakMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.65 });
+  const whiteResortMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+  const gymRedMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6 });
 
   const roundedBox = (width, height, depth, radius = 0.045) => {
     const safeRadius = Math.max(0.005, Math.min(radius, width * 0.45, height * 0.45, depth * 0.45));
@@ -1011,12 +1016,618 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   furnitureGroup.add(patioPit);
   createRoundCoffeeTable(-18.0, 20.0, 0.65, 0.30);
 
-  // Conference A Screen (Lobby/Presentation: x: 19, z: 20)
-  createSpotWallScreen(
-    19.0, 1.55, 23.8, 3.2, 1.8, Math.PI, 'conference_a',
-    screenTextures?.kpiTexture,
-    'Conference A Telemetry Display'
-  );
+  // =========================================================================
+  // MEGA-CAMPUS EXPANSION: 1. FITNESS & GYM CENTER FURNITURE (X: -58 to -26, Z: +8 to +46)
+  // =========================================================================
+
+  // 1. Commercial Treadmills
+  const createTreadmill = (tx, tz, rotY = 0) => {
+    const tm = new THREE.Group();
+    const base = new THREE.Mesh(roundedBox(1.1, 0.22, 2.2, 0.05), blackMat);
+    base.position.y = 0.11;
+    base.castShadow = true;
+    tm.add(base);
+
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.04, 1.8), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.95 }));
+    belt.position.set(0, 0.23, 0.1);
+    tm.add(belt);
+
+    [-0.48, 0.48].forEach((rx) => {
+      const riser = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.25, 0.08), chromeMat);
+      riser.position.set(rx, 0.72, -0.85);
+      tm.add(riser);
+
+      const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.1, 12), blackLeatherMat);
+      rail.rotation.x = Math.PI / 2;
+      rail.position.set(rx, 1.25, -0.35);
+      tm.add(rail);
+    });
+
+    const consoleBox = new THREE.Mesh(roundedBox(0.9, 0.25, 0.08, 0.02), screenBezelMat);
+    consoleBox.position.set(0, 1.35, -0.85);
+    consoleBox.rotation.x = -0.3;
+    tm.add(consoleBox);
+
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.18), screenGlowMat);
+    screen.position.set(0, 1.35, -0.80);
+    screen.rotation.x = -0.3;
+    tm.add(screen);
+
+    tm.position.set(tx, 0, tz);
+    tm.rotation.y = rotY;
+    furnitureGroup.add(tm);
+  };
+
+  [-48, -44, -40, -36].forEach((x) => {
+    createTreadmill(x, 14, Math.PI);
+  });
+
+  // 2. Stationary Spin Exercise Bikes
+  const createSpinBike = (bx, bz, rotY = 0) => {
+    const sb = new THREE.Group();
+    const feet = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 1.2), chromeMat);
+    feet.position.y = 0.025;
+    sb.add(feet);
+
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 24), chromeMat);
+    wheel.rotation.z = Math.PI / 2;
+    wheel.position.set(0, 0.45, 0.35);
+    sb.add(wheel);
+
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.8, 0.9), gymRedMat);
+    frame.position.set(0, 0.45, -0.05);
+    frame.rotation.x = -0.25;
+    sb.add(frame);
+
+    const seat = new THREE.Mesh(roundedBox(0.28, 0.08, 0.32, 0.04), blackLeatherMat);
+    seat.position.set(0, 0.82, -0.35);
+    seat.userData = {
+      isChair: true,
+      name: 'Spin Exercise Bike',
+      chairPos: new THREE.Vector3(bx, 0.82, bz),
+      chairRotY: rotY,
+      seatHeight: 0.82
+    };
+    sb.add(seat);
+    chairsRef.current.push({ name: 'Spin Exercise Bike', pos: new THREE.Vector3(bx, 0.82, bz), rot: rotY, seatHeight: 0.82 });
+
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.55, 12), chromeMat);
+    bar.rotation.z = Math.PI / 2;
+    bar.position.set(0, 1.05, 0.3);
+    sb.add(bar);
+
+    sb.position.set(bx, 0, bz);
+    sb.rotation.y = rotY;
+    furnitureGroup.add(sb);
+  };
+
+  [-46, -42, -38].forEach((x) => {
+    createSpinBike(x, 22, Math.PI);
+  });
+
+  // 3. Olympic Bench Press Stations
+  const createBenchPress = (px, pz, rotY = 0) => {
+    const bp = new THREE.Group();
+    [-0.6, 0.6].forEach((x) => {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.35, 0.08), chromeMat);
+      post.position.set(x, 0.675, -0.4);
+      bp.add(post);
+
+      const catchHook = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.16), blackMat);
+      catchHook.position.set(x, 1.15, -0.35);
+      bp.add(catchHook);
+    });
+
+    const bench = new THREE.Mesh(roundedBox(0.45, 0.12, 1.45, 0.04), blackLeatherMat);
+    bench.position.set(0, 0.46, 0.1);
+    bench.castShadow = true;
+    bench.userData = {
+      isChair: true,
+      name: 'Olympic Bench Press',
+      chairPos: new THREE.Vector3(px, 0.46, pz),
+      chairRotY: rotY,
+      seatHeight: 0.46
+    };
+    bp.add(bench);
+    chairsRef.current.push({ name: 'Olympic Bench Press', pos: new THREE.Vector3(px, 0.46, pz), rot: rotY, seatHeight: 0.46 });
+
+    const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 2.2, 16), chromeMat);
+    bar.rotation.z = Math.PI / 2;
+    bar.position.set(0, 1.25, -0.35);
+    bp.add(bar);
+
+    [-0.9, 0.9].forEach((x) => {
+      const plate = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.06, 24), blackMat);
+      plate.rotation.z = Math.PI / 2;
+      plate.position.set(x, 1.25, -0.35);
+      bp.add(plate);
+    });
+
+    bp.position.set(px, 0, pz);
+    bp.rotation.y = rotY;
+    furnitureGroup.add(bp);
+  };
+
+  createBenchPress(-46, 32, 0);
+  createBenchPress(-38, 32, 0);
+
+  // 4. Dumbbell Rack
+  const createDumbbellRack = (rx, rz, rotY = 0) => {
+    const dr = new THREE.Group();
+    const frameL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.85, 0.65), darkTableMat);
+    frameL.position.set(-1.6, 0.425, 0);
+    dr.add(frameL);
+    const frameR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.85, 0.65), darkTableMat);
+    frameR.position.set(1.6, 0.425, 0);
+    dr.add(frameR);
+
+    [0.38, 0.68].forEach((y, tier) => {
+      const shelf = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.04, 0.28), blackMat);
+      shelf.position.set(0, y, tier === 0 ? 0.12 : -0.1);
+      shelf.rotation.x = 0.15;
+      dr.add(shelf);
+
+      for (let i = -4; i <= 4; i += 2) {
+        const db = new THREE.Group();
+        const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.24, 12), chromeMat);
+        handle.rotation.z = Math.PI / 2;
+        db.add(handle);
+
+        const rSize = 0.08 + tier * 0.03 + Math.abs(i) * 0.01;
+        [-0.12, 0.12].forEach((hx) => {
+          const hex = new THREE.Mesh(new THREE.CylinderGeometry(rSize, rSize, 0.05, 6), blackMat);
+          hex.rotation.z = Math.PI / 2;
+          hex.position.x = hx;
+          db.add(hex);
+        });
+
+        db.position.set(i * 0.35, y + 0.06, tier === 0 ? 0.12 : -0.1);
+        dr.add(db);
+      }
+    });
+
+    dr.position.set(rx, 0, rz);
+    dr.rotation.y = rotY;
+    furnitureGroup.add(dr);
+  };
+
+  createDumbbellRack(-55, 26, Math.PI / 2);
+
+  // Gym TV display
+  createSpotWallScreen(-42, 1.8, 8.2, 3.4, 1.9, 0, 'gym_screen', screenTextures?.videoTexture, 'Fitness Center Keynote Wall');
+
+  // =========================================================================
+  // MEGA-CAMPUS EXPANSION: 2. LUXURY SWIMMING POOL & RESORT DECK (X: +26 to +58, Z: +8 to +46)
+  // =========================================================================
+
+  // 5. Poolside Sun Loungers
+  const createSunLounger = (lx, lz, rotY = 0) => {
+    const sl = new THREE.Group();
+    const frame = new THREE.Mesh(roundedBox(0.85, 0.22, 2.1, 0.04), woodTeakMat);
+    frame.position.y = 0.11;
+    frame.castShadow = true;
+    sl.add(frame);
+
+    const cushion = new THREE.Mesh(roundedBox(0.80, 0.14, 2.0, 0.05), whiteResortMat);
+    cushion.position.y = 0.26;
+    cushion.castShadow = true;
+    cushion.userData = {
+      isChair: true,
+      name: 'Poolside Sun Lounger',
+      chairPos: new THREE.Vector3(lx, 0.44, lz),
+      chairRotY: rotY,
+      seatHeight: 0.44
+    };
+    sl.add(cushion);
+
+    const pillow = new THREE.Mesh(roundedBox(0.65, 0.10, 0.35, 0.04), turquoiseMat);
+    pillow.position.set(0, 0.36, -0.75);
+    sl.add(pillow);
+
+    sl.position.set(lx, 0, lz);
+    sl.rotation.y = rotY;
+    furnitureGroup.add(sl);
+
+    chairsRef.current.push({
+      name: 'Poolside Sun Lounger',
+      pos: new THREE.Vector3(lx, 0.44, lz),
+      rot: rotY,
+      seatHeight: 0.44
+    });
+  };
+
+  // North pool loungers (facing South over the water)
+  [36, 40, 44, 48].forEach((x) => {
+    createSunLounger(x, 11, 0);
+  });
+
+  // South pool loungers (facing North over the water)
+  [36, 40, 44, 48].forEach((x) => {
+    createSunLounger(x, 43, Math.PI);
+  });
+
+  // 6. Resort Shade Parasols
+  const createResortParasol = (ux, uz) => {
+    const p = new THREE.Group();
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.45, 0.12, 16), darkTableMat);
+    base.position.y = 0.06;
+    p.add(base);
+
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.7, 12), woodTeakMat);
+    pole.position.y = 1.35;
+    p.add(pole);
+
+    const canopy = new THREE.Mesh(new THREE.ConeGeometry(1.65, 0.6, 16), whiteResortMat);
+    canopy.position.y = 2.65;
+    canopy.castShadow = true;
+    p.add(canopy);
+
+    p.position.set(ux, 0, uz);
+    furnitureGroup.add(p);
+  };
+
+  createResortParasol(38, 9.8);
+  createResortParasol(46, 9.8);
+  createResortParasol(38, 44.2);
+  createResortParasol(46, 44.2);
+
+  // 7. Resort Daybed Cabanas
+  const createPoolsideCabana = (cx, cz, rotY = 0) => {
+    const cabana = new THREE.Group();
+    [-1.2, 1.2].forEach((x) => {
+      [-1.2, 1.2].forEach((z) => {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.4, 0.12), woodTeakMat);
+        post.position.set(x, 1.2, z);
+        cabana.add(post);
+      });
+    });
+
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.08, 2.6), whiteResortMat);
+    roof.position.y = 2.44;
+    roof.castShadow = true;
+    cabana.add(roof);
+
+    const mattress = new THREE.Mesh(roundedBox(2.2, 0.35, 2.2, 0.08), whiteResortMat);
+    mattress.position.y = 0.38;
+    mattress.castShadow = true;
+    mattress.userData = {
+      isChair: true,
+      name: 'Resort Daybed Cabana',
+      chairPos: new THREE.Vector3(cx, 0.48, cz),
+      chairRotY: rotY,
+      seatHeight: 0.48
+    };
+    cabana.add(mattress);
+
+    chairsRef.current.push({
+      name: 'Resort Daybed Cabana',
+      pos: new THREE.Vector3(cx, 0.48, cz),
+      rot: rotY,
+      seatHeight: 0.48
+    });
+
+    cabana.position.set(cx, 0, cz);
+    cabana.rotation.y = rotY;
+    furnitureGroup.add(cabana);
+  };
+
+  createPoolsideCabana(55, 18, -Math.PI / 2);
+  createPoolsideCabana(55, 34, -Math.PI / 2);
+
+  // 8. Diving Board & Pool Ladder
+  const createDivingBoard = (dx, dz, rotY = 0) => {
+    const db = new THREE.Group();
+    const standL = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.30, 0.12), chromeMat);
+    standL.position.set(0, 0.15, -0.6);
+    db.add(standL);
+    const standR = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.30, 0.12), chromeMat);
+    standR.position.set(0, 0.15, 0.2);
+    db.add(standR);
+
+    const plank = new THREE.Mesh(roundedBox(0.65, 0.08, 2.5, 0.04), whiteResortMat);
+    plank.position.set(0, 0.34, 0.7);
+    plank.castShadow = true;
+    db.add(plank);
+
+    db.position.set(dx, 0, dz);
+    db.rotation.y = rotY;
+    furnitureGroup.add(db);
+  };
+
+  createDivingBoard(31.2, 27, Math.PI / 2);
+
+  const createPoolLadder = (lx, lz, rotY = 0) => {
+    const pl = new THREE.Group();
+    [-0.28, 0.28].forEach((x) => {
+      const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.9, 12), chromeMat);
+      rail.position.set(x, 0.35, 0);
+      pl.add(rail);
+    });
+    [0.12, 0.25, 0.38].forEach((y) => {
+      const rung = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.56, 12), chromeMat);
+      rung.rotation.z = Math.PI / 2;
+      rung.position.set(0, y, 0);
+      pl.add(rung);
+    });
+    pl.position.set(lx, 0, lz);
+    pl.rotation.y = rotY;
+    furnitureGroup.add(pl);
+  };
+
+  createPoolLadder(52.2, 27, -Math.PI / 2);
+
+  // =========================================================================
+  // MEGA-CAMPUS EXPANSION: 3. MEGA ARCADE & ENTERTAINMENT GAME ZONE (X: -20 to +20, Z: +20 to +46)
+  // =========================================================================
+
+  // 9. Tournament 8-Ball Billiards Table
+  const createBilliardsTable = (bx, bz, rotY = 0) => {
+    const bt = new THREE.Group();
+    [-1.1, 1.1].forEach((x) => {
+      [-0.6, 0.6].forEach((z) => {
+        const leg = new THREE.Mesh(roundedBox(0.18, 0.72, 0.18, 0.04), darkTableMat);
+        leg.position.set(x, 0.36, z);
+        leg.castShadow = true;
+        bt.add(leg);
+      });
+    });
+
+    const frame = new THREE.Mesh(roundedBox(2.65, 0.25, 1.5, 0.05), woodTeakMat);
+    frame.position.y = 0.72;
+    frame.castShadow = true;
+    bt.add(frame);
+
+    const cloth = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 1.2), billiardGreenMat);
+    cloth.position.y = 0.83;
+    cloth.receiveShadow = true;
+    bt.add(cloth);
+
+    [[-1.18, -0.6], [0, -0.62], [1.18, -0.6], [-1.18, 0.6], [0, 0.62], [1.18, 0.6]].forEach(([px, pz]) => {
+      const pocket = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.08, 12), blackMat);
+      pocket.position.set(px, 0.84, pz);
+      bt.add(pocket);
+    });
+
+    const ballMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.2 });
+    const cueBallMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c <= r; c++) {
+        const ball = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), ballMat);
+        ball.position.set(0.45 + r * 0.052, 0.88, (c - r / 2) * 0.058);
+        ball.castShadow = true;
+        bt.add(ball);
+      }
+    }
+    const cueBall = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), cueBallMat);
+    cueBall.position.set(-0.55, 0.88, 0);
+    bt.add(cueBall);
+
+    const lamp = new THREE.Group();
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.2, 8), brassGoldMat);
+    rod.position.y = 2.0;
+    lamp.add(rod);
+    [-0.6, 0, 0.6].forEach((x) => {
+      const shade = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.22, 16), billiardGreenMat);
+      shade.position.set(x, 1.5, 0);
+      lamp.add(shade);
+
+      const light = new THREE.PointLight(0xfff5e6, 0.8, 4.5);
+      light.position.set(x, 1.38, 0);
+      lamp.add(light);
+    });
+    bt.add(lamp);
+
+    bt.position.set(bx, 0, bz);
+    bt.rotation.y = rotY;
+    furnitureGroup.add(bt);
+  };
+
+  createBilliardsTable(-9, 29, 0);
+
+  // 10. Table Tennis / Ping Pong Table
+  const createPingPongTable = (px, pz, rotY = 0) => {
+    const pt = new THREE.Group();
+    [-1.0, 1.0].forEach((x) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 1.2), chromeMat);
+      leg.position.set(x, 0.36, 0);
+      leg.castShadow = true;
+      pt.add(leg);
+    });
+
+    const tableTop = new THREE.Mesh(roundedBox(2.74, 0.08, 1.52, 0.02), pingPongBlueMat);
+    tableTop.position.y = 0.76;
+    tableTop.castShadow = true;
+    pt.add(tableTop);
+
+    const centerLine = new THREE.Mesh(new THREE.BoxGeometry(2.74, 0.085, 0.02), whiteMat);
+    centerLine.position.y = 0.765;
+    pt.add(centerLine);
+
+    const net = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.16, 1.62), new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.9 }));
+    net.position.set(0, 0.88, 0);
+    pt.add(net);
+
+    const paddleRed = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16), gymRedMat);
+    paddleRed.position.set(-0.6, 0.81, 0.3);
+    pt.add(paddleRed);
+    const paddleBlack = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16), blackMat);
+    paddleBlack.position.set(0.6, 0.81, -0.3);
+    pt.add(paddleBlack);
+
+    pt.position.set(px, 0, pz);
+    pt.rotation.y = rotY;
+    furnitureGroup.add(pt);
+  };
+
+  createPingPongTable(9, 29, 0);
+
+  // 11. Retro Arcade Cabinets
+  const createArcadeCabinet = (ax, az, rotY = 0, title = 'ARCADE', marqueeColor = 0xa855f7) => {
+    const ac = new THREE.Group();
+    const body = new THREE.Mesh(roundedBox(0.76, 1.85, 0.82, 0.04), blackMat);
+    body.position.y = 0.925;
+    body.castShadow = true;
+    ac.add(body);
+
+    const marquee = new THREE.Mesh(roundedBox(0.68, 0.22, 0.12, 0.02), new THREE.MeshBasicMaterial({ color: marqueeColor }));
+    marquee.position.set(0, 1.70, 0.36);
+    ac.add(marquee);
+
+    const crt = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.48), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
+    crt.position.set(0, 1.32, 0.36);
+    crt.rotation.x = -0.35;
+    ac.add(crt);
+
+    const ctrlPanel = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.06, 0.32), darkTableMat);
+    ctrlPanel.position.set(0, 0.98, 0.42);
+    ctrlPanel.rotation.x = 0.2;
+    ac.add(ctrlPanel);
+
+    [-0.18, 0.18].forEach((jx) => {
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.12, 8), chromeMat);
+      stick.position.set(jx, 1.05, 0.44);
+      ac.add(stick);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 8), gymRedMat);
+      ball.position.set(jx, 1.11, 0.44);
+      ac.add(ball);
+    });
+
+    ac.position.set(ax, 0, az);
+    ac.rotation.y = rotY;
+    furnitureGroup.add(ac);
+  };
+
+  createArcadeCabinet(-14, 44, Math.PI, 'STREET FIGHTER', 0xef4444);
+  createArcadeCabinet(-10, 44, Math.PI, 'PAC-MAN', 0xeab308);
+  createArcadeCabinet(10, 44, Math.PI, 'SPACE INVADERS', 0x22c55e);
+  createArcadeCabinet(14, 44, Math.PI, 'GALAXY RUN', 0x3b82f6);
+
+  // 12. Gamer Lounge with 85" Curved OLED Display and Oversized Beanbag Seats
+  const createGamerLounge = (gx, gz, rotY = 0) => {
+    const gl = new THREE.Group();
+    const tvBezel = new THREE.Mesh(roundedBox(3.4, 1.85, 0.12, 0.04), screenBezelMat);
+    tvBezel.position.set(0, 1.65, -1.8);
+    tvBezel.castShadow = true;
+    gl.add(tvBezel);
+
+    const tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(3.25, 1.7), new THREE.MeshBasicMaterial({
+      map: screenTextures?.starryLogoTexture || screenTextures?.logoTexture,
+      color: 0x38bdf8
+    }));
+    tvScreen.position.set(0, 1.65, -1.73);
+    gl.add(tvScreen);
+
+    const credenza = new THREE.Mesh(roundedBox(3.8, 0.45, 0.75, 0.04), darkTableMat);
+    credenza.position.set(0, 0.225, -1.8);
+    gl.add(credenza);
+
+    const beanbagColors = [0x2563eb, 0x9333ea, 0x059669, 0xd97706];
+    const bbOffsets = [
+      { x: -1.3, z: 0.2 },
+      { x: -0.45, z: 0.5 },
+      { x: 0.45, z: 0.5 },
+      { x: 1.3, z: 0.2 }
+    ];
+
+    bbOffsets.forEach((bpos, idx) => {
+      const bbMat = new THREE.MeshStandardMaterial({ color: beanbagColors[idx], roughness: 0.9 });
+      const bb = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 14), bbMat);
+      bb.scale.set(1.1, 0.65, 1.1);
+      bb.position.set(bpos.x, 0.32, bpos.z);
+      bb.castShadow = true;
+
+      const worldPos = new THREE.Vector3(gx + bpos.x, 0.38, gz + bpos.z);
+      bb.userData = {
+        isChair: true,
+        name: `Gamer Beanbag ${idx + 1}`,
+        chairPos: worldPos,
+        chairRotY: rotY,
+        seatHeight: 0.38
+      };
+      gl.add(bb);
+      chairsRef.current.push({
+        name: `Gamer Beanbag ${idx + 1}`,
+        pos: worldPos,
+        rot: rotY,
+        seatHeight: 0.38
+      });
+    });
+
+    gl.position.set(gx, 0, gz);
+    gl.rotation.y = rotY;
+    furnitureGroup.add(gl);
+  };
+
+  createGamerLounge(0, 42, Math.PI);
+
+  // =========================================================================
+  // MEGA-CAMPUS EXPANSION: 4. EXECUTIVE CABINS WING (X: -58 to -26, Z: -46 to -8)
+  // =========================================================================
+
+  const createExecutiveSuite = (ex, ez, rotY = 0, name = 'CEO Executive Desk', screenKey = 'exec_screen') => {
+    const es = new THREE.Group();
+    // Executive walnut mahogany desk
+    const desk = new THREE.Mesh(roundedBox(2.8, 0.75, 1.3, 0.04), new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.65 }));
+    desk.position.set(0, 0.375, 0);
+    desk.castShadow = true;
+    es.add(desk);
+
+    // Leather blotter mat
+    const blotter = new THREE.Mesh(roundedBox(1.3, 0.02, 0.7, 0.02), blackLeatherMat);
+    blotter.position.set(0, 0.76, 0.05);
+    es.add(blotter);
+
+    // Brass desk lamp
+    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.42, 12), brassGoldMat);
+    lamp.position.set(-1.05, 0.96, -0.2);
+    es.add(lamp);
+
+    // Executive Swivel High-Back Chair
+    const chairGroup = new THREE.Group();
+    const seat = new THREE.Mesh(roundedBox(0.68, 0.12, 0.62, 0.04), blackLeatherMat);
+    seat.position.set(0, 0.46, 0);
+    seat.castShadow = true;
+    chairGroup.add(seat);
+
+    const backrest = new THREE.Mesh(roundedBox(0.64, 0.80, 0.12, 0.04), blackLeatherMat);
+    backrest.position.set(0, 0.86, -0.28);
+    backrest.castShadow = true;
+    chairGroup.add(backrest);
+
+    // Chrome swivel stem
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.40, 12), chromeMat);
+    stem.position.set(0, 0.20, 0);
+    chairGroup.add(stem);
+
+    chairGroup.position.set(ex, 0, ez - 0.82);
+    chairGroup.rotation.y = rotY;
+    chairGroup.userData = {
+      isChair: true,
+      name: `${name} Chair`,
+      chairPos: new THREE.Vector3(ex, 0.46, ez - 0.82),
+      chairRotY: rotY,
+      seatHeight: 0.46
+    };
+    furnitureGroup.add(chairGroup);
+    chairsRef.current.push({
+      name: `${name} Chair`,
+      pos: new THREE.Vector3(ex, 0.46, ez - 0.82),
+      rot: rotY,
+      seatHeight: 0.46
+    });
+
+    // Monitors positioned in world space on desk (ex, ez)
+    createWorkstationMonitor(ex - 0.55, 0.75, ez - 0.05, 0.16, `${screenKey}_mon1`, null, `${name} Left Monitor`);
+    createWorkstationMonitor(ex + 0.55, 0.75, ez - 0.05, -0.16, `${screenKey}_mon2`, null, `${name} Right Monitor`);
+
+    es.position.set(ex, 0, ez);
+    es.rotation.y = rotY;
+    furnitureGroup.add(es);
+  };
+
+  createExecutiveSuite(-50, -18, 0, 'CEO Executive Suite', 'ceo_screen');
+  createExecutiveSuite(-34, -18, 0, 'VP Executive Suite', 'vp_screen');
+  createExecutiveSuite(-50, -36, 0, 'Principal Suite', 'principal_screen');
 
   return { ...screensMap, furnitureGroup };
 }

@@ -94,6 +94,145 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     roughness: 0.85
   });
 
+  // Gym non-slip speckled rubber flooring
+  const gymCanvas = document.createElement('canvas');
+  gymCanvas.width = 512;
+  gymCanvas.height = 512;
+  const gCtx = gymCanvas.getContext('2d');
+  gCtx.fillStyle = '#1c222c';
+  gCtx.fillRect(0, 0, 512, 512);
+  for (let i = 0; i < 900; i++) {
+    gCtx.fillStyle = Math.random() > 0.5 ? 'rgba(56, 189, 248, 0.45)' : 'rgba(255, 255, 255, 0.35)';
+    gCtx.fillRect(Math.random() * 512, Math.random() * 512, 2.5, 2.5);
+  }
+  const gymTexture = new THREE.CanvasTexture(gymCanvas);
+  gymTexture.wrapS = THREE.RepeatWrapping;
+  gymTexture.wrapT = THREE.RepeatWrapping;
+  gymTexture.repeat.set(8, 8);
+  materials.gymFloorMat = new THREE.MeshStandardMaterial({
+    map: gymTexture,
+    roughness: 0.92,
+    metalness: 0.05
+  });
+
+  // Swimming Pool Outdoor Teak Decking
+  const teakCanvas = document.createElement('canvas');
+  teakCanvas.width = 512;
+  teakCanvas.height = 512;
+  const tCtx = teakCanvas.getContext('2d');
+  tCtx.fillStyle = '#b45309';
+  tCtx.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y += 32) {
+    tCtx.fillStyle = y % 64 === 0 ? 'rgba(180, 83, 9, 0.9)' : 'rgba(217, 119, 6, 0.9)';
+    tCtx.fillRect(0, y, 512, 30);
+    tCtx.fillStyle = 'rgba(69, 26, 3, 0.5)';
+    tCtx.fillRect(0, y + 30, 512, 2);
+  }
+  const teakTexture = new THREE.CanvasTexture(teakCanvas);
+  teakTexture.wrapS = THREE.RepeatWrapping;
+  teakTexture.wrapT = THREE.RepeatWrapping;
+  teakTexture.repeat.set(6, 6);
+  materials.poolDeckMat = new THREE.MeshStandardMaterial({
+    map: teakTexture,
+    roughness: 0.65,
+    metalness: 0.05
+  });
+
+  // Swimming Pool Mosaic Tiles
+  const poolTileCanvas = document.createElement('canvas');
+  poolTileCanvas.width = 512;
+  poolTileCanvas.height = 512;
+  const ptCtx = poolTileCanvas.getContext('2d');
+  ptCtx.fillStyle = '#0284c7';
+  ptCtx.fillRect(0, 0, 512, 512);
+  for (let x = 0; x < 512; x += 16) {
+    for (let y = 0; y < 512; y += 16) {
+      const tileColor = Math.random() > 0.3 ? '#0284c7' : (Math.random() > 0.5 ? '#0ea5e9' : '#0369a1');
+      ptCtx.fillStyle = tileColor;
+      ptCtx.fillRect(x + 1, y + 1, 14, 14);
+      ptCtx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+      ptCtx.strokeRect(x, y, 16, 16);
+    }
+  }
+  const poolTileTex = new THREE.CanvasTexture(poolTileCanvas);
+  poolTileTex.wrapS = THREE.RepeatWrapping;
+  poolTileTex.wrapT = THREE.RepeatWrapping;
+  poolTileTex.repeat.set(10, 10);
+  materials.poolTileMat = new THREE.MeshStandardMaterial({
+    map: poolTileTex,
+    roughness: 0.2,
+    metalness: 0.1
+  });
+
+  // Glistening Pool Water
+  materials.waterMat = new THREE.MeshPhysicalMaterial({
+    color: 0x06b6d4,
+    transmission: 0.72,
+    opacity: 0.82,
+    transparent: true,
+    roughness: 0.08,
+    metalness: 0.1,
+    ior: 1.333,
+    reflectivity: 0.85
+  });
+
+  // Mega Arcade & Game Zone Geometric Neon Carpet
+  const arcadeCanvas = document.createElement('canvas');
+  arcadeCanvas.width = 512;
+  arcadeCanvas.height = 512;
+  const aCtx = arcadeCanvas.getContext('2d');
+  aCtx.fillStyle = '#0b0f19';
+  aCtx.fillRect(0, 0, 512, 512);
+  aCtx.strokeStyle = 'rgba(168, 85, 247, 0.35)';
+  aCtx.lineWidth = 2;
+  for (let i = 0; i <= 512; i += 64) {
+    aCtx.beginPath(); aCtx.moveTo(i, 0); aCtx.lineTo(i, 512); aCtx.stroke();
+    aCtx.beginPath(); aCtx.moveTo(0, i); aCtx.lineTo(512, i); aCtx.stroke();
+  }
+  aCtx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+  for (let i = -512; i <= 512; i += 64) {
+    aCtx.beginPath(); aCtx.moveTo(i, 0); aCtx.lineTo(i + 512, 512); aCtx.stroke();
+  }
+  const arcadeTex = new THREE.CanvasTexture(arcadeCanvas);
+  arcadeTex.wrapS = THREE.RepeatWrapping;
+  arcadeTex.wrapT = THREE.RepeatWrapping;
+  arcadeTex.repeat.set(8, 6);
+  materials.arcadeFloorMat = new THREE.MeshStandardMaterial({
+    map: arcadeTex,
+    roughness: 0.82,
+    metalness: 0.1
+  });
+
+  // Executive Cabins Dark Walnut Parquet
+  const parquetCanvas = document.createElement('canvas');
+  parquetCanvas.width = 512;
+  parquetCanvas.height = 512;
+  const pqCtx = parquetCanvas.getContext('2d');
+  pqCtx.fillStyle = '#261c14';
+  pqCtx.fillRect(0, 0, 512, 512);
+  for (let y = 0; y < 512; y += 32) {
+    pqCtx.fillStyle = y % 64 === 0 ? '#38281d' : '#2b1f17';
+    pqCtx.fillRect(0, y, 512, 30);
+    pqCtx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+    pqCtx.strokeRect(0, y, 512, 32);
+  }
+  const parquetTex = new THREE.CanvasTexture(parquetCanvas);
+  parquetTex.wrapS = THREE.RepeatWrapping;
+  parquetTex.wrapT = THREE.RepeatWrapping;
+  parquetTex.repeat.set(6, 6);
+  materials.parquetFloorMat = new THREE.MeshStandardMaterial({
+    map: parquetTex,
+    roughness: 0.55,
+    metalness: 0.05
+  });
+
+  // Mirrored Glass for Fitness Center
+  materials.mirrorMat = new THREE.MeshStandardMaterial({
+    color: 0x94a3b8,
+    metalness: 0.95,
+    roughness: 0.05
+  });
+
   // Architectural Wall Material: Vertical Brushed Acoustic Fabric Panel Texture (Matching media_1791993853484.png)
   const wallCanvas = document.createElement('canvas');
   wallCanvas.width = 1024;
@@ -199,7 +338,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   sunLight.shadow.mapSize.height = 2048;
   sunLight.shadow.camera.near = 1.0;
   sunLight.shadow.camera.far = 110;
-  const sCam = 36;
+  const sCam = 70;
   sunLight.shadow.camera.left = -sCam;
   sunLight.shadow.camera.right = sCam;
   sunLight.shadow.camera.top = sCam;
@@ -209,12 +348,12 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   environmentGroup.add(sunLight);
 
   const fillLight = new THREE.DirectionalLight(0xd9ebff, 0.6);
-  fillLight.position.set(-20, 30, -20);
+  fillLight.position.set(-30, 40, -30);
   environmentGroup.add(fillLight);
 
-  // 3. Main Interior Floor Mesh (Width: 64, Depth: 48)
+  // 3. Main Expanded Mega-Campus Floor Mesh (Width: 120, Depth: 96)
   const floorMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(64, 0.4, 48),
+    new THREE.BoxGeometry(120, 0.4, 96),
     materials.floorMat
   );
   floorMesh.position.set(0, -0.2, 0);
@@ -222,36 +361,97 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   floorMesh.name = 'floor';
   environmentGroup.add(floorMesh);
 
-  // Patio outdoor floor overlay (Southwest game terrace: x: -32 to -14, z: +12 to +24)
-  const patioFloor = new THREE.Mesh(
-    new THREE.BoxGeometry(18, 0.42, 12),
-    materials.patioFloorMat
+  // A. Fitness Gym Floor Overlay (West Wing: X: -58 to -26, Z: +8 to +46)
+  const gymFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(32, 0.42, 38),
+    materials.gymFloorMat
   );
-  patioFloor.position.set(-23, -0.19, 18);
-  patioFloor.receiveShadow = true;
-  environmentGroup.add(patioFloor);
+  gymFloor.position.set(-42, -0.19, 27);
+  gymFloor.receiveShadow = true;
+  gymFloor.name = 'floor_gym';
+  environmentGroup.add(gymFloor);
 
-  // Meeting Cabin / Private Lounge light polished floor overlay (North-Center: x: -14 to +6, z: -24 to -8)
-  const cabinFloorCanvas = document.createElement('canvas');
-  cabinFloorCanvas.width = 512;
-  cabinFloorCanvas.height = 512;
-  const cfCtx = cabinFloorCanvas.getContext('2d');
-  cfCtx.fillStyle = '#eaecef';
-  cfCtx.fillRect(0, 0, 512, 512);
-  cfCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-  for (let i = 0; i < 400; i++) {
-    cfCtx.fillRect(Math.random() * 512, Math.random() * 512, 2, 2);
-  }
-  const cabinFloorTex = new THREE.CanvasTexture(cabinFloorCanvas);
-  cabinFloorTex.wrapS = THREE.RepeatWrapping;
-  cabinFloorTex.wrapT = THREE.RepeatWrapping;
-  cabinFloorTex.repeat.set(4, 3);
-  const cabinFloor = new THREE.Mesh(
-    new THREE.BoxGeometry(20, 0.42, 16),
-    new THREE.MeshStandardMaterial({ map: cabinFloorTex, roughness: 0.82 })
+  // B. Luxury Swimming Pool & Sun Deck Floor Overlay (East Wing: X: +26 to +58, Z: +8 to +46)
+  // 4 Surrounding Teak Deck sections with cutout for pool basin (X: 32 to 52, Z: 16 to 38)
+  const deckN = new THREE.Mesh(new THREE.BoxGeometry(32, 0.42, 8), materials.poolDeckMat);
+  deckN.position.set(42, -0.19, 12);
+  deckN.receiveShadow = true;
+  environmentGroup.add(deckN);
+
+  const deckS = new THREE.Mesh(new THREE.BoxGeometry(32, 0.42, 8), materials.poolDeckMat);
+  deckS.position.set(42, -0.19, 42);
+  deckS.receiveShadow = true;
+  environmentGroup.add(deckS);
+
+  const deckW = new THREE.Mesh(new THREE.BoxGeometry(6, 0.42, 22), materials.poolDeckMat);
+  deckW.position.set(29, -0.19, 27);
+  deckW.receiveShadow = true;
+  environmentGroup.add(deckW);
+
+  const deckE = new THREE.Mesh(new THREE.BoxGeometry(6, 0.42, 22), materials.poolDeckMat);
+  deckE.position.set(55, -0.19, 27);
+  deckE.receiveShadow = true;
+  environmentGroup.add(deckE);
+
+  // Swimming Pool Mosaic Tiled Floor (X: 32 to 52, Z: 16 to 38)
+  const poolBottom = new THREE.Mesh(
+    new THREE.BoxGeometry(20, 0.05, 22),
+    materials.poolTileMat
   );
-  cabinFloor.position.set(-4, -0.19, -16);
+  poolBottom.position.set(42, 0.02, 27);
+  poolBottom.receiveShadow = true;
+  environmentGroup.add(poolBottom);
+
+  // Pool Coping Rim (White Italian marble coping surrounding pool edge)
+  const copingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25, metalness: 0.05 });
+  const copingN = new THREE.Mesh(new THREE.BoxGeometry(21.4, 0.26, 0.8), copingMat);
+  copingN.position.set(42, 0.13, 15.6);
+  copingN.castShadow = true;
+  environmentGroup.add(copingN);
+
+  const copingS = new THREE.Mesh(new THREE.BoxGeometry(21.4, 0.26, 0.8), copingMat);
+  copingS.position.set(42, 0.13, 38.4);
+  copingS.castShadow = true;
+  environmentGroup.add(copingS);
+
+  const copingW = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.26, 22), copingMat);
+  copingW.position.set(31.6, 0.13, 27);
+  copingW.castShadow = true;
+  environmentGroup.add(copingW);
+
+  const copingE = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.26, 22), copingMat);
+  copingE.position.set(52.4, 0.13, 27);
+  copingE.castShadow = true;
+  environmentGroup.add(copingE);
+
+  // Dynamic Animated Glistening Swimming Pool Water Surface Mesh
+  const waterGeo = new THREE.PlaneGeometry(19.8, 21.8, 32, 32);
+  const waterMesh = new THREE.Mesh(waterGeo, materials.waterMat);
+  waterMesh.rotation.x = -Math.PI / 2;
+  waterMesh.position.set(42, 0.20, 27);
+  waterMesh.receiveShadow = true;
+  waterMesh.name = 'swimming_pool_water';
+  environmentGroup.add(waterMesh);
+  scene.userData.poolWaterMesh = waterMesh;
+
+  // C. Mega Arcade & Game Zone Floor Overlay (South-Center Wing: X: -20 to +20, Z: +20 to +46)
+  const arcadeFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(40, 0.42, 26),
+    materials.arcadeFloorMat
+  );
+  arcadeFloor.position.set(0, -0.19, 33);
+  arcadeFloor.receiveShadow = true;
+  arcadeFloor.name = 'floor_arcade';
+  environmentGroup.add(arcadeFloor);
+
+  // D. Executive Cabins Floor Overlay (North-West Wing: X: -58 to -26, Z: -46 to -8)
+  const cabinFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(32, 0.42, 38),
+    materials.parquetFloorMat
+  );
+  cabinFloor.position.set(-42, -0.19, -27);
   cabinFloor.receiveShadow = true;
+  cabinFloor.name = 'floor_executive_cabins';
   environmentGroup.add(cabinFloor);
 
   // 4. Exact Wall Builder Helpers (Dollhouse Cutaway Height: 2.85m matching Spot desktop reference)
@@ -685,12 +885,23 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // 5. Build the Exact Spot Virtual Wall Blueprint (media_1792165933867.png & media_1792165933914.png)
   // Overall interior dimensions: X = [-32, +32], Z = [-24, +24]
 
-  // Outer Perimeter Solid Walls:
-  createWall(-32, 0, WALL_THICKNESS, 48); // West Wall (X = -32)
-  createWall(32, -10, WALL_THICKNESS, 28); // East Wall behind Auditorium Stage (X = +32, Z: -24 to +4)
+  // Outer Mega-Campus Perimeter Solid Walls & Panoramic Glass Clerestories (120m x 96m: X = [-58, +58], Z = [-46, +46])
+  createWall(-58, 0, WALL_THICKNESS, 92); // Far West Wall (X = -58)
+  createWall(58, -20, WALL_THICKNESS, 52); // Far East Wall behind Auditorium (X = +58, Z: -46 to +6)
 
-  // Transparent Clerestory Windows with mullions on North, South, and East Promenade:
-  const createClerestoryFacade = (zPos, startX = -30, endX = 30) => {
+  // Interior Connecting Wall at X = -32 between Central Core and West Wing (Executive Cabins & Gym)
+  createWall(-32, -35, WALL_THICKNESS, 22); // North partition
+  createDoubleDoor(-32, -16, Math.PI / 2, 'Executive Suite West Door'); // Doorway from Boardroom into Executive Cabins
+  createWall(-32, 0, WALL_THICKNESS, 16); // Center solid wall behind Chat cabins
+  createDoubleDoor(-32, 16, Math.PI / 2, 'Gym Concourse Door'); // Doorway from Patio into Fitness Gym
+  createWall(-32, 35, WALL_THICKNESS, 22); // South partition
+
+  // Interior Connecting Wall at X = +32 between Central Core and East Wing (Swimming Pool & Auditorium)
+  createWall(32, -10, WALL_THICKNESS, 28); // Wall behind Auditorium Stage (X = +32, Z: -24 to +4)
+  createGlassDoubleDoor(32, 14, Math.PI / 2, 'Pool Deck French Doors'); // Grand glass French doors onto Pool Deck
+
+  // Transparent Clerestory Windows with mullions on North and South Horizons:
+  const createClerestoryFacade = (zPos, startX = -56, endX = 56) => {
     for (let x = startX; x <= endX; x += 6) {
       const glassPane = new THREE.Mesh(
         new THREE.BoxGeometry(5.8, WALL_HEIGHT, 0.08),
@@ -709,28 +920,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     }
   };
 
-  // North Clerestory overlooking exterior street, trees, park benches & zebra crossings
-  createClerestoryFacade(-24, -30, 30);
-
-  // South Clerestory overlooking exterior sidewalk & lawn
-  createClerestoryFacade(24, -30, 30);
-
-  // East Promenade Clerestory: Floor-to-ceiling glass windows overlooking Seattle skyline & Ferris Wheel (media_1792165933914.png)
-  for (let z = 6; z <= 22; z += 5) {
-    const glassPane = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, WALL_HEIGHT, 4.8),
-      materials.glassMat
-    );
-    glassPane.position.set(32, WALL_HEIGHT / 2, z);
-    environmentGroup.add(glassPane);
-
-    const mullion = new THREE.Mesh(
-      new THREE.BoxGeometry(0.22, WALL_HEIGHT, 0.16),
-      materials.frameMat
-    );
-    mullion.position.set(32, WALL_HEIGHT / 2, z + 2.4);
-    environmentGroup.add(mullion);
-  }
+  createClerestoryFacade(-46, -54, 54); // North clerestory
+  createClerestoryFacade(46, -54, 24); // South clerestory (West half & arcade)
 
   // =========================================================================
   // ROW 1: NORTH ROOMS (Z = -24 to -8) - Exact match to media_1792165933867.png
@@ -819,6 +1010,84 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // South Wall Entrance Double Glass Doors at X = 22, Z = 24
   createGlassDoubleDoor(22, 24, 0, 'Main Office Entrance');
 
+  // =========================================================================
+  // ROW 4: EXECUTIVE CABINS WING (X = -58 to -26, Z = -46 to -8)
+  // =========================================================================
+  // North-South dividing wall at X = -42 between Cabins 1/2 and 3/4
+  createWall(-42, -35, WALL_THICKNESS, 22);
+  createSingleDoor(-42, -24, Math.PI / 2, 'Executive Cabin Connecting Door');
+  createWall(-42, -16, WALL_THICKNESS, 16);
+
+  // East-West dividing wall at Z = -27
+  createWall(-50, -27, 16, WALL_THICKNESS);
+  createSingleDoor(-42, -27, 0, 'CEO Cabin Door');
+  createWall(-34, -27, 16, WALL_THICKNESS);
+
+  // =========================================================================
+  // ROW 5: FITNESS & GYM CENTER (X = -58 to -26, Z = +8 to +46)
+  // =========================================================================
+  // North Gym Entrance Wall at Z = +8 (from X = -58 to -26, span = 32m)
+  createWall(-50, 8, 16, WALL_THICKNESS);
+  createGlassDoubleDoor(-42, 8, 0, 'Fitness Gym Glass Entrance');
+  createWall(-34, 8, 16, WALL_THICKNESS);
+
+  // East Gym Wall at X = -26 (separating Gym from Game Zone)
+  createGlassPartition(-26, 27, WALL_THICKNESS, 38);
+
+  // West Wall Large Gym Mirrored Panels
+  const gymMirror = new THREE.Mesh(new THREE.BoxGeometry(0.04, 2.4, 32), materials.mirrorMat);
+  gymMirror.position.set(-57.8, 1.3, 27);
+  environmentGroup.add(gymMirror);
+
+  // =========================================================================
+  // ROW 6: LUXURY SWIMMING POOL & RESORT DECK (X = +26 to +58, Z = +8 to +46)
+  // =========================================================================
+  // Helper: Modern Glass Resort Balustrade
+  const createGlassBalustrade = (bx, bz, length, rotY = 0) => {
+    const bGrp = new THREE.Group();
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(length, 1.15, 0.06), materials.glassMat);
+    glass.position.y = 0.58;
+    bGrp.add(glass);
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, length, 12), materials.doorFrameMat);
+    rail.rotation.z = Math.PI / 2;
+    rail.position.y = 1.16;
+    bGrp.add(rail);
+    bGrp.position.set(bx, 0, bz);
+    bGrp.rotation.y = rotY;
+    environmentGroup.add(bGrp);
+    wallsList.push({
+      mesh: glass,
+      center: new THREE.Vector3(bx, 0.58, bz),
+      width: rotY === 0 ? length : 0.4,
+      depth: rotY === 0 ? 0.4 : length,
+      radius: length / 2
+    });
+  };
+
+  createGlassBalustrade(58, 27, 38, Math.PI / 2); // East Resort Railing overlooking Skyline
+  createGlassBalustrade(42, 46, 32, 0); // South Resort Railing
+
+  // Decorative Planter dividing line between Pool Deck and Central Area
+  createLowPlanter(26, 27, 34, 0.65, Math.PI / 2);
+
+  // =========================================================================
+  // ROW 7: MEGA ARCADE & ENTERTAINMENT GAME ZONE (X = -20 to +20, Z = +20 to +46)
+  // =========================================================================
+  // North Entrance from Central Concourse: Open Neon Arched Portal at Z = 20
+  createWall(-14, 20, 12, WALL_THICKNESS);
+  createWall(14, 20, 12, WALL_THICKNESS);
+
+  // Glowing Neon Portal Frame across X = -4 to +4 at Z = 20
+  const portalMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+  const portalL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
+  portalL.position.set(-4, 1.4, 20);
+  environmentGroup.add(portalL);
+  const portalR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
+  portalR.position.set(4, 1.4, 20);
+  environmentGroup.add(portalR);
+  const portalTop = new THREE.Mesh(new THREE.BoxGeometry(8.12, 0.12, 0.12), portalMat);
+  portalTop.position.set(0, 2.8, 20);
+  environmentGroup.add(portalTop);
 
   // 7. Seattle Environment: Asphalt Roads, Sidewalks, Park Benches, Trees & City
   const seattleGroup = new THREE.Group();
@@ -831,28 +1100,28 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.75 });
   const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 });
 
-  // North Street (Z = -38)
-  const northRoad = new THREE.Mesh(new THREE.BoxGeometry(140, 0.08, 14), asphaltMat);
-  northRoad.position.set(0, -0.04, -38);
+  // North Street (Z = -54)
+  const northRoad = new THREE.Mesh(new THREE.BoxGeometry(160, 0.08, 14), asphaltMat);
+  northRoad.position.set(0, -0.04, -54);
   seattleGroup.add(northRoad);
 
-  // South Street (Z = +38)
-  const southRoad = new THREE.Mesh(new THREE.BoxGeometry(140, 0.08, 14), asphaltMat);
-  southRoad.position.set(0, -0.04, 38);
+  // South Street (Z = +54)
+  const southRoad = new THREE.Mesh(new THREE.BoxGeometry(160, 0.08, 14), asphaltMat);
+  southRoad.position.set(0, -0.04, 54);
   seattleGroup.add(southRoad);
 
-  // West Street (X = -46)
-  const westRoad = new THREE.Mesh(new THREE.BoxGeometry(14, 0.08, 90), asphaltMat);
-  westRoad.position.set(-46, -0.04, 0);
+  // West Street (X = -68)
+  const westRoad = new THREE.Mesh(new THREE.BoxGeometry(14, 0.08, 120), asphaltMat);
+  westRoad.position.set(-68, -0.04, 0);
   seattleGroup.add(westRoad);
 
   // Sidewalks directly outside north and south clerestory
-  const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(80, 0.14, 4), sidewalkMat);
-  northSidewalk.position.set(0, 0.06, -26.5);
+  const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 4), sidewalkMat);
+  northSidewalk.position.set(0, 0.06, -48.5);
   seattleGroup.add(northSidewalk);
 
-  const southSidewalk = new THREE.Mesh(new THREE.BoxGeometry(80, 0.14, 4), sidewalkMat);
-  southSidewalk.position.set(0, 0.06, 26.5);
+  const southSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 4), sidewalkMat);
+  southSidewalk.position.set(0, 0.06, 48.5);
   seattleGroup.add(southSidewalk);
 
   // Broken white lane divider lines on roads
