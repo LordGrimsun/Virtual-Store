@@ -139,7 +139,6 @@ export default function WorkspacePlatform({ user, onExit }) {
   const cameraRef = useRef(null);
   const playerMeshRef = useRef(null);
   const playerPartsRef = useRef(null);
-  const [hoveredSitPill, setHoveredSitPill] = useState(null); // { x: number, y: number, name: string }
 
   const getInitialPlayerPosition = () => {
     const tr = user?.targetRoom?.toLowerCase() || user?.targetRoomId?.toLowerCase() || '';
@@ -171,6 +170,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const cameraDistanceRef = useRef(16.5);
   const cameraOrbitAngleRef = useRef(0.28);
   const cameraPitchAngleRef = useRef(0.76); // Optimal dollhouse isometric 44° pitch
+  const cameraTargetYOffsetRef = useRef(0);
   const isDraggingOrbitRef = useRef(false);
   const pointerDownPosRef = useRef({ x: 0, y: 0, time: 0, button: 0 });
   const isPointerMovedRef = useRef(false);
@@ -1055,8 +1055,15 @@ export default function WorkspacePlatform({ user, onExit }) {
         targetPosRef.current.copy(target);
         setCurrentRoom(formattedName);
         setCurrentRoomId(slug);
-        camera.position.set(target.x + 3.5, 14.0, target.z + 12.0);
-        camera.lookAt(target.x, 1.5, target.z);
+        if (slug === 'auditorium') {
+          cameraOrbitAngleRef.current = -Math.PI / 2;
+          cameraPitchAngleRef.current = 0.28;
+          cameraDistanceRef.current = 8.5;
+          cameraTargetYOffsetRef.current = 0;
+        } else {
+          camera.position.set(target.x + 3.5, 14.0, target.z + 12.0);
+          camera.lookAt(target.x, 1.5, target.z);
+        }
       }
     }
 
@@ -1209,14 +1216,32 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
         }
 
-        // Priority 3: Responsive Click-to-Sit on chairs, armchairs, and sofas (zero fluctuation snap)
+        // Priority 3: Responsive Click-to-Sit & Seamless Seat Switching on chairs, armchairs, sofas, and benches
         for (let i = 0; i < Math.min(intersects.length, 6); i++) {
           let chairObj = intersects[i].object;
           while (chairObj && chairObj !== scene) {
             if (chairObj.name === 'clickable_chair' || chairObj.userData?.isChair || chairObj.name?.startsWith('chair_') || chairObj.name?.startsWith('sofa_')) {
-              const chairPos = chairObj.userData?.chairPos;
-              const chairRotY = chairObj.userData?.chairRotY ?? 0;
-              const seatHeight = chairObj.userData?.seatHeight ?? 0.46;
+              let chairPos = chairObj.userData?.chairPos;
+              let chairRotY = chairObj.userData?.chairRotY ?? 0;
+              let seatHeight = chairObj.userData?.seatHeight ?? 0.46;
+              const isAudBench = chairObj.userData?.name?.toLowerCase().includes('auditorium') || chairObj.name?.includes('bench');
+
+              // If clicking a long auditorium bench, snap to the nearest cushion position
+              if (isAudBench && chairsRef.current.length > 0) {
+                const clickPt = intersects[i].point;
+                const nearest = chairsRef.current
+                  .filter((c) => c.name?.toLowerCase().includes('auditorium'))
+                  .reduce((closest, chair) => {
+                    const d = chair.pos.distanceTo(clickPt);
+                    return !closest || d < closest.dist ? { chair, dist: d } : closest;
+                  }, null);
+                if (nearest && nearest.dist < 3.5) {
+                  chairPos = nearest.chair.pos;
+                  chairRotY = nearest.chair.rot ?? (Math.PI / 2);
+                  seatHeight = nearest.chair.seatHeight ?? 0.46;
+                }
+              }
+
               if (chairPos) {
                 playSound('click');
                 if (playerMeshRef.current) {
@@ -1227,8 +1252,16 @@ export default function WorkspacePlatform({ user, onExit }) {
                 chairRotYRef.current = chairRotY;
                 seatHeightRef.current = seatHeight;
                 isSittingRef.current = true;
+
+                if (isAudBench || (chairPos.x >= 10 && chairPos.z < 4)) {
+                  cameraOrbitAngleRef.current = -Math.PI / 2;
+                  cameraPitchAngleRef.current = 0.26;
+                  cameraDistanceRef.current = 22.0;
+                  cameraTargetYOffsetRef.current = 0;
+                }
                 return;
               }
+
               const nearestChair = chairsRef.current.reduce((closest, chair) => {
                 const d = chair.pos.distanceTo(intersects[i].point);
                 return !closest || d < closest.dist ? { chair, dist: d } : closest;
@@ -1247,6 +1280,13 @@ export default function WorkspacePlatform({ user, onExit }) {
                 chairRotYRef.current = nRot;
                 seatHeightRef.current = nSeatHeight;
                 isSittingRef.current = true;
+
+                if (nearestChair.chair.name?.toLowerCase().includes('auditorium') || (nPos.x >= 10 && nPos.z < 4)) {
+                  cameraOrbitAngleRef.current = -Math.PI / 2;
+                  cameraPitchAngleRef.current = 0.26;
+                  cameraDistanceRef.current = 22.0;
+                  cameraTargetYOffsetRef.current = 0;
+                }
                 return;
               }
             }
@@ -1623,10 +1663,11 @@ export default function WorkspacePlatform({ user, onExit }) {
           const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(screenRot);
           const sWidth = screenMesh.userData?.width || 4.8;
           const sHeight = screenMesh.userData?.height || 2.7;
+          const isDeskMon = screenMesh.userData?.isDeskMonitor || sWidth < 1.6;
           const maxDist = sWidth > 10 ? 16.5 : 11.5;
-          const viewDist = Math.max(2.6, Math.min(sWidth * 1.12, maxDist));
+          const viewDist = isDeskMon ? 0.88 : Math.max(2.6, Math.min(sWidth * 1.12, maxDist));
           const camTargetPos = sPos.clone().addScaledVector(normal, viewDist);
-          camTargetPos.y = sPos.y + Math.max(0.6, sHeight * 0.12);
+          camTargetPos.y = sPos.y + (isDeskMon ? 0.02 : Math.max(0.6, sHeight * 0.12));
 
           camera.position.lerp(camTargetPos, 0.08);
           camera.lookAt(sPos.x, sPos.y, sPos.z);
@@ -1639,12 +1680,34 @@ export default function WorkspacePlatform({ user, onExit }) {
           const angle = cameraOrbitAngleRef.current;
           const pitch = cameraPitchAngleRef.current;
 
-          const camX = p.x + Math.sin(angle) * dist * Math.cos(pitch);
-          const camY = Math.max(2.2, dist * Math.sin(pitch));
-          const camZ = p.z + Math.cos(angle) * dist * Math.cos(pitch);
+          // Check if player is in the Auditorium (East atrium: X >= 6 and Z < 4)
+          const isAuditorium = p.x >= 6 && p.z < 4;
+          const isAuditoriumSeated = isAuditorium && isSittingRef.current;
 
-          camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
-          camera.lookAt(p.x, 1.5, p.z);
+          if (isAuditoriumSeated) {
+            // Authentic Spot Virtual Auditorium Framing (Exact match to media_1792207254846.png)
+            const screenX = 31.65;
+            const screenZ = -10.0;
+            const lookY = 3.6 + (cameraTargetYOffsetRef.current || 0);
+
+            const camDist = Math.max(6.0, dist);
+            const camX = screenX - camDist * Math.cos(pitch);
+            const camY = Math.max(1.8, 3.2 + (camDist * 0.12) * Math.sin(pitch) + (cameraTargetYOffsetRef.current || 0) * 0.5);
+            const camZ = THREE.MathUtils.lerp(p.z, screenZ, 0.45) + Math.sin(angle + Math.PI / 2) * (dist * 0.25);
+
+            camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
+            camera.lookAt(screenX, lookY, screenZ);
+          } else {
+            const baseLookY = isAuditorium ? 2.4 : 1.5;
+            const lookY = baseLookY + (cameraTargetYOffsetRef.current || 0);
+
+            const camX = p.x + Math.sin(angle) * dist * Math.cos(pitch);
+            const camY = Math.max(2.2, dist * Math.sin(pitch));
+            const camZ = p.z + Math.cos(angle) * dist * Math.cos(pitch);
+
+            camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.12);
+            camera.lookAt(p.x, lookY, p.z);
+          }
         }
       }
 
@@ -1760,6 +1823,12 @@ export default function WorkspacePlatform({ user, onExit }) {
           playerMeshRef.current.position.y = (found.seatHeight ?? 0.46) - 0.40;
           playerMeshRef.current.rotation.y = found.rot ?? 0;
         }
+        if (found.name?.toLowerCase().includes('auditorium') || (found.pos.x >= 10 && found.pos.z < 4)) {
+          cameraOrbitAngleRef.current = -Math.PI / 2;
+          cameraPitchAngleRef.current = 0.26;
+          cameraDistanceRef.current = 22.0;
+          cameraTargetYOffsetRef.current = 0;
+        }
         return found;
       }
       return null;
@@ -1785,14 +1854,14 @@ export default function WorkspacePlatform({ user, onExit }) {
       setIsSpotLinkModalOpen(false);
     };
 
-    // Mouse Wheel Zoom: Smooth distance adjustment between 2.5 and 38
+    // Mouse Wheel Zoom: Smooth distance adjustment between 0.85 (deep PC/seat zoom) and 38
     const handleWheel = (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY * 0.025;
-      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 2.5, 38);
+      cameraDistanceRef.current = THREE.MathUtils.clamp(cameraDistanceRef.current + zoomFactor, 0.85, 38);
     };
 
-    // Mouse Orbit Dragging and Chair Hover Detection (media_1792165947435.png)
+    // Mouse Orbit Dragging, Vertical Pan & Pointer Cursor Detection
     let lastHoverCheck = 0;
     const handlePointerMove = (e) => {
       if (isDraggingOrbitRef.current) {
@@ -1811,15 +1880,24 @@ export default function WorkspacePlatform({ user, onExit }) {
           const deltaY = e.clientY - lastMousePosRef.current.y;
           lastMousePosRef.current = { x: e.clientX, y: e.clientY };
 
-          cameraOrbitAngleRef.current += deltaX * 0.007;
-          cameraPitchAngleRef.current = THREE.MathUtils.clamp(
-            cameraPitchAngleRef.current - deltaY * 0.005,
-            0.45,
-            1.22
-          );
+          if (pointerDownPosRef.current.button === 2 || pointerDownPosRef.current.button === 1 || e.shiftKey) {
+            // Right-drag / middle-drag / shift-drag: Vertical and lateral camera pan
+            cameraTargetYOffsetRef.current = THREE.MathUtils.clamp(
+              cameraTargetYOffsetRef.current - deltaY * 0.015,
+              -4.0,
+              8.0
+            );
+          } else {
+            cameraOrbitAngleRef.current += deltaX * 0.007;
+            cameraPitchAngleRef.current = THREE.MathUtils.clamp(
+              cameraPitchAngleRef.current - deltaY * 0.005,
+              0.05,
+              1.35
+            );
+          }
         }
       } else {
-        // Throttled hover check for chairs/sofas (media_1792165947435.png)
+        // Throttled hover check for chairs/sofas (clean pointer cursor without intrusive popups)
         const now = performance.now();
         if (now - lastHoverCheck > 40) {
           lastHoverCheck = now;
@@ -1841,18 +1919,10 @@ export default function WorkspacePlatform({ user, onExit }) {
             if (foundChair) break;
           }
 
-          if (foundChair && !isSittingRef.current) {
+          if (foundChair) {
             renderer.domElement.style.cursor = 'pointer';
-            const cp = new THREE.Vector3();
-            foundChair.getWorldPosition(cp);
-            cp.y += (foundChair.userData?.seatHeight || 0.46) + 0.25;
-            cp.project(camera);
-            const px = ((cp.x + 1) * width) / 2;
-            const py = ((-cp.y + 1) * height) / 2;
-            setHoveredSitPill({ x: px, y: py, name: foundChair.userData?.name || 'Chair' });
           } else {
             renderer.domElement.style.cursor = 'crosshair';
-            setHoveredSitPill(null);
           }
         }
       }
@@ -3177,46 +3247,6 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         ))}
 
-        {/* Authentic Hover-to-Sit Tooltip (media_1792165947435.png) */}
-        {hoveredSitPill && !isSittingRef.current && (
-          <div
-            style={{
-              position: 'absolute',
-              left: `${hoveredSitPill.x}px`,
-              top: `${hoveredSitPill.y}px`,
-              transform: 'translate(-50%, -100%)',
-              background: '#0f172a',
-              color: '#ffffff',
-              padding: '7px 15px',
-              borderRadius: '8px',
-              fontSize: '13px',
-              fontWeight: 700,
-              pointerEvents: 'none',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-              border: '1px solid #334155',
-              zIndex: 75,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              userSelect: 'none'
-            }}
-          >
-            <span>Sit down</span>
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '-6px',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                width: 0,
-                height: 0,
-                borderLeft: '6px solid transparent',
-                borderRight: '6px solid transparent',
-                borderTop: '6px solid #0f172a'
-              }}
-            />
-          </div>
-        )}
 
         {/* Floating Screen Toolbar for Interactive Display Configuration & Showcase */}
         {activeScreenTarget && (

@@ -81,29 +81,29 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return displayMesh;
   };
 
-  // Helper: Modern Ergonomic Workstation Monitor (Exact match to media_1792034444310.png)
+  // Helper: Modern Ergonomic Workstation Monitor (Large 34" Ultrawide Display)
   const createWorkstationMonitor = (mx, my, mz, rotY = 0, screenKey = 'workstation_mon', defaultTex = null, displayName = 'Workstation Monitor') => {
     const monGrp = new THREE.Group();
     monGrp.name = `screen_group_${screenKey}`;
 
     // 1. Metal Stand Base (resting on desk at my)
-    const base = new THREE.Mesh(roundedBox(0.24, 0.015, 0.18, 0.02), chromeMat);
+    const base = new THREE.Mesh(roundedBox(0.36, 0.016, 0.24, 0.02), chromeMat);
     base.position.set(0, 0.008, 0);
     monGrp.add(base);
 
     // 2. Stand Vertical Riser / Neck
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.24, 12), blackMat);
-    neck.position.set(0, 0.13, -0.02);
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.020, 0.020, 0.36, 16), blackMat);
+    neck.position.set(0, 0.19, -0.04);
     monGrp.add(neck);
 
-    // 3. Monitor Bezel Casing (width: 0.72, height: 0.44, depth: 0.03)
-    const casing = new THREE.Mesh(roundedBox(0.72, 0.44, 0.03, 0.015), screenBezelMat);
-    casing.position.set(0, 0.26, 0);
+    // 3. Monitor Bezel Casing (width: 1.20, height: 0.68, depth: 0.035) - Modern 34" Ultrawide
+    const casing = new THREE.Mesh(roundedBox(1.20, 0.68, 0.035, 0.015), screenBezelMat);
+    casing.position.set(0, 0.38, 0);
     casing.castShadow = true;
     casing.name = `casing_screen_${screenKey}`;
     monGrp.add(casing);
 
-    // 4. Display Screen Face with dedicated high-def texture
+    // 4. Display Screen Face with dedicated high-def texture (width: 1.15, height: 0.64)
     const texture = defaultTex || (screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture() : screenTextures?.starryLogoTexture);
     if (texture) texture.colorSpace = THREE.SRGBColorSpace;
     const displayMat = new THREE.MeshBasicMaterial({
@@ -111,12 +111,12 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       color: 0xffffff,
       side: THREE.DoubleSide
     });
-    const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.40), displayMat);
-    displayMesh.position.set(0, 0.26, 0.018);
+    const displayMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.64), displayMat);
+    displayMesh.position.set(0, 0.38, 0.020);
     displayMesh.name = `screen_${screenKey}`;
-    displayMesh.userData = { isSpotScreen: true, screenKey, width: 0.68, height: 0.40, displayMesh, isDeskMonitor: true, displayName };
-    casing.userData = { isSpotScreen: true, screenKey, width: 0.68, height: 0.40, displayMesh, isDeskMonitor: true, displayName };
-    monGrp.userData = { isSpotScreen: true, screenKey, width: 0.68, height: 0.40, displayMesh, isDeskMonitor: true, displayName };
+    displayMesh.userData = { isSpotScreen: true, screenKey, width: 1.15, height: 0.64, displayMesh, isDeskMonitor: true, displayName };
+    casing.userData = { isSpotScreen: true, screenKey, width: 1.15, height: 0.64, displayMesh, isDeskMonitor: true, displayName };
+    monGrp.userData = { isSpotScreen: true, screenKey, width: 1.15, height: 0.64, displayMesh, isDeskMonitor: true, displayName };
     monGrp.add(displayMesh);
 
     monGrp.position.set(mx, my, mz);
@@ -672,12 +672,10 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   audPodium.castShadow = true;
   furnitureGroup.add(audPodium);
 
-  // 4 Stepped Stadium Seating Tiers facing East towards the cinema screen
+  // 2 Stepped Stadium Seating Tiers facing East towards the cinema screen (Exact match to media_1792207254846.png)
   const audTiers = [
-    { x: 22.0, y: 0.00, riserH: 0.00 },
-    { x: 18.5, y: 0.28, riserH: 0.28 },
-    { x: 15.0, y: 0.56, riserH: 0.56 },
-    { x: 11.5, y: 0.84, riserH: 0.84 }
+    { x: 21.0, y: 0.00, riserH: 0.00 },
+    { x: 17.5, y: 0.32, riserH: 0.32 }
   ];
 
   audTiers.forEach((tier, tIdx) => {
@@ -700,6 +698,13 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     bench.position.set(tier.x, tier.y + 0.34, -10.0);
     bench.castShadow = true;
     bench.name = 'clickable_chair';
+    bench.userData = {
+      isChair: true,
+      name: `Auditorium Tier ${tIdx + 1} Bench`,
+      chairPos: new THREE.Vector3(tier.x, tier.y, -10.0),
+      chairRotY: Math.PI / 2,
+      seatHeight: tier.y + 0.46
+    };
     furnitureGroup.add(bench);
 
     // 8 Individually clickable seat cushions along each bench

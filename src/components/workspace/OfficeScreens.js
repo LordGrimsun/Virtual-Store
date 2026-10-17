@@ -661,9 +661,10 @@ export function createOfficeScreenTextures() {
   // 13. Developer IDE Code Editor (Chat A & Workstation Desk Monitors)
   const createCodeEditorTexture = (fileName = 'WorkspacePlatform.jsx') => {
     const eCanvas = document.createElement('canvas');
-    eCanvas.width = 1024;
-    eCanvas.height = 576;
+    eCanvas.width = 2048;
+    eCanvas.height = 1152;
     const ctx = eCanvas.getContext('2d');
+    ctx.scale(2, 2);
 
     // VS Code Dark Theme
     ctx.fillStyle = '#1e1e1e';
@@ -728,15 +729,21 @@ export function createOfficeScreenTextures() {
     ctx.font = 'bold 14px -apple-system, sans-serif';
     ctx.fillText('⚡ SPOT WORKSPACE IDE • TypeScript 5.4 • UTF-8 • 60 FPS • Node.js v24.15', 24, 564);
 
-    return new THREE.CanvasTexture(eCanvas);
+    const tex = new THREE.CanvasTexture(eCanvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
   };
 
   // 14. Terminal & DevOps Console (Workstation Desk Monitor 2)
   const createTerminalLogsTexture = () => {
     const tCanvas = document.createElement('canvas');
-    tCanvas.width = 1024;
-    tCanvas.height = 576;
+    tCanvas.width = 2048;
+    tCanvas.height = 1152;
     const ctx = tCanvas.getContext('2d');
+    ctx.scale(2, 2);
 
     // Terminal Black
     ctx.fillStyle = '#0f172a';
@@ -779,15 +786,21 @@ export function createOfficeScreenTextures() {
       ctx.fillText(l.text, 24, 76 + i * 36);
     });
 
-    return new THREE.CanvasTexture(tCanvas);
+    const tex = new THREE.CanvasTexture(tCanvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
   };
 
   // 15. Figma / UI Design Canvas (Workstation Desk Monitor 3)
   const createDesignCanvasTexture = () => {
     const dCanvas = document.createElement('canvas');
-    dCanvas.width = 1024;
-    dCanvas.height = 576;
+    dCanvas.width = 2048;
+    dCanvas.height = 1152;
     const ctx = dCanvas.getContext('2d');
+    ctx.scale(2, 2);
 
     // Figma dark canvas
     ctx.fillStyle = '#1e1e24';
@@ -849,7 +862,12 @@ export function createOfficeScreenTextures() {
       ctx.fillText(sw.hex, 610, sy + 46);
     });
 
-    return new THREE.CanvasTexture(dCanvas);
+    const tex = new THREE.CanvasTexture(dCanvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
   };
 
   // 16. Social & Community Wall (Lounge A)
@@ -914,9 +932,10 @@ export function createOfficeScreenTextures() {
   // 17. High-Definition Live Telecast Display (Active Screen Share)
   const createTelecastLiveTexture = (screenName = 'Conference Screen', userName = 'Ayush Kesharwani') => {
     const tCanvas = document.createElement('canvas');
-    tCanvas.width = 1024;
-    tCanvas.height = 576;
+    tCanvas.width = 2048;
+    tCanvas.height = 1152;
     const ctx = tCanvas.getContext('2d');
+    ctx.scale(2, 2);
 
     // Deep modern dark broadcast navy
     ctx.fillStyle = '#070c18';
@@ -957,7 +976,7 @@ export function createOfficeScreenTextures() {
     ['#ef4444', '#f59e0b', '#10b981'].forEach((col, idx) => {
       ctx.fillStyle = col;
       ctx.beginPath();
-      ctx.arc(84 + idx * 20, 129, 6, 0, Math.PI * 2);
+      ctx.arc(80 + idx * 20, 129, 6, 0, Math.PI * 2);
       ctx.fill();
     });
 
@@ -986,7 +1005,12 @@ export function createOfficeScreenTextures() {
     ctx.font = 'bold 14px sans-serif';
     ctx.fillText('Press "Screen Share" in bottom dock or screen tool pill to toggle telecast.', 36, 556);
 
-    return new THREE.CanvasTexture(tCanvas);
+    const tex = new THREE.CanvasTexture(tCanvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    tex.magFilter = THREE.LinearFilter;
+    return tex;
   };
 
   // 18. YouTube Player Texture

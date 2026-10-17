@@ -819,36 +819,6 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // South Wall Entrance Double Glass Doors at X = 22, Z = 24
   createGlassDoubleDoor(22, 24, 0, 'Main Office Entrance');
 
-  // 6. Giant Spot Vertical Signboard / Monolith (East entranceway outside Auditorium)
-  const monolithGrp = new THREE.Group();
-  const monolith = new THREE.Mesh(
-    new THREE.BoxGeometry(0.8, 11, 14),
-    new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.5 })
-  );
-  monolith.position.set(34.5, 5.5, -10);
-  monolith.castShadow = true;
-  monolithGrp.add(monolith);
-
-  // Green circular Spot emblem on Monolith
-  const spotCircle = new THREE.Mesh(
-    new THREE.CylinderGeometry(1.2, 1.2, 0.1, 32),
-    new THREE.MeshBasicMaterial({ color: 0x10b981 })
-  );
-  spotCircle.rotation.z = Math.PI / 2;
-  spotCircle.position.set(34.0, 7.5, -10);
-  monolithGrp.add(spotCircle);
-
-  // Spot lowercase typography plaque
-  if (screenTextures?.logoTexture) {
-    const spotSign = new THREE.Mesh(
-      new THREE.PlaneGeometry(8, 2.5),
-      new THREE.MeshBasicMaterial({ map: screenTextures.logoTexture, transparent: true })
-    );
-    spotSign.rotation.y = -Math.PI / 2;
-    spotSign.position.set(34.05, 5.5, -10);
-    monolithGrp.add(spotSign);
-  }
-  environmentGroup.add(monolithGrp);
 
   // 7. Seattle Environment: Asphalt Roads, Sidewalks, Park Benches, Trees & City
   const seattleGroup = new THREE.Group();
