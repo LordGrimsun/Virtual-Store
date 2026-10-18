@@ -1,89 +1,98 @@
 import React, { useState } from 'react';
-import { X, Copy, Check, ExternalLink, Link2, Compass, MapPin, Sparkles } from 'lucide-react';
+import { X, Link2, Check, ChevronDown, ChevronRight, Mail, Sparkles, Send } from 'lucide-react';
 
 /**
- * SpotLinkModal: Handles copying the active Spot deep link matching the user's request:
- * https://spotvirtual.com/@sunnkesh-4c24f4f3d747fffc/@office/@conference-b
- * and provides input to teleport to any custom Spot room URL.
+ * SpotLinkModal: Exact pixel-accurate implementation of the Spot Virtual invite modal
+ * matching media_1792293223270.png:
+ * - "Invite people to Sunnkesh"
+ * - Pill toggle: "Invite guests" vs "Invite members"
+ * - "Guests are automatically removed when they disconnect unless a member role has been assigned."
+ * - "INVITE TO" select dropdown
+ * - "> Advanced options" accordion
+ * - Full-width vibrant green "Copy link" button
+ * - "Or send invite via email"
  */
 export default function SpotLinkModal({
   isOpen,
   onClose,
-  currentRoom = 'Conference Room B',
+  currentRoom = 'Lobby',
   workspaceSlug = '@sunnkesh-4c24f4f3d747fffc',
   spaceSlug = '@office',
-  userName = 'Ayush',
+  userName = 'Ayush Kesharwani',
   onTeleportToRoom
 }) {
+  const [activeTab, setActiveTab] = useState('guests'); // 'guests' | 'members'
+  const [selectedRoom, setSelectedRoom] = useState(currentRoom || 'Lobby');
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [linkExpiration, setLinkExpiration] = useState('never'); // 'never' | '7days' | '30days'
+  const [maxUses, setMaxUses] = useState('unlimited');
   const [copied, setCopied] = useState(false);
-  const [inputUrl, setInputUrl] = useState('');
-  const [errorMsg, setErrorMsg] = useState(null);
+  const [isEmailInviteOpen, setIsEmailInviteOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [emailSentToast, setEmailSentToast] = useState(false);
 
   if (!isOpen) return null;
 
   // Format room slug matching canonical office rooms
-  const cleanRoom = (currentRoom || '').toLowerCase();
-  let roomSlug = '@boardroom';
-  if (cleanRoom.includes('auditorium')) roomSlug = '@auditorium';
+  const cleanRoom = (selectedRoom || currentRoom || 'Lobby').toLowerCase();
+  let roomSlug = '@lobby';
+  if (cleanRoom.includes('lobby')) roomSlug = '@lobby';
   else if (cleanRoom.includes('boardroom')) roomSlug = '@boardroom';
-  else if (cleanRoom.includes('conference-b') || cleanRoom.includes('conference b')) roomSlug = '@conference-b';
-  else if (cleanRoom.includes('conference-a') || cleanRoom.includes('conference a')) roomSlug = '@conference-a';
-  else if (cleanRoom.includes('chat-a') || cleanRoom.includes('chat a')) roomSlug = '@chat-a';
-  else if (cleanRoom.includes('chat-b') || cleanRoom.includes('chat b')) roomSlug = '@chat-b';
-  else if (cleanRoom.includes('cubicle-1') || cleanRoom.includes('cubicle 1')) roomSlug = '@cubicle-1';
-  else if (cleanRoom.includes('cubicle-2') || cleanRoom.includes('cubicle 2')) roomSlug = '@cubicle-2';
-  else if (cleanRoom.includes('patio')) roomSlug = '@patio';
-  else if (cleanRoom.includes('lobby')) roomSlug = '@lobby';
-  else if (cleanRoom.includes('lounge-a') || cleanRoom.includes('lounge a')) roomSlug = '@lounge-a';
-  else if (cleanRoom.includes('lounge-b') || cleanRoom.includes('lounge b')) roomSlug = '@lounge-b';
-  else if (cleanRoom.includes('lounge-c') || cleanRoom.includes('lounge c')) roomSlug = '@lounge-c';
+  else if (cleanRoom.includes('swimming') || cleanRoom.includes('pool')) roomSlug = '@swimming-pool';
+  else if (cleanRoom.includes('arcade') || cleanRoom.includes('game')) roomSlug = '@game-zone';
+  else if (cleanRoom.includes('gym') || cleanRoom.includes('fitness')) roomSlug = '@gym';
+  else if (cleanRoom.includes('cabin') || cleanRoom.includes('executive')) roomSlug = '@executive-cabins';
+  else if (cleanRoom.includes('atrium') || cleanRoom.includes('grand')) roomSlug = '@grand-atrium';
+  else if (cleanRoom.includes('auditorium')) roomSlug = '@auditorium';
+  else if (cleanRoom.includes('conference-b')) roomSlug = '@conference-b';
+  else if (cleanRoom.includes('conference-a')) roomSlug = '@conference-a';
+  else if (cleanRoom.includes('cubicle-1')) roomSlug = '@cubicle-1';
+  else if (cleanRoom.includes('cubicle-2')) roomSlug = '@cubicle-2';
   else if (cleanRoom.includes('workspace')) roomSlug = '@workspace-a';
+  else if (cleanRoom.includes('lounge-c')) roomSlug = '@lounge-c';
 
   const cleanOrg = workspaceSlug.startsWith('@') ? workspaceSlug : `@${workspaceSlug}`;
   const cleanSpace = spaceSlug.startsWith('@') ? spaceSlug : `@${spaceSlug}`;
-  const inviteQuery = `?invitedBy=${encodeURIComponent(userName)}`;
+  const roleQuery = activeTab === 'members' ? '&role=member' : '&role=guest';
+  const inviteQuery = `?invitedBy=${encodeURIComponent(userName)}${roleQuery}`;
 
-  const spotOriginUrl = `https://spotvirtual.com/${cleanOrg}/${cleanSpace}/${roomSlug}${inviteQuery}`;
   const deployedShareUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/#/${cleanOrg}/${cleanSpace}/${roomSlug}${inviteQuery}`
     : `https://spot-virtual.vercel.app/#/${cleanOrg}/${cleanSpace}/${roomSlug}${inviteQuery}`;
 
-  const handleCopyLink = () => {
+  const handleCopy = () => {
     navigator.clipboard.writeText(deployedShareUrl);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2200);
+    setTimeout(() => setCopied(false), 2400);
   };
 
-  const handleJoinUrl = (e) => {
+  const handleSendEmail = (e) => {
     e.preventDefault();
-    if (!inputUrl.trim()) return;
-
-    try {
-      // Parse any Spot URL
-      const clean = inputUrl.trim().toLowerCase();
-      let targetRoomName = 'Boardroom';
-
-      if (clean.includes('auditorium')) targetRoomName = 'Auditorium';
-      else if (clean.includes('boardroom')) targetRoomName = 'Boardroom';
-      else if (clean.includes('conference-b')) targetRoomName = 'Conference B';
-      else if (clean.includes('conference-a')) targetRoomName = 'Conference A';
-      else if (clean.includes('chat-a')) targetRoomName = 'Chat A';
-      else if (clean.includes('chat-b')) targetRoomName = 'Chat B';
-      else if (clean.includes('cubicle-1')) targetRoomName = 'Focus Cubicle 1';
-      else if (clean.includes('cubicle-2')) targetRoomName = 'Focus Cubicle 2';
-      else if (clean.includes('patio')) targetRoomName = 'Patio';
-      else if (clean.includes('lobby')) targetRoomName = 'Lobby';
-      else if (clean.includes('workspace')) targetRoomName = 'Workspace A';
-      else if (clean.includes('lounge-a')) targetRoomName = 'Lounge A';
-      else if (clean.includes('lounge-b')) targetRoomName = 'Lounge B';
-      else if (clean.includes('lounge-c')) targetRoomName = 'Lounge C';
-
-      onTeleportToRoom(targetRoomName);
-      onClose();
-    } catch (err) {
-      setErrorMsg('Please enter a valid Spot URL (e.g. https://spotvirtual.com/@org/@space/@room)');
-    }
+    if (!inviteEmail.trim()) return;
+    setEmailSentToast(true);
+    setTimeout(() => {
+      setEmailSentToast(false);
+      setInviteEmail('');
+      setIsEmailInviteOpen(false);
+    }, 2200);
   };
+
+  const availableRooms = [
+    { id: 'Lobby', name: 'Lobby' },
+    { id: 'Boardroom', name: 'Boardroom' },
+    { id: 'Swimming Pool & Sun Deck', name: 'Swimming Pool & Sun Deck' },
+    { id: 'Arcade & Game Zone', name: 'Arcade & Game Zone' },
+    { id: 'Fitness & Gym Center', name: 'Fitness & Gym Center' },
+    { id: 'Executive Cabins', name: 'Executive Cabins' },
+    { id: 'Grand Central Atrium', name: 'Grand Central Atrium' },
+    { id: 'Auditorium', name: 'Auditorium' },
+    { id: 'Conference A', name: 'Conference A' },
+    { id: 'Conference B', name: 'Conference B' },
+    { id: 'Focus Cubicle 1', name: 'Focus Cubicle 1' },
+    { id: 'Focus Cubicle 2', name: 'Focus Cubicle 2' },
+    { id: 'Workspace A', name: 'Workspace A' },
+    { id: 'Lounge C', name: 'Lounge C' }
+  ];
 
   return (
     <div style={{
@@ -92,253 +101,297 @@ export default function SpotLinkModal({
       left: 0,
       width: '100%',
       height: '100%',
-      background: 'rgba(15, 23, 42, 0.72)',
-      backdropFilter: 'blur(8px)',
+      background: 'rgba(15, 23, 42, 0.65)',
+      backdropFilter: 'blur(6px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 250,
+      zIndex: 2000,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
       <div style={{
         background: '#ffffff',
         borderRadius: '16px',
-        width: '580px',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.35)',
-        border: '1px solid #cbd5e1',
-        overflow: 'hidden'
+        width: '520px',
+        maxWidth: '92vw',
+        boxShadow: '0 25px 65px rgba(0, 0, 0, 0.28)',
+        border: '1px solid #e2e8f0',
+        padding: '28px 32px',
+        position: 'relative'
       }}>
-        {/* Header */}
-        <div style={{
-          background: 'linear-gradient(135deg, #0284c7, #0f172a)',
-          color: '#ffffff',
-          padding: '18px 24px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: '24px',
+            right: '24px',
+            background: 'transparent',
+            border: 'none',
+            color: '#6b7280',
+            cursor: 'pointer',
+            padding: '4px'
+          }}
+        >
+          <X size={20} />
+        </button>
+
+        {/* Title matching media_1792293223270.png */}
+        <h2 style={{
+          margin: '0 0 20px 0',
+          fontSize: '22px',
+          fontWeight: 400,
+          color: '#111827',
+          lineHeight: 1.3
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{
-              width: 32,
-              height: 32,
-              borderRadius: '8px',
-              background: '#22c55e',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 900,
-              color: '#ffffff'
-            }}>
-              🔗
-            </span>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Spot Room Link & Gateway</h3>
-              <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.85 }}>Direct Access: Sunn Kesh Digital HQ &bull; {currentRoom}</p>
-            </div>
-          </div>
+          Invite people to <strong style={{ fontWeight: 800 }}>Sunnkesh</strong>
+        </h2>
+
+        {/* Pill Toggle Switch: Invite guests vs Invite members */}
+        <div style={{
+          display: 'flex',
+          background: '#f1f5f9',
+          padding: '4px',
+          borderRadius: '12px',
+          marginBottom: '16px'
+        }}>
           <button
-            onClick={onClose}
+            onClick={() => setActiveTab('guests')}
             style={{
-              background: 'rgba(255,255,255,0.2)',
+              flex: 1,
+              padding: '9px 0',
+              borderRadius: '8px',
               border: 'none',
-              borderRadius: '50%',
-              width: 32,
-              height: 32,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#fff',
-              cursor: 'pointer'
+              background: activeTab === 'guests' ? '#ffffff' : 'transparent',
+              color: activeTab === 'guests' ? '#111827' : '#64748b',
+              fontWeight: activeTab === 'guests' ? 700 : 500,
+              fontSize: '14px',
+              boxShadow: activeTab === 'guests' ? '0 1px 4px rgba(0, 0, 0, 0.08)' : 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
             }}
           >
-            <X size={18} />
+            Invite guests
+          </button>
+          <button
+            onClick={() => setActiveTab('members')}
+            style={{
+              flex: 1,
+              padding: '9px 0',
+              borderRadius: '8px',
+              border: 'none',
+              background: activeTab === 'members' ? '#ffffff' : 'transparent',
+              color: activeTab === 'members' ? '#111827' : '#64748b',
+              fontWeight: activeTab === 'members' ? 700 : 500,
+              fontSize: '14px',
+              boxShadow: activeTab === 'members' ? '0 1px 4px rgba(0, 0, 0, 0.08)' : 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            Invite members
           </button>
         </div>
 
-        {/* Body */}
-        <div style={{ padding: '24px', background: '#f8fafc' }}>
-          {/* Active Room Share Card */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            marginBottom: '20px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
-                Share Live Room Link
-              </span>
-              <span style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 8px',
-                borderRadius: '1rem',
-                background: '#dcfce7',
-                color: '#15803d',
-                fontSize: '0.72rem',
-                fontWeight: 700
-              }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e' }} />
-                Instant Access
-              </span>
-            </div>
+        {/* Subtext description */}
+        <p style={{
+          margin: '0 0 20px 0',
+          fontSize: '13px',
+          lineHeight: 1.5,
+          color: '#6b7280'
+        }}>
+          {activeTab === 'guests'
+            ? 'Guests are automatically removed when they disconnect unless a member role has been assigned.'
+            : 'Members have persistent workspace permissions, team chat access, and reserved seats across all rooms.'}
+        </p>
 
-            <div style={{
+        {/* Dropdown label */}
+        <label style={{
+          display: 'block',
+          fontSize: '11px',
+          fontWeight: 800,
+          color: '#64748b',
+          letterSpacing: '0.05em',
+          marginBottom: '8px'
+        }}>
+          INVITE TO
+        </label>
+
+        {/* Room select dropdown */}
+        <div style={{ position: 'relative', marginBottom: '18px' }}>
+          <select
+            value={selectedRoom}
+            onChange={(e) => setSelectedRoom(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '11px 14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              fontSize: '14px',
+              color: '#111827',
+              appearance: 'none',
+              outline: 'none',
+              cursor: 'pointer',
+              fontWeight: 500
+            }}
+          >
+            {availableRooms.map((rm) => (
+              <option key={rm.id} value={rm.id}>
+                {rm.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            size={18}
+            color="#6b7280"
+            style={{
+              position: 'absolute',
+              right: '14px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none'
+            }}
+          />
+        </div>
+
+        {/* Collapsible Advanced Options */}
+        <div style={{ marginBottom: '22px' }}>
+          <button
+            onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              background: '#f1f5f9',
-              padding: '10px 12px',
+              gap: '6px',
+              color: '#0284c7',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            {isAdvancedOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+            <span>Advanced options</span>
+          </button>
+
+          {isAdvancedOpen && (
+            <div style={{
+              marginTop: '12px',
+              padding: '14px',
+              background: '#f8fafc',
               borderRadius: '8px',
-              border: '1px solid #cbd5e1'
+              border: '1px solid #e2e8f0',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              fontSize: '13px'
             }}>
-              <code style={{
-                flex: 1,
-                fontSize: '0.82rem',
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#475569', fontWeight: 500 }}>Link Expiration:</span>
+                <select
+                  value={linkExpiration}
+                  onChange={(e) => setLinkExpiration(e.target.value)}
+                  style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                >
+                  <option value="never">Never expires</option>
+                  <option value="7days">7 days</option>
+                  <option value="30days">30 days</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#475569', fontWeight: 500 }}>Max Uses:</span>
+                <select
+                  value={maxUses}
+                  onChange={(e) => setMaxUses(e.target.value)}
+                  style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12px' }}
+                >
+                  <option value="unlimited">Unlimited</option>
+                  <option value="10">10 uses</option>
+                  <option value="1">1 use only</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Big Vibrant Green "Copy link" button matching media_1792293223270.png */}
+        <button
+          onClick={handleCopy}
+          style={{
+            width: '100%',
+            padding: '13px',
+            borderRadius: '8px',
+            border: 'none',
+            background: copied ? '#059669' : '#16a34a', // Spot vibrant emerald green
+            color: '#ffffff',
+            fontSize: '15px',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(22, 163, 74, 0.3)',
+            transition: 'background 0.15s ease'
+          }}
+        >
+          {copied ? <Check size={18} /> : <Link2 size={18} />}
+          <span>{copied ? 'Link copied to clipboard!' : 'Copy link'}</span>
+        </button>
+
+        {/* Or send invite via email link */}
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          {!isEmailInviteOpen ? (
+            <button
+              onClick={() => setIsEmailInviteOpen(true)}
+              style={{
+                background: 'transparent',
+                border: 'none',
                 color: '#0284c7',
-                fontFamily: 'monospace',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap'
-              }}>
-                {deployedShareUrl}
-              </code>
-
-              <button
-                onClick={handleCopyLink}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: '7px 14px',
-                  borderRadius: '6px',
-                  background: copied ? '#22c55e' : '#0284c7',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s ease'
-                }}
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                <span>{copied ? 'Copied!' : 'Copy Link'}</span>
-              </button>
-            </div>
-
-            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                Teammates clicking this link join directly into <strong>{currentRoom}</strong>
-              </span>
-
-              <a
-                href={spotOriginUrl}
-                target="_blank"
-                rel="noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.75rem',
-                  color: '#0284c7',
-                  fontWeight: 600,
-                  textDecoration: 'none'
-                }}
-              >
-                <span>Spot Official Link</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
-          </div>
-
-          {/* Join / Teleport to Any Spot Link Form */}
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            padding: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-          }}>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '0.88rem', fontWeight: 700, color: '#1e293b' }}>
-              Teleport by Spot URL
-            </h4>
-            <p style={{ margin: '0 0 12px 0', fontSize: '0.78rem', color: '#64748b' }}>
-              Paste any Spot Virtual URL (e.g. <code>https://spotvirtual.com/@sunnkesh-4c24f4f3d747fffc/@office/@conference-b</code>) to connect directly:
-            </p>
-
-            <form onSubmit={handleJoinUrl} style={{ display: 'flex', gap: '8px' }}>
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
+            >
+              Or <span style={{ textDecoration: 'underline' }}>send invite via email</span>
+            </button>
+          ) : (
+            <form onSubmit={handleSendEmail} style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
               <input
-                type="text"
-                placeholder="https://spotvirtual.com/@org/@space/@room"
-                value={inputUrl}
-                onChange={(e) => { setInputUrl(e.target.value); setErrorMsg(null); }}
+                type="email"
+                placeholder="colleague@company.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                required
                 style={{
                   flex: 1,
-                  padding: '9px 12px',
-                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
                   border: '1px solid #cbd5e1',
-                  fontSize: '0.82rem',
-                  fontFamily: 'monospace'
+                  fontSize: '13px',
+                  outline: 'none'
                 }}
               />
               <button
                 type="submit"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '9px 16px',
-                  borderRadius: '8px',
-                  background: '#0f172a',
+                  padding: '8px 14px',
+                  borderRadius: '6px',
+                  background: '#0284c7',
                   color: '#ffffff',
                   border: 'none',
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
+                  fontSize: '13px',
+                  fontWeight: 600,
                   cursor: 'pointer'
                 }}
               >
-                <Compass size={14} />
-                <span>Teleport</span>
+                {emailSentToast ? 'Sent!' : 'Send'}
               </button>
             </form>
-
-            {errorMsg && (
-              <p style={{ color: '#ef4444', fontSize: '0.78rem', margin: '8px 0 0 0' }}>
-                {errorMsg}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{
-          padding: '12px 24px',
-          background: '#ffffff',
-          borderTop: '1px solid #e2e8f0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          fontSize: '0.78rem',
-          color: '#64748b'
-        }}>
-          <span>Workspace Slug: <strong>{workspaceSlug}</strong></span>
-          <button
-            onClick={onClose}
-            style={{
-              padding: '6px 14px',
-              borderRadius: '8px',
-              background: '#f1f5f9',
-              color: '#334155',
-              border: '1px solid #cbd5e1',
-              fontWeight: 700,
-              cursor: 'pointer'
-            }}
-          >
-            Close
-          </button>
+          )}
         </div>
       </div>
     </div>

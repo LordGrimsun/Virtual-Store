@@ -103,6 +103,20 @@ export default function App() {
           roomSlug = 'workspace-a';
         }
 
+        if (searchParams.get('skipOnboarding') === 'true' || searchParams.get('direct') === 'true') {
+          setCurrentUser(prev => ({
+            ...prev,
+            companyName: wsName,
+            workspaceSlug: `@${wsSlug}`,
+            spaceSlug,
+            spaceName,
+            targetRoom,
+            targetRoomId: roomSlug
+          }));
+          setIsPlatformActive(true);
+          return;
+        }
+
         // Show authentic guest onboarding flow for visitor deep links
         setGuestModal({
           isOpen: true,

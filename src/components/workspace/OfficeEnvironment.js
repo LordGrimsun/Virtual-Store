@@ -371,20 +371,20 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   gymFloor.name = 'floor_gym';
   environmentGroup.add(gymFloor);
 
-  // B. Luxury Swimming Pool & Sun Deck Floor Overlay (East Wing: X: +26 to +58, Z: +8 to +46)
-  // 4 Surrounding Teak Deck sections with cutout for pool basin (X: 32 to 52, Z: 16 to 38)
-  const deckN = new THREE.Mesh(new THREE.BoxGeometry(32, 0.42, 8), materials.poolDeckMat);
-  deckN.position.set(42, -0.19, 12);
+  // B. Luxury Swimming Pool & Sun Deck Floor Overlay (East Wing: X: +24 to +58, Z: +8 to +46)
+  // Surrounding Teak Deck sections with cutout for pool basin (X: 32 to 52, Z: 16 to 38)
+  const deckN = new THREE.Mesh(new THREE.BoxGeometry(34, 0.42, 8), materials.poolDeckMat);
+  deckN.position.set(41, -0.19, 12);
   deckN.receiveShadow = true;
   environmentGroup.add(deckN);
 
-  const deckS = new THREE.Mesh(new THREE.BoxGeometry(32, 0.42, 8), materials.poolDeckMat);
-  deckS.position.set(42, -0.19, 42);
+  const deckS = new THREE.Mesh(new THREE.BoxGeometry(34, 0.42, 8), materials.poolDeckMat);
+  deckS.position.set(41, -0.19, 42);
   deckS.receiveShadow = true;
   environmentGroup.add(deckS);
 
-  const deckW = new THREE.Mesh(new THREE.BoxGeometry(6, 0.42, 22), materials.poolDeckMat);
-  deckW.position.set(29, -0.19, 27);
+  const deckW = new THREE.Mesh(new THREE.BoxGeometry(8, 0.42, 22), materials.poolDeckMat);
+  deckW.position.set(28, -0.19, 27);
   deckW.receiveShadow = true;
   environmentGroup.add(deckW);
 
@@ -434,9 +434,9 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   environmentGroup.add(waterMesh);
   scene.userData.poolWaterMesh = waterMesh;
 
-  // C. Mega Arcade & Game Zone Floor Overlay (South-Center Wing: X: -20 to +20, Z: +20 to +46)
+  // C. Mega Arcade & Game Zone Floor Overlay (South-Center Wing: X: -24 to +24, Z: +20 to +46)
   const arcadeFloor = new THREE.Mesh(
-    new THREE.BoxGeometry(40, 0.42, 26),
+    new THREE.BoxGeometry(48, 0.42, 26),
     materials.arcadeFloorMat
   );
   arcadeFloor.position.set(0, -0.19, 33);
@@ -444,12 +444,12 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   arcadeFloor.name = 'floor_arcade';
   environmentGroup.add(arcadeFloor);
 
-  // D. Executive Cabins Floor Overlay (North-West Wing: X: -58 to -26, Z: -46 to -8)
+  // D. Executive Cabins Floor Overlay (North-West Wing: X: -58 to -32, Z: -46 to -8)
   const cabinFloor = new THREE.Mesh(
-    new THREE.BoxGeometry(32, 0.42, 38),
+    new THREE.BoxGeometry(26, 0.42, 38),
     materials.parquetFloorMat
   );
-  cabinFloor.position.set(-42, -0.19, -27);
+  cabinFloor.position.set(-45, -0.19, -27);
   cabinFloor.receiveShadow = true;
   cabinFloor.name = 'floor_executive_cabins';
   environmentGroup.add(cabinFloor);
@@ -951,90 +951,95 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // =========================================================================
 
   // =========================================================================
-  // ROW 3: SOUTH ROOMS & COLLABORATION WING (Z = +8 to +24)
+  // ROW 3: SOUTH ROOMS & COLLABORATION WING (Z = +8 to +20)
   // =========================================================================
 
-  // A. FOCUS CUBICLES 1 & 2 (X = -26 to -14, Z = 8 to 14) - Fully Enclosed with Zero Gaps
+  // A. FOCUS WORK PODS (X = -26 to -14, Z = 8 to 14)
   // Outer West Wall (X = -26, Z = 8 to 14)
   createWall(-26, 11, WALL_THICKNESS, 6);
 
-  // Focus Cubicle 1 Front Wall (Z = 8, X = -26 to -19.5, span = 6.5m)
-  // Single door at X = -22.75 (outer frame: -23.56 to -21.94)
-  createWall(-24.78, 8, 2.44, WALL_THICKNESS); // Left wall: -26.0 to -23.56 (0.000 gap)
-  createSingleDoor(-22.75, 8, 0, 'Focus Cubicle 1 Door');
-  createWall(-20.72, 8, 2.44, WALL_THICKNESS); // Right wall: -21.94 to -19.50 (0.000 gap)
+  // Focus Pods Front Wall (Z = 8, X = -26 to -14, span = 12m)
+  // Single door at X = -20 (outer frame: -20.81 to -19.19)
+  createWall(-23.405, 8, 5.19, WALL_THICKNESS); // Left wall: -26.0 to -20.81
+  createSingleDoor(-20, 8, 0, 'Focus Work Pod Door');
+  createWall(-16.595, 8, 5.19, WALL_THICKNESS); // Right wall: -19.19 to -14.0
 
-  // Center divider between Cubicle 1 and 2 (X = -19.5, Z = 8 to 14)
-  createWall(-19.5, 11, WALL_THICKNESS, 6);
+  // Center divider between Pod 1 and 2 (X = -20, Z = 8 to 14)
+  createWall(-20, 11, WALL_THICKNESS, 6);
 
-  // Focus Cubicle 2 Front Wall (Z = 8, X = -19.5 to -14.0, span = 5.5m)
-  // Single door at X = -16.75 (outer frame: -17.56 to -15.94)
-  createWall(-18.53, 8, 1.94, WALL_THICKNESS); // Left wall: -19.50 to -17.56 (0.000 gap)
-  createSingleDoor(-16.75, 8, 0, 'Focus Cubicle 2 Door');
-  createWall(-14.97, 8, 1.94, WALL_THICKNESS); // Right wall: -15.94 to -14.00 (0.000 gap)
-
-  // Outer East Wall of Cubicles (X = -14, Z = 8 to 14)
+  // Outer East Wall of Focus Pods (X = -14, Z = 8 to 14)
   createWall(-14, 11, WALL_THICKNESS, 6);
 
-  // Back Wall of Cubicles (Z = 14, X = -26 to -14, span = 12m)
+  // Back Wall of Focus Pods (Z = 14, X = -26 to -14, span = 12m)
   createWall(-20, 14, 12, WALL_THICKNESS);
 
-  // B. WORKSPACE A & COLLABORATION SUITE (X = -14 to +14, Z = 8 to 24) - Fully Enclosed
+  // B. WORKSPACE A & COLLABORATION SUITE (X = -14 to +14, Z = 8 to 20) - Fully Enclosed
   // Front Wall along Z = 8 (from X = -14 to +14, total span = 28m)
   // Central Double Door at X = 0 (outer frame: -1.51 to +1.51)
-  createWall(-7.755, 8, 12.49, WALL_THICKNESS); // Left front wall: -14.0 to -1.51 (0.000 gap)
+  createWall(-7.755, 8, 12.49, WALL_THICKNESS); // Left front wall: -14.0 to -1.51
   createDoubleDoor(0, 8, 0, 'Workspace A Concourse Door'); // Central Double Doors from Lounge C concourse
-  createWall(7.755, 8, 12.49, WALL_THICKNESS); // Right front wall: +1.51 to +14.0 (0.000 gap)
+  createWall(7.755, 8, 12.49, WALL_THICKNESS); // Right front wall: +1.51 to +14.0
 
-  // West Divider Wall with Outdoor Patio (X = -14, Z = 14 to 24, span = 10m)
-  // Double Glass Sliding Doors at Z = 19 (outer frame: 17.49 to 20.51)
-  createWall(-14, 15.745, WALL_THICKNESS, 3.49); // North wall: 14.0 to 17.49 (0.000 gap)
-  createGlassDoubleDoor(-14, 19, Math.PI / 2, 'Patio Terrace Glass Door'); // Glass doors to outdoor game terrace
-  createWall(-14, 22.255, WALL_THICKNESS, 3.49); // South wall: 20.51 to 24.0 (0.000 gap)
+  // West Divider Wall (X = -14, Z = 8 to 20, span = 12m)
+  createWall(-14, 14, WALL_THICKNESS, 12);
 
-  // East Divider Wall with Promenade / Lobby (X = 14, Z = 8 to 24, span = 16m)
-  // Double Doors at Z = 16 (outer frame: 14.49 to 17.51)
-  createWall(14, 11.245, WALL_THICKNESS, 6.49); // North wall: 8.0 to 14.49 (0.000 gap)
-  createDoubleDoor(14, 16, Math.PI / 2, 'Workspace A East Door'); // Doors to East Promenade
-  createWall(14, 20.755, WALL_THICKNESS, 6.49); // South wall: 17.51 to 24.0 (0.000 gap)
+  // East Divider Wall with Promenade / Lobby (X = 14, Z = 8 to 20, span = 12m)
+  // Double Doors at Z = 14 (outer frame: 12.49 to 15.51)
+  createWall(14, 10.245, WALL_THICKNESS, 4.49); // North segment: 8.0 to 12.49
+  createDoubleDoor(14, 14, Math.PI / 2, 'Workspace A East Door'); // Doors to East Promenade
+  createWall(14, 17.755, WALL_THICKNESS, 4.49); // South segment: 15.51 to 20.0
 
-  // C. MAIN LOBBY & ENTRANCE (X = 14 to 32, Z = 8 to 24)
-  // South Wall Entrance Double Glass Doors at X = 22, Z = 24
-  createGlassDoubleDoor(22, 24, 0, 'Main Office Entrance');
+  // South Dividing Wall along Z = 20 (separating Workspace A from Mega Arcade, span X = -24 to +24 = 48m)
+  // Central Double Door at X = 0 with illuminated neon portal (outer frame: -1.51 to +1.51)
+  createWall(-12.755, 20, 22.49, WALL_THICKNESS); // West segment: -24 to -1.51
+  createDoubleDoor(0, 20, 0, 'Arcade Main Entrance');
+  createWall(12.755, 20, 22.49, WALL_THICKNESS); // East segment: +1.51 to +24
+
+  // Glowing Neon Portal Frame across X = -1.8 to +1.8 at Z = 20 over the door
+  const portalMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
+  const portalL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
+  portalL.position.set(-1.8, 1.4, 20.08);
+  environmentGroup.add(portalL);
+  const portalR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
+  portalR.position.set(1.8, 1.4, 20.08);
+  environmentGroup.add(portalR);
+  const portalTop = new THREE.Mesh(new THREE.BoxGeometry(3.72, 0.12, 0.12), portalMat);
+  portalTop.position.set(0, 2.8, 20.08);
+  environmentGroup.add(portalTop);
 
   // =========================================================================
-  // ROW 4: EXECUTIVE CABINS WING (X = -58 to -26, Z = -46 to -8)
-  // Area: 32m x 38m. Grand Concourse Entrance at X = -26, Z = -16.
+  // ROW 4: EXECUTIVE CABINS WING (X = -58 to -32, Z = -46 to -8)
+  // Area: 26m x 38m. Cleanly separated from Boardroom (X = -32 to -14).
+  // Grand Concourse Entrance at X = -45, Z = -8.
   // =========================================================================
 
-  // South Enclosing Wall (Z = -8, span X = -58 to -26, length = 32m)
-  createWall(-42, -8, 32, WALL_THICKNESS);
+  // Enclosing East Wall along X = -32 (from Z = -46 to -8, span = 38m)
+  // This wall guarantees full 5-meter clearance around the Boardroom table!
+  createWall(-32, -27, WALL_THICKNESS, 38);
 
-  // East Wall along X = -26 with Grand Double Door Entrance into Executive Corridor
-  // Total span Z = -46 to -8 (38m). Double Door at Z = -16 (outer frame: -17.51 to -14.49)
-  createWall(-26, -31.755, WALL_THICKNESS, 28.49); // North segment: -46 to -17.51
-  createDoubleDoor(-26, -16, Math.PI / 2, 'Executive Wing Grand Entrance');
-  createWall(-26, -11.245, WALL_THICKNESS, 6.49); // South segment: -14.49 to -8
+  // South Enclosing Wall along Z = -8 (from X = -58 to -32, span = 26m)
+  // Executive Wing Grand Entrance Double Doors at X = -45 (outer frame: -46.51 to -43.49)
+  createWall(-52.255, -8, 11.49, WALL_THICKNESS); // West segment: -58 to -46.51
+  createDoubleDoor(-45, -8, 0, 'Executive Wing Grand Entrance');
+  createWall(-37.745, -8, 11.49, WALL_THICKNESS); // East segment: -43.49 to -32
 
-  // Central Corridor Dividing Wall along Z = -26 (separating North CEO/VP from South Director/Boardroom suites)
-  // CEO Suite Single Door at X = -48 (outer frame: -48.81 to -47.19)
-  createWall(-53.405, -26, 9.19, WALL_THICKNESS); // Far West segment: -58 to -48.81
-  createSingleDoor(-48, -26, 0, 'CEO Executive Suite Door');
-  createWall(-44.595, -26, 5.19, WALL_THICKNESS); // Segment between door and center divider: -47.19 to -42
+  // Central Corridor Dividing Wall along Z = -28 (separating North CEO/VP from South Suites, span 26m)
+  // CEO Suite Single Door at X = -51 (outer frame: -51.81 to -50.19)
+  createWall(-54.905, -28, 6.19, WALL_THICKNESS); // Far West segment: -58 to -51.81
+  createSingleDoor(-51, -28, 0, 'CEO Executive Suite Door');
+  createWall(-46.5, -28, 7.38, WALL_THICKNESS); // Segment between CEO and VP door: -50.19 to -42.81
+  // VP Suite Single Door at X = -42 (outer frame: -42.81 to -41.19)
+  createSingleDoor(-42, -28, 0, 'VP Executive Suite Door');
+  createWall(-36.595, -28, 9.19, WALL_THICKNESS); // Segment to East wall: -41.19 to -32
 
-  // Center Dividing Wall at X = -42 (North: dividing CEO from VP, Z: -46 to -26, span 20m)
-  createWall(-42, -36, WALL_THICKNESS, 20);
+  // Center Dividing Wall North-South at X = -46.5 (dividing CEO from VP, Z: -46 to -28, span 18m)
+  createWall(-46.5, -37, WALL_THICKNESS, 18);
 
-  // VP Suite Single Door at X = -36 (outer frame: -36.81 to -35.19)
-  createWall(-39.405, -26, 5.19, WALL_THICKNESS); // Segment between center divider and VP door: -42 to -36.81
-  createSingleDoor(-36, -26, 0, 'VP Executive Suite Door');
-  createWall(-30.595, -26, 9.19, WALL_THICKNESS); // Segment from VP door to East wall: -35.19 to -26
-
-  // Center Dividing Wall at X = -42 (South: dividing Principal Suite from Meeting Suite, Z: -26 to -8, span 18m)
-  // Single Door at Z = -16 (outer frame: -16.81 to -15.19)
-  createWall(-42, -21.405, WALL_THICKNESS, 9.19); // North segment: -26 to -16.81
-  createSingleDoor(-42, -16, Math.PI / 2, 'Principal Suite Door');
-  createWall(-42, -11.595, WALL_THICKNESS, 7.19); // South segment: -15.19 to -8
+  // Center Dividing Wall North-South at X = -46.5 (dividing Principal Suite from Executive Boardroom, Z: -28 to -8, span 20m)
+  // Single Door at Z = -18 (outer frame: -18.81 to -17.19)
+  createWall(-46.5, -23.405, WALL_THICKNESS, 9.19); // North segment: -28 to -18.81
+  createSingleDoor(-46.5, -18, Math.PI / 2, 'Principal Suite Door');
+  createWall(-46.5, -12.595, WALL_THICKNESS, 9.19); // South segment: -17.19 to -8
 
   // =========================================================================
   // ROW 5: FITNESS & GYM CENTER (X = -58 to -26, Z = +8 to +46)
@@ -1060,24 +1065,6 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // Area: 48m x 26m. North Entrance from Concourse at X = 0, Z = +20.
   // =========================================================================
 
-  // North Enclosing Wall along Z = +20 (from X = -24 to +24, span = 48m)
-  // Central Double Door at X = 0 (outer frame: -1.51 to +1.51)
-  createWall(-12.755, 20, 22.49, WALL_THICKNESS); // West segment: -24 to -1.51
-  createDoubleDoor(0, 20, 0, 'Arcade Main Entrance');
-  createWall(12.755, 20, 22.49, WALL_THICKNESS); // East segment: +1.51 to +24
-
-  // Glowing Neon Portal Frame across X = -1.8 to +1.8 at Z = 20 over the door
-  const portalMat = new THREE.MeshBasicMaterial({ color: 0xa855f7 });
-  const portalL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
-  portalL.position.set(-1.8, 1.4, 20.08);
-  environmentGroup.add(portalL);
-  const portalR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.8, 0.12), portalMat);
-  portalR.position.set(1.8, 1.4, 20.08);
-  environmentGroup.add(portalR);
-  const portalTop = new THREE.Mesh(new THREE.BoxGeometry(3.72, 0.12, 0.12), portalMat);
-  portalTop.position.set(0, 2.8, 20.08);
-  environmentGroup.add(portalTop);
-
   // West Wall along X = -24 (from Z = 20 to 46, span = 26m, center Z = 33)
   createWall(-24, 33, WALL_THICKNESS, 26);
 
@@ -1088,13 +1075,13 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createWall(24, 40.255, WALL_THICKNESS, 11.49); // South segment: 34.51 to 46
 
   // =========================================================================
-  // ROW 7: LUXURY SWIMMING POOL & RESORT DECK (X = +26 to +58, Z = +8 to +46)
-  // Area: 32m x 38m. North Entrance from Promenade at X = +42, Z = +8.
+  // ROW 7: LUXURY SWIMMING POOL & RESORT DECK (X = +24 to +58, Z = +8 to +46)
+  // Area: 34m x 38m. North Entrance from Promenade at X = +42, Z = +8.
   // =========================================================================
 
-  // North Enclosing Wall along Z = +8 (from X = +26 to +58, span = 32m)
+  // North Enclosing Wall along Z = +8 (from X = +24 to +58, span = 34m)
   // French Glass Double Door at X = +42 (outer frame: 40.49 to 43.51)
-  createWall(33.245, 8, 14.49, WALL_THICKNESS); // West segment: 26 to 40.49
+  createWall(32.245, 8, 16.49, WALL_THICKNESS); // West segment: 24 to 40.49
   createGlassDoubleDoor(42, 8, 0, 'Pool Deck French Doors');
   createWall(50.755, 8, 14.49, WALL_THICKNESS); // East segment: 43.51 to 58
 
@@ -1121,10 +1108,10 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   };
 
   createGlassBalustrade(58, 27, 38, Math.PI / 2); // East Resort Railing overlooking Skyline
-  createGlassBalustrade(42, 46, 32, 0); // South Resort Railing
+  createGlassBalustrade(41, 46, 34, 0); // South Resort Railing
 
-  // Decorative Planter dividing line between Pool Deck and Lobby (Z: 8 to 20 at X = 26)
-  createLowPlanter(26, 14, 12, 0.65, Math.PI / 2);
+  // Decorative Planter dividing line between Pool Deck and Lobby (Z: 8 to 20 at X = 24)
+  createLowPlanter(24, 14, 12, 0.65, Math.PI / 2);
 
   // 7. Seattle Environment: Asphalt Roads, Sidewalks, Park Benches, Trees & City
   const seattleGroup = new THREE.Group();

@@ -1231,10 +1231,50 @@ export function createAvatarSystem() {
    * - Sitting: Legs pivot 90° forward (-1.45 rad), arms rest forward.
    * - Standing Idle: Gentle breathing sway, wave emote.
    */
-  const applyAvatarPose = (parts, { isMoving = false, walkCycle = 0, isSitting = false, emote = null, elapsed = 0 }) => {
+  const applyAvatarPose = (parts, { isMoving = false, walkCycle = 0, isSitting = false, isSwimming = false, swimCycle = 0, emote = null, elapsed = 0 }) => {
     if (!parts) return;
 
-    if (isMoving) {
+    if (isSwimming) {
+      if (isMoving) {
+        // Forward swimming crawl stroke
+        const stroke = Math.sin(swimCycle);
+        if (parts.leftArmPivot) {
+          parts.leftArmPivot.rotation.x = -Math.PI * 0.45 + stroke * 0.75;
+          parts.leftArmPivot.rotation.z = -0.35 + Math.cos(swimCycle) * 0.35;
+        }
+        if (parts.rightArmPivot) {
+          parts.rightArmPivot.rotation.x = -Math.PI * 0.45 - stroke * 0.75;
+          parts.rightArmPivot.rotation.z = 0.35 - Math.cos(swimCycle) * 0.35;
+        }
+        if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = Math.sin(swimCycle * 2) * 0.45;
+        if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -Math.sin(swimCycle * 2) * 0.45;
+        if (parts.leftKneePivot) parts.leftKneePivot.rotation.x = Math.max(0, Math.sin(swimCycle * 2) * 0.55);
+        if (parts.rightKneePivot) parts.rightKneePivot.rotation.x = Math.max(0, -Math.sin(swimCycle * 2) * 0.55);
+        if (parts.torsoGroup) {
+          parts.torsoGroup.position.y = 0.68;
+          parts.torsoGroup.rotation.x = 0.35; // streamline pitch in water
+        }
+      } else {
+        // Idle treading water / floating
+        if (parts.leftArmPivot) {
+          parts.leftArmPivot.rotation.x = -0.35;
+          parts.leftArmPivot.rotation.z = -0.65 + Math.sin(elapsed * 3) * 0.18;
+        }
+        if (parts.rightArmPivot) {
+          parts.rightArmPivot.rotation.x = -0.35;
+          parts.rightArmPivot.rotation.z = 0.65 - Math.sin(elapsed * 3) * 0.18;
+        }
+        if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = Math.sin(elapsed * 3.5) * 0.22;
+        if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -Math.sin(elapsed * 3.5) * 0.22;
+        if (parts.leftKneePivot) parts.leftKneePivot.rotation.x = 0.25;
+        if (parts.rightKneePivot) parts.rightKneePivot.rotation.x = 0.25;
+        if (parts.torsoGroup) {
+          parts.torsoGroup.position.y = 0.68 + Math.sin(elapsed * 3) * 0.02;
+          parts.torsoGroup.rotation.x = 0.12;
+        }
+      }
+    } else if (isMoving) {
+      if (parts.torsoGroup) parts.torsoGroup.rotation.x = 0;
       const stride = Math.sin(walkCycle);
       if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = stride * 0.55;
       if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -stride * 0.55;
@@ -1247,6 +1287,7 @@ export function createAvatarSystem() {
 
       if (parts.torsoGroup) parts.torsoGroup.position.y = 0.74;
     } else if (isSitting) {
+      if (parts.torsoGroup) parts.torsoGroup.rotation.x = 0;
       // Classic Minifigure 90° forward seated leg pose
       if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = -1.45;
       if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -1.45;
@@ -1259,6 +1300,7 @@ export function createAvatarSystem() {
 
       if (parts.torsoGroup) parts.torsoGroup.position.y = 0.74;
     } else {
+      if (parts.torsoGroup) parts.torsoGroup.rotation.x = 0;
       if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = 0;
       if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = 0;
       if (parts.leftKneePivot) parts.leftKneePivot.rotation.x = 0;

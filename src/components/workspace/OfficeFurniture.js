@@ -241,12 +241,17 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     back.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
     sofa.add(back);
 
-    // Left and right armrests
+    // Left and right armrests with cream caps matching media_1792293223270.png & media_1792293223278.png
     [-1.12, 1.12].forEach((ax) => {
       const arm = new THREE.Mesh(roundedBox(0.18, 0.36, 0.84, 0.05), blackLeatherMat);
       arm.position.set(ax, 0.46, 0);
       arm.castShadow = true;
       sofa.add(arm);
+
+      const cap = new THREE.Mesh(roundedBox(0.20, 0.06, 0.86, 0.03), whiteResortMat);
+      cap.position.set(ax, 0.65, 0);
+      cap.castShadow = true;
+      sofa.add(cap);
     });
 
     sofa.position.set(cx, 0, cz);
@@ -857,6 +862,18 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createTubArmchair(-2.6, 2.0, -Math.PI / 2, 'Lounge C Tub Chair 2');
 
   // =========================================================================
+  // 4b. MAIN LOBBY & RECEPTION WAITING LOUNGE (X = 0, Z = -43.8)
+  // Matching media_1792293223270.png and media_1792293223278.png:
+  // Sleek black 3-seater sofa with cream arms, potted plant to the left,
+  // round coffee table, and facing the panoramic glass window overlooking Seattle city skyline.
+  // =========================================================================
+  createBlackSofa(0, -43.8, 0, 'Lobby Black Sofa');
+  createRoundCoffeeTable(0, -41.2, 0.75, 0.45);
+  createFlowerVase(0, 0.45, -41.2);
+  createPottedPlant(-2.4, -43.5, 'Lobby Ficus Plant');
+  createWindowArmchair(2.8, -41.2, -Math.PI / 2, 'Lobby Guest Armchair');
+
+  // =========================================================================
   // 5. EAST PROMENADE WINDOW SEATING (X = +22 to +32, Z = +6 to +24)
   // Exact match to media_1792165933867.png & media_1792165933914.png
   // Pairs of curved black armchairs with cocktail tables looking out at Seattle
@@ -957,17 +974,17 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createCollabPod(-4.0, 16.0, 1);
   createCollabPod(4.0, 16.0, 2);
 
-  // Workspace A Team CI/CD Screen on South wall
+  // Workspace A Team CI/CD Screen mounted flush on South dividing wall (Z = 20)
   createSpotWallScreen(
-    0, 1.55, 23.8, 3.8, 2.1, Math.PI, 'workspace_a',
+    -7.0, 1.55, 19.82, 3.8, 2.1, 0, 'workspace_a',
     screenTextures?.createCiCdMonitorTexture ? screenTextures.createCiCdMonitorTexture() : screenTextures?.chartTexture,
     'Workspace A Team CI/CD Monitor'
   );
 
-  // Patio Outdoor Game Zone: Giant 8x8 Chessboard at (x: -23.0, z: 19.0)
+  // Mega Arcade: Giant 8x8 Tournament Chessboard Court at (x: -14.0, z: 32.0)
   const chessGrp = new THREE.Group();
   chessGrp.name = 'clickable_chessboard';
-  chessGrp.userData = { isChessboard: true, name: 'Giant Terrace Chessboard' };
+  chessGrp.userData = { isChessboard: true, name: 'Giant Tournament Chessboard' };
 
   const boardSize = 5.2;
   const squareSize = boardSize / 8;
@@ -979,6 +996,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     brassGoldMat
   );
   border.position.y = 0.015;
+  border.name = 'clickable_chessboard';
+  border.userData = { isChessboard: true };
   chessGrp.add(border);
 
   for (let r = 0; r < 8; r++) {
@@ -1007,14 +1026,29 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       }
     }
   }
-  chessGrp.position.set(-23.0, 0, 19.0);
+  chessGrp.position.set(-14.0, 0, 32.0);
   furnitureGroup.add(chessGrp);
 
-  // Patio Sunken Turquoise Lounge Pit (x: -18, z: 20)
-  const patioPit = new THREE.Mesh(roundedBox(3.8, 0.32, 3.8, 0.1), turquoiseMat);
-  patioPit.position.set(-18.0, 0.16, 20.0);
-  furnitureGroup.add(patioPit);
-  createRoundCoffeeTable(-18.0, 20.0, 0.65, 0.30);
+  // Spectator seating benches along Tournament Chessboard Court
+  [-17.5, -10.5].forEach((bx) => {
+    const bench = new THREE.Mesh(roundedBox(0.65, 0.44, 3.8, 0.04), darkTableMat);
+    bench.position.set(bx, 0.22, 32.0);
+    bench.castShadow = true;
+    bench.userData = {
+      isChair: true,
+      name: 'Chess Spectator Bench',
+      chairPos: new THREE.Vector3(bx, 0.44, 32.0),
+      chairRotY: bx < -14 ? Math.PI / 2 : -Math.PI / 2,
+      seatHeight: 0.44
+    };
+    furnitureGroup.add(bench);
+    chairsRef.current.push({
+      name: 'Chess Spectator Bench',
+      pos: new THREE.Vector3(bx, 0.44, 32.0),
+      rot: bx < -14 ? Math.PI / 2 : -Math.PI / 2,
+      seatHeight: 0.44
+    });
+  });
 
   // =========================================================================
   // MEGA-CAMPUS EXPANSION: 1. FITNESS & GYM CENTER FURNITURE (X: -58 to -26, Z: +8 to +46)
@@ -1363,6 +1397,9 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // 9. Tournament 8-Ball Billiards Table
   const createBilliardsTable = (bx, bz, rotY = 0) => {
     const bt = new THREE.Group();
+    bt.name = 'clickable_billiards';
+    bt.userData = { isBilliardsTable: true, name: 'Tournament 8-Ball Billiards' };
+
     [-1.1, 1.1].forEach((x) => {
       [-0.6, 0.6].forEach((z) => {
         const leg = new THREE.Mesh(roundedBox(0.18, 0.72, 0.18, 0.04), darkTableMat);
@@ -1375,11 +1412,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     const frame = new THREE.Mesh(roundedBox(2.65, 0.25, 1.5, 0.05), woodTeakMat);
     frame.position.y = 0.72;
     frame.castShadow = true;
+    frame.name = 'clickable_billiards';
+    frame.userData = { isBilliardsTable: true };
     bt.add(frame);
 
     const cloth = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.06, 1.2), billiardGreenMat);
     cloth.position.y = 0.83;
     cloth.receiveShadow = true;
+    cloth.name = 'clickable_billiards';
+    cloth.userData = { isBilliardsTable: true };
     bt.add(cloth);
 
     [[-1.18, -0.6], [0, -0.62], [1.18, -0.6], [-1.18, 0.6], [0, 0.62], [1.18, 0.6]].forEach(([px, pz]) => {
@@ -1395,11 +1436,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
         const ball = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), ballMat);
         ball.position.set(0.45 + r * 0.052, 0.88, (c - r / 2) * 0.058);
         ball.castShadow = true;
+        ball.name = 'clickable_billiards';
+        ball.userData = { isBilliardsTable: true };
         bt.add(ball);
       }
     }
     const cueBall = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 10), cueBallMat);
     cueBall.position.set(-0.55, 0.88, 0);
+    cueBall.name = 'clickable_billiards';
+    cueBall.userData = { isBilliardsTable: true };
     bt.add(cueBall);
 
     const lamp = new THREE.Group();
@@ -1422,11 +1467,14 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(bt);
   };
 
-  createBilliardsTable(-9, 29, 0);
+  createBilliardsTable(-14, 40, 0);
 
   // 10. Table Tennis / Ping Pong Table
   const createPingPongTable = (px, pz, rotY = 0) => {
     const pt = new THREE.Group();
+    pt.name = 'clickable_pingpong';
+    pt.userData = { isPingPongTable: true, name: 'Tournament Ping Pong' };
+
     [-1.0, 1.0].forEach((x) => {
       const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 1.2), chromeMat);
       leg.position.set(x, 0.36, 0);
@@ -1437,6 +1485,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     const tableTop = new THREE.Mesh(roundedBox(2.74, 0.08, 1.52, 0.02), pingPongBlueMat);
     tableTop.position.y = 0.76;
     tableTop.castShadow = true;
+    tableTop.name = 'clickable_pingpong';
+    tableTop.userData = { isPingPongTable: true };
     pt.add(tableTop);
 
     const centerLine = new THREE.Mesh(new THREE.BoxGeometry(2.74, 0.085, 0.02), whiteMat);
@@ -1449,9 +1499,14 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
     const paddleRed = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16), gymRedMat);
     paddleRed.position.set(-0.6, 0.81, 0.3);
+    paddleRed.name = 'clickable_pingpong';
+    paddleRed.userData = { isPingPongTable: true };
     pt.add(paddleRed);
+
     const paddleBlack = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.02, 16), blackMat);
     paddleBlack.position.set(0.6, 0.81, -0.3);
+    paddleBlack.name = 'clickable_pingpong';
+    paddleBlack.userData = { isPingPongTable: true };
     pt.add(paddleBlack);
 
     pt.position.set(px, 0, pz);
@@ -1459,14 +1514,19 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(pt);
   };
 
-  createPingPongTable(9, 29, 0);
+  createPingPongTable(12, 32, 0);
 
-  // 11. Retro Arcade Cabinets
+  // 11. Retro Arcade Cabinets with Interactive Playable Trigger
   const createArcadeCabinet = (ax, az, rotY = 0, title = 'ARCADE', marqueeColor = 0xa855f7) => {
     const ac = new THREE.Group();
+    ac.name = 'clickable_arcade';
+    ac.userData = { isArcadeCabinet: true, title, name: `${title} Arcade Machine` };
+
     const body = new THREE.Mesh(roundedBox(0.76, 1.85, 0.82, 0.04), blackMat);
     body.position.y = 0.925;
     body.castShadow = true;
+    body.name = 'clickable_arcade';
+    body.userData = { isArcadeCabinet: true, title };
     ac.add(body);
 
     const marquee = new THREE.Mesh(roundedBox(0.68, 0.22, 0.12, 0.02), new THREE.MeshBasicMaterial({ color: marqueeColor }));
@@ -1476,6 +1536,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     const crt = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.48), new THREE.MeshBasicMaterial({ color: 0x38bdf8 }));
     crt.position.set(0, 1.32, 0.36);
     crt.rotation.x = -0.35;
+    crt.name = 'clickable_arcade';
+    crt.userData = { isArcadeCabinet: true, title };
     ac.add(crt);
 
     const ctrlPanel = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.06, 0.32), darkTableMat);
@@ -1497,14 +1559,32 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(ac);
   };
 
-  createArcadeCabinet(-14, 44, Math.PI, 'STREET FIGHTER', 0xef4444);
-  createArcadeCabinet(-10, 44, Math.PI, 'PAC-MAN', 0xeab308);
-  createArcadeCabinet(10, 44, Math.PI, 'SPACE INVADERS', 0x22c55e);
-  createArcadeCabinet(14, 44, Math.PI, 'GALAXY RUN', 0x3b82f6);
+  createArcadeCabinet(4, 44, Math.PI, 'STREET FIGHTER', 0xef4444);
+  createArcadeCabinet(8, 44, Math.PI, 'PAC-MAN', 0xeab308);
+  createArcadeCabinet(12, 44, Math.PI, 'SPACE INVADERS', 0x22c55e);
+  createArcadeCabinet(16, 44, Math.PI, 'GALAXY RUN', 0x3b82f6);
 
-  // 12. Gamer Lounge with 85" Curved OLED Display and Oversized Beanbag Seats
+  // 12. Gamer Lounge with 85" Curved OLED Display and Floor Credenza Unit
   const createGamerLounge = (gx, gz, rotY = 0) => {
     const gl = new THREE.Group();
+
+    // Floor credenza media unit
+    const credenza = new THREE.Mesh(roundedBox(3.8, 0.45, 0.75, 0.04), darkTableMat);
+    credenza.position.set(0, 0.225, -1.8);
+    gl.add(credenza);
+
+    // Twin mounting pillars anchoring TV securely to credenza (eliminates floating TV glitch!)
+    [-0.85, 0.85].forEach((mx) => {
+      const pylon = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.15, 0.08), chromeMat);
+      pylon.position.set(mx, 0.98, -1.8);
+      gl.add(pylon);
+    });
+
+    // Sleek soundbar resting on credenza
+    const soundbar = new THREE.Mesh(roundedBox(2.2, 0.08, 0.12, 0.02), blackMat);
+    soundbar.position.set(0, 0.49, -1.74);
+    gl.add(soundbar);
+
     const tvBezel = new THREE.Mesh(roundedBox(3.4, 1.85, 0.12, 0.04), screenBezelMat);
     tvBezel.position.set(0, 1.65, -1.8);
     tvBezel.castShadow = true;
@@ -1516,10 +1596,6 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     }));
     tvScreen.position.set(0, 1.65, -1.73);
     gl.add(tvScreen);
-
-    const credenza = new THREE.Mesh(roundedBox(3.8, 0.45, 0.75, 0.04), darkTableMat);
-    credenza.position.set(0, 0.225, -1.8);
-    gl.add(credenza);
 
     const beanbagColors = [0x2563eb, 0x9333ea, 0x059669, 0xd97706];
     const bbOffsets = [
@@ -1558,10 +1634,64 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     furnitureGroup.add(gl);
   };
 
-  createGamerLounge(0, 42, Math.PI);
+  createGamerLounge(-2, 42, Math.PI);
+
+  // 13. Poolside Outdoor Cinema Jumbotron LED Screen (8.0m x 4.5m)
+  const createPoolsideCinemaScreen = (px, pz, rotY = 0) => {
+    const pj = new THREE.Group();
+    // Twin marine stainless steel pillars
+    [-3.2, 3.2].forEach((sx) => {
+      const pylon = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 5.5, 16), chromeMat);
+      pylon.position.set(sx, 2.75, 0);
+      pylon.castShadow = true;
+      pj.add(pylon);
+    });
+
+    // Pylon crossbar
+    const crossbar = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.14, 0.14), chromeMat);
+    crossbar.position.set(0, 4.8, 0);
+    pj.add(crossbar);
+
+    // Weather-sealed LED display housing (8.2m wide x 4.7m high x 0.28m deep)
+    const housingMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.8, roughness: 0.25 });
+    const housing = new THREE.Mesh(roundedBox(8.2, 4.7, 0.28, 0.08), housingMat);
+    housing.position.set(0, 3.8, 0.05);
+    housing.castShadow = true;
+    pj.add(housing);
+
+    // High-definition display screen face (8.0m x 4.5m)
+    const screenFaceMat = new THREE.MeshBasicMaterial({
+      map: screenTextures?.createAuditoriumKeynoteTexture ? screenTextures.createAuditoriumKeynoteTexture() : screenTextures?.starryLogoTexture,
+      color: 0xffffff,
+      side: THREE.DoubleSide
+    });
+    const screenFace = new THREE.Mesh(new THREE.PlaneGeometry(8.0, 4.5), screenFaceMat);
+    screenFace.position.set(0, 3.8, 0.20);
+    screenFace.name = 'screen_pool_jumbotron';
+    screenFace.userData = {
+      isSpotScreen: true,
+      screenKey: 'pool_jumbotron',
+      width: 8.0,
+      height: 4.5,
+      displayMesh: screenFace,
+      displayName: 'Poolside Cinema Jumbotron'
+    };
+    housing.userData = screenFace.userData;
+    pj.add(screenFace);
+
+    pj.position.set(px, 0, pz);
+    pj.rotation.y = rotY;
+    furnitureGroup.add(pj);
+
+    screensMap['pool_jumbotron'] = screenFace;
+    screensMap['screen_pool_jumbotron'] = screenFace;
+    screensMap['pool_cinema'] = screenFace;
+  };
+
+  createPoolsideCinemaScreen(56.5, 27.0, -Math.PI / 2);
 
   // =========================================================================
-  // MEGA-CAMPUS EXPANSION: 4. EXECUTIVE CABINS WING (X: -58 to -26, Z: -46 to -8)
+  // MEGA-CAMPUS EXPANSION: 4. EXECUTIVE CABINS WING (X: -58 to -32, Z: -46 to -8)
   // =========================================================================
 
   const createExecutiveSuite = (ex, ez, rotY = 0, name = 'CEO Executive Desk', screenKey = 'exec_screen') => {
@@ -1628,33 +1758,33 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // 1. CEO Executive Penthouse Suite (North-West)
   createExecutiveSuite(-50, -36, 0, 'CEO Executive Suite', 'ceo_screen');
   // 2. VP Executive Suite (North-East of Wing)
-  createExecutiveSuite(-34, -36, 0, 'VP Executive Suite', 'vp_screen');
+  createExecutiveSuite(-38, -36, 0, 'VP Executive Suite', 'vp_screen');
   // 3. Principal Director Suite (South-West of Wing)
-  createExecutiveSuite(-50, -17, 0, 'Principal Suite', 'principal_screen');
+  createExecutiveSuite(-50, -18, 0, 'Principal Suite', 'principal_screen');
 
-  // 4. Executive Private Board Meeting Suite (South-East of Wing: -34, -17)
+  // 4. Executive Private Board Meeting Suite (South-East of Wing: -38, -18)
   const execBoard = new THREE.Group();
-  const confTable = new THREE.Mesh(roundedBox(3.8, 0.74, 1.8, 0.06), new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.55 }));
+  const confTable = new THREE.Mesh(roundedBox(3.4, 0.74, 1.6, 0.06), new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.55 }));
   confTable.position.set(0, 0.37, 0);
   confTable.castShadow = true;
   execBoard.add(confTable);
 
   // 6 Conference Leather Chairs
-  [-1.2, 0, 1.2].forEach((cx) => {
-    [1.25, -1.25].forEach((cz, idx) => {
-      const c = new THREE.Mesh(roundedBox(0.60, 0.10, 0.55, 0.04), blackLeatherMat);
+  [-1.0, 0, 1.0].forEach((cx) => {
+    [1.15, -1.15].forEach((cz, idx) => {
+      const c = new THREE.Mesh(roundedBox(0.58, 0.10, 0.52, 0.04), blackLeatherMat);
       c.position.set(cx, 0.46, cz);
       c.castShadow = true;
       execBoard.add(c);
       chairsRef.current.push({
         name: `Executive Board Chair`,
-        pos: new THREE.Vector3(-34 + cx, 0.46, -17 + cz),
+        pos: new THREE.Vector3(-38 + cx, 0.46, -18 + cz),
         rot: idx === 0 ? Math.PI : 0,
         seatHeight: 0.46
       });
     });
   });
-  execBoard.position.set(-34, 0, -17);
+  execBoard.position.set(-38, 0, -18);
   furnitureGroup.add(execBoard);
 
   return { ...screensMap, furnitureGroup };

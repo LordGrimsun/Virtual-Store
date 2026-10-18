@@ -7,7 +7,8 @@ import {
   Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
   Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
   TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag,
-  Grid, Mail, Clock, Hammer, Search, Home
+  Grid, Mail, Clock, Hammer, Search, Home, MoreVertical, MoreHorizontal,
+  Paperclip, BarChart3, Crosshair, Globe, Youtube, ArrowLeft
 } from 'lucide-react';
 
 import { createOfficeScreenTextures } from '../components/workspace/OfficeScreens';
@@ -22,6 +23,14 @@ import SpinWheelWidget from '../components/workspace/widgets/SpinWheelWidget';
 import WatercoolerWidget from '../components/workspace/widgets/WatercoolerWidget';
 import SpotLinkModal from '../components/workspace/SpotLinkModal';
 import ChessGameWidget from '../components/workspace/widgets/ChessGameWidget';
+import ArcadeGameWidget from '../components/workspace/widgets/ArcadeGameWidget';
+import BilliardsGameWidget from '../components/workspace/widgets/BilliardsGameWidget';
+import PingPongGameWidget from '../components/workspace/widgets/PingPongGameWidget';
+import StickyNoteWidget from '../components/workspace/widgets/StickyNoteWidget';
+import SharedBrowserWidget from '../components/workspace/widgets/SharedBrowserWidget';
+import PollWidget from '../components/workspace/widgets/PollWidget';
+import YouTubeWidget from '../components/workspace/widgets/YouTubeWidget';
+import TimerWidget from '../components/workspace/widgets/TimerWidget';
 
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
@@ -78,6 +87,33 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isWatercoolerOpen, setIsWatercoolerOpen] = useState(false);
   const [isSpotLinkModalOpen, setIsSpotLinkModalOpen] = useState(false);
   const [isChessOpen, setIsChessOpen] = useState(false);
+  const [isArcadeOpen, setIsArcadeOpen] = useState(false);
+  const [isBilliardsOpen, setIsBilliardsOpen] = useState(false);
+  const [isPingPongOpen, setIsPingPongOpen] = useState(false);
+  const [isSwimming, setIsSwimming] = useState(false);
+  const isSwimmingRef = useRef(false);
+
+  // New Spot Virtual Widgets & Menus (media_1792293223270.png, media_1792293223278.png, media_1792293223292.png, media_1792293238602.png)
+  const [isStickyNoteOpen, setIsStickyNoteOpen] = useState(false);
+  const [isSharedBrowserOpen, setIsSharedBrowserOpen] = useState(false);
+  const [isPollOpen, setIsPollOpen] = useState(false);
+  const [isYouTubeOpen, setIsYouTubeOpen] = useState(false);
+  const [isTimerOpen, setIsTimerOpen] = useState(false);
+  const [isObjectsMenuOpen, setIsObjectsMenuOpen] = useState(false);
+  const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
+  const [isPresenterMode, setIsPresenterMode] = useState(false);
+  const [isRoomChatOpen, setIsRoomChatOpen] = useState(false);
+  const [hoverChairScreenPos, setHoverChairScreenPos] = useState(null);
+  const [proximityMode, setProximityMode] = useState(true);
+  const [roomChatDraft, setRoomChatDraft] = useState('');
+  const [roomMessages, setRoomMessages] = useState([
+    {
+      id: 1,
+      sender: 'Sarah Chen',
+      text: 'Hey everyone! Welcome to the Lobby. The product showcase will begin shortly.',
+      time: '11:42 AM'
+    }
+  ]);
 
   // Interactive Object Modals
   const [activeModal, setActiveModal] = useState(null);
@@ -149,7 +185,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       return new THREE.Vector3(-10, 0, 1.5);
     }
     if (tr.includes('lobby')) {
-      return new THREE.Vector3(16, 0, 18);
+      return new THREE.Vector3(0, 0, -38.5);
     }
     if (tr.includes('office a') || tr.includes('office-a') || isInitialSer) {
       return new THREE.Vector3(-4, 0, 16);
@@ -1047,7 +1083,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           slug = 'workspace-a';
           formattedName = 'Workspace A';
         } else if (clean.includes('lobby')) {
-          target.set(16, 0, 18);
+          target.set(0, 0, -38.5);
           slug = 'lobby';
           formattedName = 'Lobby';
         }
@@ -1071,6 +1107,14 @@ export default function WorkspacePlatform({ user, onExit }) {
           cameraTargetYOffsetRef.current = 0;
           camera.position.set(target.x - 4.6, 2.4, target.z);
           camera.lookAt(target.x + 2.0, 1.45, target.z);
+        } else if (slug === 'lobby') {
+          playerObj.mesh.rotation.y = Math.PI; // Face North towards skyline
+          cameraOrbitAngleRef.current = 0; // Camera at South, behind player looking North
+          cameraPitchAngleRef.current = 0.12; // Level horizon view
+          cameraDistanceRef.current = 4.2;
+          cameraTargetYOffsetRef.current = 0;
+          camera.position.set(target.x, 1.85, target.z + 4.2);
+          camera.lookAt(target.x, 1.35, target.z - 4.5);
         } else {
           playerObj.mesh.rotation.y = Math.PI; // Face North into room (away from camera)
           cameraOrbitAngleRef.current = 0; // Camera at South, behind player looking North
@@ -1200,6 +1244,21 @@ export default function WorkspacePlatform({ user, onExit }) {
               setIsChessOpen(true);
               return;
             }
+            if (clickedObj.name === 'clickable_arcade' || clickedObj.userData?.isArcade) {
+              playSound('chime');
+              setIsArcadeOpen(true);
+              return;
+            }
+            if (clickedObj.name === 'clickable_billiards' || clickedObj.userData?.isBilliards) {
+              playSound('chime');
+              setIsBilliardsOpen(true);
+              return;
+            }
+            if (clickedObj.name === 'clickable_pingpong' || clickedObj.userData?.isPingPong) {
+              playSound('chime');
+              setIsPingPongOpen(true);
+              return;
+            }
             if (clickedObj.name === 'confAudioPuck') {
               playSound('click');
               setIsMuted((prev) => !prev);
@@ -1236,51 +1295,57 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
         }
 
+        // Helper: Execute sit on chair with proper rotation, seat height, and camera calibration
+        const executeSitOnChair = (chairObj, clickPt = null) => {
+          if (!chairObj) return false;
+          let chairPos = chairObj.userData?.chairPos;
+          let chairRotY = chairObj.userData?.chairRotY ?? 0;
+          let seatHeight = chairObj.userData?.seatHeight ?? 0.46;
+          const isAudBench = chairObj.userData?.name?.toLowerCase().includes('auditorium') || chairObj.name?.includes('bench');
+
+          if (isAudBench && chairsRef.current.length > 0 && clickPt) {
+            const nearest = chairsRef.current
+              .filter((c) => c.name?.toLowerCase().includes('auditorium'))
+              .reduce((closest, chair) => {
+                const d = chair.pos.distanceTo(clickPt);
+                return !closest || d < closest.dist ? { chair, dist: d } : closest;
+              }, null);
+            if (nearest && nearest.dist < 3.5) {
+              chairPos = nearest.chair.pos;
+              chairRotY = nearest.chair.rot ?? (Math.PI / 2);
+              seatHeight = nearest.chair.seatHeight ?? 0.46;
+            }
+          }
+
+          if (chairPos) {
+            playSound('click');
+            if (playerMeshRef.current) {
+              playerMeshRef.current.position.set(chairPos.x, seatHeight - 0.40, chairPos.z);
+              playerMeshRef.current.rotation.y = chairRotY;
+            }
+            targetPosRef.current.set(chairPos.x, 0, chairPos.z);
+            chairRotYRef.current = chairRotY;
+            seatHeightRef.current = seatHeight;
+            isSittingRef.current = true;
+
+            if (isAudBench || (chairPos.x >= 10 && chairPos.z < 4)) {
+              cameraOrbitAngleRef.current = -Math.PI / 2;
+              cameraPitchAngleRef.current = 0.26;
+              cameraDistanceRef.current = 22.0;
+              cameraTargetYOffsetRef.current = 0;
+            }
+            return true;
+          }
+          return false;
+        };
+        window.__spotExecuteSitOnChair = executeSitOnChair;
+
         // Priority 3: Responsive Click-to-Sit & Seamless Seat Switching on chairs, armchairs, sofas, and benches
         for (let i = 0; i < Math.min(intersects.length, 6); i++) {
           let chairObj = intersects[i].object;
           while (chairObj && chairObj !== scene) {
             if (chairObj.name === 'clickable_chair' || chairObj.userData?.isChair || chairObj.name?.startsWith('chair_') || chairObj.name?.startsWith('sofa_')) {
-              let chairPos = chairObj.userData?.chairPos;
-              let chairRotY = chairObj.userData?.chairRotY ?? 0;
-              let seatHeight = chairObj.userData?.seatHeight ?? 0.46;
-              const isAudBench = chairObj.userData?.name?.toLowerCase().includes('auditorium') || chairObj.name?.includes('bench');
-
-              // If clicking a long auditorium bench, snap to the nearest cushion position
-              if (isAudBench && chairsRef.current.length > 0) {
-                const clickPt = intersects[i].point;
-                const nearest = chairsRef.current
-                  .filter((c) => c.name?.toLowerCase().includes('auditorium'))
-                  .reduce((closest, chair) => {
-                    const d = chair.pos.distanceTo(clickPt);
-                    return !closest || d < closest.dist ? { chair, dist: d } : closest;
-                  }, null);
-                if (nearest && nearest.dist < 3.5) {
-                  chairPos = nearest.chair.pos;
-                  chairRotY = nearest.chair.rot ?? (Math.PI / 2);
-                  seatHeight = nearest.chair.seatHeight ?? 0.46;
-                }
-              }
-
-              if (chairPos) {
-                playSound('click');
-                if (playerMeshRef.current) {
-                  playerMeshRef.current.position.set(chairPos.x, seatHeight - 0.40, chairPos.z);
-                  playerMeshRef.current.rotation.y = chairRotY;
-                }
-                targetPosRef.current.set(chairPos.x, 0, chairPos.z);
-                chairRotYRef.current = chairRotY;
-                seatHeightRef.current = seatHeight;
-                isSittingRef.current = true;
-
-                if (isAudBench || (chairPos.x >= 10 && chairPos.z < 4)) {
-                  cameraOrbitAngleRef.current = -Math.PI / 2;
-                  cameraPitchAngleRef.current = 0.26;
-                  cameraDistanceRef.current = 22.0;
-                  cameraTargetYOffsetRef.current = 0;
-                }
-                return;
-              }
+              if (executeSitOnChair(chairObj, intersects[i].point)) return;
 
               const nearestChair = chairsRef.current.reduce((closest, chair) => {
                 const d = chair.pos.distanceTo(intersects[i].point);
@@ -1572,7 +1637,8 @@ export default function WorkspacePlatform({ user, onExit }) {
             targetPosRef.current.copy(player.position);
           }
 
-          const moveSpeed = 6.8;
+          const inWater = player.position.x >= 32.2 && player.position.x <= 51.8 && player.position.z >= 16.2 && player.position.z <= 37.8;
+          const moveSpeed = inWater ? 4.5 : 6.8;
           const stepX = moveX * delta * moveSpeed;
           const stepZ = moveZ * delta * moveSpeed;
           const resolved = resolveWallCollision(player.position.x, player.position.z, stepX, stepZ);
@@ -1602,7 +1668,8 @@ export default function WorkspacePlatform({ user, onExit }) {
             while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
             player.rotation.y += rotDiff * 0.22;
 
-            const step = Math.min(dist, delta * 6.2);
+            const inWater = player.position.x >= 32.2 && player.position.x <= 51.8 && player.position.z >= 16.2 && player.position.z <= 37.8;
+            const step = Math.min(dist, delta * (inWater ? 4.2 : 6.2));
             const stepX = (dx / dist) * step;
             const stepZ = (dz / dist) * step;
             const resolved = resolveWallCollision(player.position.x, player.position.z, stepX, stepZ);
@@ -1612,8 +1679,25 @@ export default function WorkspacePlatform({ user, onExit }) {
           }
         }
 
-        // Kinematics & Pose Animation
-        if (isMoving) {
+        // Kinematics & Pose Animation (Swimming, Walking, Sitting, Idle)
+        const inPool = player.position.x >= 32.2 && player.position.x <= 51.8 && player.position.z >= 16.2 && player.position.z <= 37.8;
+        if (inPool !== isSwimmingRef.current) {
+          isSwimmingRef.current = inPool;
+          setIsSwimming(inPool);
+        }
+
+        if (inPool) {
+          isSittingRef.current = false;
+          if (isMoving) {
+            walkCycle += delta * 8;
+            player.position.y = -0.48 + Math.sin(walkCycle * 2) * 0.05;
+            avatarSystem.applyAvatarPose(parts, { isSwimming: true, isMoving: true, swimCycle: walkCycle });
+          } else {
+            // Idle treading water with gentle bobbing
+            player.position.y = -0.48 + Math.sin(elapsed * 2.0) * 0.04;
+            avatarSystem.applyAvatarPose(parts, { isSwimming: true, isMoving: false, elapsed });
+          }
+        } else if (isMoving) {
           walkCycle += delta * 12;
           player.position.y = Math.abs(Math.sin(walkCycle * 2)) * 0.08;
           avatarSystem.applyAvatarPose(parts, { isMoving: true, walkCycle });
@@ -1946,12 +2030,121 @@ export default function WorkspacePlatform({ user, onExit }) {
       setIsChessOpen(false);
     };
 
+    window.__spotOpenArcade = () => {
+      setIsArcadeOpen(true);
+    };
+
+    window.__spotCloseArcade = () => {
+      setIsArcadeOpen(false);
+    };
+
+    window.__spotOpenBilliards = () => {
+      setIsBilliardsOpen(true);
+    };
+
+    window.__spotCloseBilliards = () => {
+      setIsBilliardsOpen(false);
+    };
+
+    window.__spotOpenPingPong = () => {
+      setIsPingPongOpen(true);
+    };
+
+    window.__spotClosePingPong = () => {
+      setIsPingPongOpen(false);
+    };
+
     window.__spotOpenInvite = () => {
       setIsSpotLinkModalOpen(true);
     };
 
     window.__spotCloseInvite = () => {
       setIsSpotLinkModalOpen(false);
+    };
+
+    window.__spotOpenStickyNote = () => {
+      setIsStickyNoteOpen(true);
+    };
+
+    window.__spotCloseStickyNote = () => {
+      setIsStickyNoteOpen(false);
+    };
+
+    window.__spotOpenSharedBrowser = () => {
+      setIsSharedBrowserOpen(true);
+    };
+
+    window.__spotCloseSharedBrowser = () => {
+      setIsSharedBrowserOpen(false);
+    };
+
+    window.__spotOpenPoll = () => {
+      setIsPollOpen(true);
+    };
+
+    window.__spotClosePoll = () => {
+      setIsPollOpen(false);
+    };
+
+    window.__spotOpenYouTube = () => {
+      setIsYouTubeOpen(true);
+    };
+
+    window.__spotCloseYouTube = () => {
+      setIsYouTubeOpen(false);
+    };
+
+    window.__spotOpenTimer = () => {
+      setIsTimerOpen(true);
+    };
+
+    window.__spotCloseTimer = () => {
+      setIsTimerOpen(false);
+    };
+
+    window.__spotOpenObjectsMenu = () => {
+      setIsObjectsMenuOpen(true);
+    };
+
+    window.__spotCloseObjectsMenu = () => {
+      setIsObjectsMenuOpen(false);
+    };
+
+    window.__spotOpenRoomMenu = () => {
+      setIsRoomMenuOpen(true);
+    };
+
+    window.__spotCloseRoomMenu = () => {
+      setIsRoomMenuOpen(false);
+    };
+
+    window.__spotOpenRoomChat = () => {
+      setIsRoomChatOpen(true);
+    };
+
+    window.__spotCloseRoomChat = () => {
+      setIsRoomChatOpen(false);
+    };
+
+    window.__spotCloseSidebar = () => {
+      setIsSpacesSidebarOpen(false);
+    };
+
+    window.__spotToggleSidebar = (val) => {
+      setIsSpacesSidebarOpen((prev) => (val !== undefined ? val : !prev));
+    };
+
+    window.__spotHoverSofa = () => {
+      const sofa = chairsRef.current.find((c) => c.name?.includes('Lobby Black Sofa') || c.name?.includes('Sofa'));
+      if (sofa && cameraRef.current && rendererRef.current) {
+        const pVec = sofa.pos.clone();
+        pVec.y += (sofa.seatHeight || 0.46) + 0.12;
+        pVec.project(cameraRef.current);
+        const rect = rendererRef.current.domElement.getBoundingClientRect();
+        const sx = ((pVec.x + 1) * rect.width) / 2 + rect.left;
+        const sy = ((-pVec.y + 1) * rect.height) / 2 + rect.top;
+        setHoverChairScreenPos({ x: sx, y: sy, chairObj: sofa, hitPoint: sofa.pos });
+      }
     };
 
     // Mouse Wheel Zoom: GTA San Andreas zoom range between 1.2m (close over-shoulder) and 16.0m (tactical chase)
@@ -2009,6 +2202,12 @@ export default function WorkspacePlatform({ user, onExit }) {
             obj.name?.startsWith('avatar_') ||
             obj.userData?.isChessboard ||
             obj.name === 'clickable_chessboard' ||
+            obj.userData?.isArcade ||
+            obj.name === 'clickable_arcade' ||
+            obj.userData?.isBilliards ||
+            obj.name === 'clickable_billiards' ||
+            obj.userData?.isPingPong ||
+            obj.name === 'clickable_pingpong' ||
             obj.name?.startsWith('widget_') ||
             obj.name === 'doughnutPlate' ||
             obj.name === 'appleBowl' ||
@@ -2023,6 +2222,43 @@ export default function WorkspacePlatform({ user, onExit }) {
       }
 
       renderer.domElement.style.cursor = isInteractive ? 'pointer' : 'grab';
+
+      // Check for hovered chair/sofa cushion to show the floating "Sit down" tooltip (media_1792293223278.png)
+      let hoveredChair = null;
+      for (let i = 0; i < Math.min(hits.length, 8); i++) {
+        let obj = hits[i].object;
+        while (obj && obj !== scene) {
+          if (
+            obj.userData?.isChair ||
+            obj.name === 'clickable_chair' ||
+            obj.name?.startsWith('chair_') ||
+            obj.name?.startsWith('sofa_') ||
+            obj.userData?.chairPos
+          ) {
+            hoveredChair = { obj, hitPoint: hits[i].point };
+            break;
+          }
+          obj = obj.parent;
+        }
+        if (hoveredChair) break;
+      }
+
+      if (hoveredChair && !isSittingRef.current) {
+        const chairObj = hoveredChair.obj;
+        const pVec = new THREE.Vector3();
+        if (chairObj.userData?.chairPos) {
+          pVec.copy(chairObj.userData.chairPos);
+        } else {
+          chairObj.getWorldPosition(pVec);
+        }
+        pVec.y += (chairObj.userData?.seatHeight || 0.46) + 0.12;
+        pVec.project(camera);
+        const sx = ((pVec.x + 1) * rect.width) / 2 + rect.left;
+        const sy = ((-pVec.y + 1) * rect.height) / 2 + rect.top;
+        setHoverChairScreenPos({ x: sx, y: sy, chairObj, hitPoint: hoveredChair.hitPoint });
+      } else {
+        setHoverChairScreenPos(null);
+      }
     };
 
     const handlePointerMove = (e) => {
@@ -2225,7 +2461,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       slug = 'workspace-a';
       formattedName = 'Workspace A';
     } else if (clean.includes('lobby')) {
-      target.set(16, 0, 18);
+      target.set(0, 0, -38.5);
       slug = 'lobby';
       formattedName = 'Lobby';
     }
@@ -2238,14 +2474,25 @@ export default function WorkspacePlatform({ user, onExit }) {
       playerMeshRef.current.position.copy(target);
       if (slug === 'auditorium' || slug === 'conference-a') {
         playerMeshRef.current.rotation.y = Math.PI / 2; // Face East towards stage/promenade
+      } else if (slug === 'lobby') {
+        playerMeshRef.current.rotation.y = Math.PI; // Face North into sofa and skyline view
       } else if (slug === 'swimming-pool' || slug === 'gym' || slug === 'game-zone' || slug === 'grand-atrium') {
-        playerMeshRef.current.rotation.y = 0; // Face South into feature activity area
+        playerMeshRef.current.rotation.y = 0; // Face South
       } else {
         playerMeshRef.current.rotation.y = Math.PI; // Face North into room
       }
     }
 
-    if (slug === 'auditorium') {
+    if (slug === 'lobby') {
+      cameraDistanceRef.current = 4.2;
+      cameraOrbitAngleRef.current = 0;
+      cameraPitchAngleRef.current = 0.12;
+      cameraTargetYOffsetRef.current = 0;
+      if (cameraRef.current && !isTopDownBlueprint) {
+        cameraRef.current.position.set(target.x, 1.85, target.z + 4.2);
+        cameraRef.current.lookAt(target.x, 1.35, target.z - 4.5);
+      }
+    } else if (slug === 'auditorium') {
       cameraDistanceRef.current = 6.0;
       cameraOrbitAngleRef.current = -Math.PI / 2;
       cameraPitchAngleRef.current = 0.22;
@@ -2875,7 +3122,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           zIndex: 60,
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
         }}>
-          <span>You have 30 days left in your trial.</span>
+          <span>You have 27 days left in your trial.</span>
           <button
             onClick={() => alert('Spot Enterprise Free Forever Activated!')}
             style={{
@@ -4270,64 +4517,345 @@ export default function WorkspacePlatform({ user, onExit }) {
               <span style={{ fontSize: '16px' }}>✋</span>
             </button>
 
-            {/* Layers / Floorplan View Toggle */}
-            <button
-              onClick={() => setIsTopDownBlueprint(!isTopDownBlueprint)}
-              title="Toggle Top-Down Floorplan Blueprint"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: isTopDownBlueprint ? '#0091ff' : 'transparent',
-                border: 'none',
-                color: isTopDownBlueprint ? '#ffffff' : '#94a3b8',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Layers size={18} />
-            </button>
+            {/* Objects & Widgets Menu Toggle (media_1792293223278.png) */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  setIsObjectsMenuOpen(!isObjectsMenuOpen);
+                  setIsRoomMenuOpen(false);
+                }}
+                title="Add Objects & Widgets"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: isObjectsMenuOpen ? '#ffffff' : 'transparent',
+                  border: 'none',
+                  color: isObjectsMenuOpen ? '#0f172a' : '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <Layers size={18} />
+              </button>
 
-            {/* 3-Dots More Menu */}
-            <button
-              onClick={() => setActiveTab(activeTab === 'ai' ? 'none' : 'ai')}
-              title="OpenClaw AI Agent & Apps"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                background: activeTab !== 'none' ? '#0091ff' : 'transparent',
-                border: 'none',
-                color: activeTab !== 'none' ? '#ffffff' : '#94a3b8',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Sparkles size={18} />
-            </button>
+              {/* Objects & Widgets Popover matching media_1792293223278.png */}
+              {isObjectsMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '48px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '210px',
+                  background: '#ffffff',
+                  borderRadius: '12px',
+                  boxShadow: '0 15px 35px rgba(0,0,0,0.22)',
+                  border: '1px solid #cbd5e1',
+                  padding: '8px 0',
+                  zIndex: 1500,
+                  textAlign: 'left'
+                }}>
+                  <div style={{ padding: '6px 14px 2px', fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '0.04em' }}>
+                    OBJECTS
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsStickyNoteOpen(true);
+                      setIsObjectsMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <span style={{ fontSize: '15px' }}>📋</span>
+                    <span>Sticky note</span>
+                  </button>
+
+                  <div style={{ padding: '8px 14px 2px', fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '0.04em' }}>
+                    WIDGETS
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsSharedBrowserOpen(true);
+                      setIsObjectsMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <Globe size={16} color="#0284c7" />
+                    <span>Shared browser</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsPollOpen(true);
+                      setIsObjectsMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <BarChart3 size={16} color="#06b6d4" />
+                    <span>Poll</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsYouTubeOpen(true);
+                      setIsObjectsMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <Youtube size={16} color="#ef4444" />
+                    <span>YouTube</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsTimerOpen(true);
+                      setIsObjectsMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 14px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      color: '#0f172a',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    <Clock size={16} color="#64748b" />
+                    <span>Timer</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* 3-Dots Room Actions Menu (media_1792293223292.png) */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  setIsRoomMenuOpen(!isRoomMenuOpen);
+                  setIsObjectsMenuOpen(false);
+                }}
+                title="Room Actions"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: isRoomMenuOpen ? '#ffffff' : 'transparent',
+                  border: 'none',
+                  color: isRoomMenuOpen ? '#0f172a' : '#94a3b8',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <MoreVertical size={18} />
+              </button>
+
+              {/* Room Actions Popover matching media_1792293223292.png */}
+              {isRoomMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '48px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: '200px',
+                  background: '#ffffff',
+                  borderRadius: '10px',
+                  boxShadow: '0 12px 30px rgba(0,0,0,0.2)',
+                  border: '1px solid #cbd5e1',
+                  padding: '6px 0',
+                  zIndex: 1500,
+                  textAlign: 'left'
+                }}>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      setToastMessage(`Copied link to ${currentRoom}! 📋`);
+                      setTimeout(() => setToastMessage(null), 3000);
+                      setIsRoomMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: '#1e293b',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    Copy link
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (playerMeshRef.current) {
+                        const p = playerMeshRef.current.position;
+                        avatarsRef.current.forEach((av, i) => {
+                          if (!av.isPlayer && av.mesh) {
+                            av.mesh.position.set(p.x + (i + 1) * 1.2, 0, p.z + 1.2);
+                          }
+                        });
+                        playSound('chime');
+                        setToastMessage(`All members moved to ${currentRoom}! 👥`);
+                        setTimeout(() => setToastMessage(null), 3000);
+                      }
+                      setIsRoomMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: '#1e293b',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    Move members here
+                  </button>
+                  <button
+                    onClick={() => {
+                      const nextState = !isPresenterMode;
+                      setIsPresenterMode(nextState);
+                      playSound('click');
+                      setToastMessage(nextState ? 'Presenter Mode ON 🎙️' : 'Presenter Mode OFF');
+                      setTimeout(() => setToastMessage(null), 3000);
+                      setIsRoomMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: isPresenterMode ? '#0284c7' : '#1e293b',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    {isPresenterMode ? 'Turn off Presenter Mode' : 'Turn on Presenter Mode'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsUserProfileOpen(true);
+                      setIsRoomMenuOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '9px 16px',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: '#1e293b',
+                      fontSize: '13px',
+                      fontWeight: 500
+                    }}
+                    onMouseOver={(e) => (e.currentTarget.style.background = '#f1f5f9')}
+                    onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    Room settings
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right Section: Room badge, Calendar, Mail, Clock, Chat, Avatar */}
+          {/* Right Section: Room badge & Chat trigger, Calendar, Mail, Clock, Chat, Avatar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Active Room Badge */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '5px 10px',
-              borderRadius: '6px',
-              background: '#242c3d',
-              color: '#f8fafc',
-              fontSize: '13px',
-              fontWeight: 500
-            }}>
-              <MessageSquare size={14} color="#0091ff" />
+            {/* Active Room Badge Button (media_1792293238602.png) */}
+            <button
+              onClick={() => setIsRoomChatOpen(!isRoomChatOpen)}
+              title="Open Room Chat Feed"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                background: isRoomChatOpen ? '#0284c7' : '#242c3d',
+                color: '#f8fafc',
+                fontSize: '13px',
+                fontWeight: 600,
+                border: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <MessageSquare size={15} color={isRoomChatOpen ? '#ffffff' : '#0091ff'} />
               <span>{currentRoom}</span>
-            </div>
+            </button>
 
             {/* Calendar */}
             <button
@@ -4452,6 +4980,54 @@ export default function WorkspacePlatform({ user, onExit }) {
           onClose={() => setIsChessOpen(false)}
         />
 
+        {/* 14b. Playable Retro Arcade Cabinet Widget */}
+        <ArcadeGameWidget
+          isOpen={isArcadeOpen}
+          onClose={() => setIsArcadeOpen(false)}
+        />
+
+        {/* 14c. Playable 8-Ball Billiards Table Widget */}
+        <BilliardsGameWidget
+          isOpen={isBilliardsOpen}
+          onClose={() => setIsBilliardsOpen(false)}
+        />
+
+        {/* 14d. Playable Table Tennis Ping Pong Widget */}
+        <PingPongGameWidget
+          isOpen={isPingPongOpen}
+          onClose={() => setIsPingPongOpen(false)}
+        />
+
+        {/* Floating Swimming Water HUD Indicator */}
+        {isSwimming && (
+          <div style={{
+            position: 'fixed',
+            bottom: '100px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, rgba(14, 165, 233, 0.95), rgba(2, 132, 199, 0.98))',
+            color: '#fff',
+            padding: '10px 24px',
+            borderRadius: '9999px',
+            boxShadow: '0 12px 30px -4px rgba(14, 165, 233, 0.55), 0 0 20px rgba(56, 189, 248, 0.45)',
+            border: '1.5px solid rgba(255, 255, 255, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            zIndex: 1000,
+            backdropFilter: 'blur(8px)',
+            pointerEvents: 'none',
+            userSelect: 'none',
+            animation: 'pulse 2s infinite'
+          }}>
+            <span style={{ fontSize: '22px' }}>🏊</span>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '13px', fontWeight: 800, letterSpacing: '0.04em' }}>SWIMMING IN POOL</span>
+              <span style={{ fontSize: '11px', opacity: 0.9, fontWeight: 500 }}>WASD / Arrow keys for front crawl & flutter kicks</span>
+            </div>
+          </div>
+        )}
+
         {/* 15. Spot Room Link Modal & Deep Link Teleport */}
         <SpotLinkModal
           isOpen={isSpotLinkModalOpen}
@@ -4461,6 +5037,332 @@ export default function WorkspacePlatform({ user, onExit }) {
           userName={userName}
           onTeleportToRoom={jumpToRoom}
         />
+
+        {/* 16. Interactive Sticky Note Widget */}
+        <StickyNoteWidget
+          isOpen={isStickyNoteOpen}
+          onClose={() => setIsStickyNoteOpen(false)}
+        />
+
+        {/* 17. Collaborative Shared Browser Widget */}
+        <SharedBrowserWidget
+          isOpen={isSharedBrowserOpen}
+          onClose={() => setIsSharedBrowserOpen(false)}
+        />
+
+        {/* 18. Live Team Poll Widget */}
+        <PollWidget
+          isOpen={isPollOpen}
+          onClose={() => setIsPollOpen(false)}
+        />
+
+        {/* 19. Synchronized YouTube Video Player Widget */}
+        <YouTubeWidget
+          isOpen={isYouTubeOpen}
+          onClose={() => setIsYouTubeOpen(false)}
+        />
+
+        {/* 20. Productivity Focus Timer & Stopwatch Widget */}
+        <TimerWidget
+          isOpen={isTimerOpen}
+          onClose={() => setIsTimerOpen(false)}
+        />
+
+        {/* 21. Floating "Sit down" Badge on Furniture Hover (media_1792293223278.png) */}
+        {hoverChairScreenPos && !isSittingRef.current && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.__spotExecuteSitOnChair && hoverChairScreenPos.chairObj) {
+                window.__spotExecuteSitOnChair(hoverChairScreenPos.chairObj, hoverChairScreenPos.hitPoint);
+              }
+              setHoverChairScreenPos(null);
+            }}
+            style={{
+              position: 'fixed',
+              left: `${hoverChairScreenPos.x}px`,
+              top: `${hoverChairScreenPos.y - 18}px`,
+              transform: 'translate(-50%, -100%)',
+              background: '#0f172a',
+              color: '#ffffff',
+              padding: '5px 12px',
+              borderRadius: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.45)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              zIndex: 1000,
+              userSelect: 'none',
+              pointerEvents: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+          >
+            Sit down
+          </div>
+        )}
+
+        {/* 22. Top Right Floating 3D Canvas Controls (media_1792293223270.png) */}
+        <div style={{
+          position: 'fixed',
+          top: isTrialBannerOpen ? '50px' : '16px',
+          right: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          zIndex: 100
+        }}>
+          {/* Proximity Audio Mode Toggle */}
+          <button
+            onClick={() => {
+              setProximityMode(!proximityMode);
+              setToastMessage(proximityMode ? 'Proximity Audio: Disabled 🌐' : 'Proximity Audio: Enabled 🎧');
+              setTimeout(() => setToastMessage(null), 2500);
+            }}
+            title="Toggle Proximity Audio"
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: proximityMode ? '#0284c7' : '#64748b',
+              cursor: 'pointer'
+            }}
+          >
+            <Radio size={20} />
+          </button>
+
+          {/* Center Camera on Player Avatar */}
+          <button
+            onClick={() => {
+              if (playerMeshRef.current) {
+                cameraOrbitAngleRef.current = 0;
+                cameraPitchAngleRef.current = 0.24;
+                cameraDistanceRef.current = 4.2;
+                setToastMessage('Camera centered on avatar 🎯');
+                setTimeout(() => setToastMessage(null), 2500);
+              }
+            }}
+            title="Center on Avatar"
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#475569',
+              cursor: 'pointer'
+            }}
+          >
+            <Crosshair size={20} />
+          </button>
+
+          {/* Spaces Directory / Rooms Grid Toggle */}
+          <button
+            onClick={() => setIsSpacesSidebarOpen(!isSpacesSidebarOpen)}
+            title="Toggle Spaces & Rooms Directory"
+            style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '50%',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#475569',
+              cursor: 'pointer'
+            }}
+          >
+            <Grid size={20} />
+          </button>
+        </div>
+
+        {/* 23. Room Chat Drawer matching media_1792293238602.png ("Message Lobby") */}
+        {isRoomChatOpen && (
+          <div style={{
+            position: 'fixed',
+            top: isTrialBannerOpen ? '36px' : '0',
+            right: 0,
+            bottom: '56px',
+            width: '360px',
+            background: '#ffffff',
+            boxShadow: '-4px 0 25px rgba(0,0,0,0.12)',
+            borderLeft: '1px solid #cbd5e1',
+            zIndex: 1400,
+            display: 'flex',
+            flexDirection: 'column',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '12px 16px',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#ffffff'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => setIsRoomChatOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px' }}
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '15px', color: '#0f172a' }}>
+                  <span>🚪</span>
+                  <span>{currentRoom}</span>
+                  <ChevronDown size={14} color="#64748b" />
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Search size={16} color="#64748b" style={{ cursor: 'pointer' }} />
+                <Maximize2 size={15} color="#64748b" style={{ cursor: 'pointer' }} />
+                <button
+                  onClick={() => setIsRoomChatOpen(false)}
+                  style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '2px' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div style={{ flex: 1, padding: '24px 20px', overflowY: 'auto' }}>
+              {/* Big Circular S Avatar & Start of Feed */}
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: '#e2e8f0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                fontWeight: 700,
+                color: '#475569',
+                marginBottom: '16px'
+              }}>
+                S
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                <span>🚪</span>
+                <span>{currentRoom}</span>
+              </div>
+
+              <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#64748b', lineHeight: 1.4 }}>
+                Created by Ayush Kesharwani on Wednesday 14 October.
+              </p>
+              <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: '#94a3b8', lineHeight: 1.4 }}>
+                This is the start of the room's chat feed.
+              </p>
+
+              {/* Messages Feed */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {roomMessages.map((msg) => (
+                  <div key={msg.id} style={{ display: 'flex', gap: '10px' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      background: '#0284c7',
+                      color: '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      fontWeight: 700
+                    }}>
+                      {msg.sender[0]}
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{msg.sender}</span>
+                        <span style={{ fontSize: '11px', color: '#94a3b8' }}>{msg.time}</span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.4 }}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Message Input Footer */}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', background: '#ffffff' }}>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!roomChatDraft.trim()) return;
+                  const newMsg = {
+                    id: Date.now(),
+                    sender: userName,
+                    text: roomChatDraft.trim(),
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  };
+                  setRoomMessages((prev) => [...prev, newMsg]);
+                  setRoomChatDraft('');
+                  playSound('click');
+                }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  border: '1.5px solid #0284c7',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  background: '#ffffff'
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder={`Message ${currentRoom}`}
+                  value={roomChatDraft}
+                  onChange={(e) => setRoomChatDraft(e.target.value)}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '14px',
+                    color: '#0f172a',
+                    marginBottom: '8px'
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Smile size={18} color="#94a3b8" style={{ cursor: 'pointer' }} />
+                    <Paperclip size={18} color="#94a3b8" style={{ cursor: 'pointer' }} />
+                  </div>
+                  <button
+                    type="submit"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: roomChatDraft.trim() ? '#0284c7' : '#cbd5e1',
+                      cursor: roomChatDraft.trim() ? 'pointer' : 'default',
+                      padding: '2px'
+                    }}
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* 9. Sliding Side Drawers (AI Agent, Room Chat, Whiteboard, Settings) */}
