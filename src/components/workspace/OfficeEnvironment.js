@@ -933,6 +933,11 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // Solid Wall behind Auditorium Stage (X = +32, Z: -24 to +4, total span = 28m)
   createWall(32, -10, WALL_THICKNESS, 28);
 
+  // Enclosing East Wall of Skyline Lounge separating from Grand Event Market Hall (X = +32, Z: -46 to -24, span = 22m)
+  createWall(32, -41.255, WALL_THICKNESS, 9.49); // North segment: -46.0 to -36.51
+  createGlassDoubleDoor(32, -35, Math.PI / 2, 'Skyline Lounge to Market Hall Glass Doors'); // Centered Doors: -36.51 to -33.49
+  createWall(32, -28.745, WALL_THICKNESS, 9.49); // South segment: -33.49 to -24.0
+
   // Transparent Clerestory Windows with mullions on North and South Horizons:
   const createClerestoryFacade = (zPos, startX = -56, endX = 56) => {
     for (let x = startX; x <= endX; x += 6) {
@@ -964,6 +969,11 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // Dividing wall between Boardroom and Meeting Cabin (X = -14, Z = -24 to -8)
   createWall(-14, -16, WALL_THICKNESS, 16);
 
+  // North Enclosing Wall along Z = -24 (total span: X = -32 to -14, exactly 18m)
+  createWall(-28.255, -24, 7.49, WALL_THICKNESS); // Left solid wall: -32.0 to -24.51
+  createGlassDoubleDoor(-23, -24, 0, 'Boardroom North Glass Double Doors'); // Centered Glass Double Doors: -24.51 to -21.49
+  createWall(-17.745, -24, 7.49, WALL_THICKNESS); // Right solid wall: -21.49 to -14.0
+
   // South wall of Boardroom (Z = -8, total span: X = -32 to -14, exactly 18m)
   // Double Door at X = -23 (outer frame: -24.51 to -21.49)
   createWall(-28.255, -8, 7.49, WALL_THICKNESS); // Left solid wall: -32.0 to -24.51 (0.000 gap)
@@ -974,6 +984,11 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // Dividing wall between Meeting Cabin and Auditorium (X = +6, Z = -24 to -8)
   createWall(6, -16, WALL_THICKNESS, 16);
 
+  // North Enclosing Wall along Z = -24 (total span: X = -14 to +6, exactly 20m)
+  createWall(-9.755, -24, 8.49, WALL_THICKNESS); // Left solid wall: -14.0 to -5.51
+  createGlassDoubleDoor(-4, -24, 0, 'Meeting Cabin North Glass Double Doors'); // Centered Glass Double Doors: -5.51 to -2.49
+  createWall(1.755, -24, 8.49, WALL_THICKNESS); // Right solid wall: -2.49 to +6.0
+
   // South wall of Meeting Cabin (Z = -8, total span: X = -14 to +6, exactly 20m)
   // Double Door at X = -4 (outer frame: -5.51 to -2.49)
   createWall(-9.755, -8, 8.49, WALL_THICKNESS); // Left solid wall: -14.0 to -5.51 (0.000 gap)
@@ -981,6 +996,11 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createWall(1.755, -8, 8.49, WALL_THICKNESS); // Right ribbed wall: -2.49 to +6.00 (0.000 gap)
 
   // 3. AUDITORIUM OPEN ATRIUM (East: X = +6 to +32, Z = -24 to +4)
+  // North Enclosing Wall along Z = -24 (total span: X = +6 to +32, exactly 26m)
+  createWall(11.745, -24, 11.49, WALL_THICKNESS); // West wall: +6.0 to +17.49
+  createGlassDoubleDoor(19, -24, 0, 'Auditorium North Glass Double Doors'); // Centered Glass Double Doors: +17.49 to +20.51
+  createWall(26.255, -24, 11.49, WALL_THICKNESS); // East wall: +20.51 to +32.0
+
   // Open layout: Framed by stylish low black planters with tall green reeds (media_1792165933867.png & media_1792165933914.png)
   createLowPlanter(6, -2, 12, 0.65, Math.PI / 2); // West boundary planter along X = +6 from Z = -8 to Z = +4
   createLowPlanter(12, 4, 12, 0.65, 0); // South boundary planter along Z = +4 from X = +6 to X = +18
