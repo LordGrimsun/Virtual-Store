@@ -955,24 +955,29 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   // ROW 3: SOUTH ROOMS & COLLABORATION WING (Z = +8 to +20)
   // =========================================================================
 
-  // A. FOCUS WORK PODS (X = -26 to -14, Z = 8 to 14)
-  // Outer West Wall (X = -26, Z = 8 to 14)
-  createWall(-26, 11, WALL_THICKNESS, 6);
+  // A. COLLABORATIVE BREAKOUT SUITES (X = -26 to -14, Z = 8 to 20)
+  // Replaces cramped cubicles and void space with two grand executive meeting suites (72m² each)
 
-  // Focus Pods Front Wall (Z = 8, X = -26 to -14, span = 12m)
-  // Single door at X = -20 (outer frame: -20.81 to -19.19)
-  createWall(-23.405, 8, 5.19, WALL_THICKNESS); // Left wall: -26.0 to -20.81
-  createSingleDoor(-20, 8, 0, 'Focus Work Pod Door');
-  createWall(-16.595, 8, 5.19, WALL_THICKNESS); // Right wall: -19.19 to -14.0
+  // Suite 1: North Collaborative Suite (Z = 8 to 14, X = -26 to -14)
+  // Front Wall along Z = 8 with Centered Glass Double Doors at X = -20
+  createWall(-23.755, 8, 4.49, WALL_THICKNESS); // Left wall: -26.0 to -21.51
+  createGlassDoubleDoor(-20, 8, 0, 'Collaborative Suite 1 Double Doors');
+  createWall(-16.245, 8, 4.49, WALL_THICKNESS); // Right wall: -18.49 to -14.0
 
-  // Center divider between Pod 1 and 2 (X = -20, Z = 8 to 14)
-  createWall(-20, 11, WALL_THICKNESS, 6);
-
-  // Outer East Wall of Focus Pods (X = -14, Z = 8 to 14)
+  // Suite 1 East Wall along X = -14 (Z: 8 to 14, span = 6m)
   createWall(-14, 11, WALL_THICKNESS, 6);
 
-  // Back Wall of Focus Pods (Z = 14, X = -26 to -14, span = 12m)
+  // Center Dividing Wall between Suite 1 and Suite 2 along Z = 14 (X: -26 to -14, span = 12m)
   createWall(-20, 14, 12, WALL_THICKNESS);
+
+  // Suite 2: South Collaborative Suite (Z = 14 to 20, X = -26 to -14)
+  // East Corridor Wall along X = -14 with Centered Glass Double Doors at Z = 17
+  createWall(-14, 14.745, WALL_THICKNESS, 1.49); // North segment: 14.0 to 15.49
+  createGlassDoubleDoor(-14, 17, Math.PI / 2, 'Collaborative Suite 2 Double Doors');
+  createWall(-14, 19.255, WALL_THICKNESS, 1.49); // South segment: 18.51 to 20.0
+
+  // Suite 2 South Wall along Z = 20 (X: -26 to -14, span = 12m)
+  createWall(-20, 20, 12, WALL_THICKNESS);
 
   // B. WORKSPACE A & COLLABORATION SUITE (X = -14 to +14, Z = 8 to 20) - Fully Enclosed
   // Front Wall along Z = 8 (from X = -14 to +14, total span = 28m)
@@ -981,18 +986,15 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createDoubleDoor(0, 8, 0, 'Workspace A Concourse Door'); // Central Double Doors from Lounge C concourse
   createWall(7.755, 8, 12.49, WALL_THICKNESS); // Right front wall: +1.51 to +14.0
 
-  // West Divider Wall (X = -14, Z = 8 to 20, span = 12m)
-  createWall(-14, 14, WALL_THICKNESS, 12);
-
   // East Divider Wall with Promenade / Lobby (X = 14, Z = 8 to 20, span = 12m)
   // Double Doors at Z = 14 (outer frame: 12.49 to 15.51)
   createWall(14, 10.245, WALL_THICKNESS, 4.49); // North segment: 8.0 to 12.49
   createDoubleDoor(14, 14, Math.PI / 2, 'Workspace A East Door'); // Doors to East Promenade
   createWall(14, 17.755, WALL_THICKNESS, 4.49); // South segment: 15.51 to 20.0
 
-  // South Dividing Wall along Z = 20 (separating Workspace A from Mega Arcade, span X = -24 to +24 = 48m)
+  // South Dividing Wall along Z = 20 (separating Workspace A from Mega Arcade, span X = -14 to +24 = 38m)
   // Central Double Door at X = 0 with illuminated neon portal (outer frame: -1.51 to +1.51)
-  createWall(-12.755, 20, 22.49, WALL_THICKNESS); // West segment: -24 to -1.51
+  createWall(-7.755, 20, 12.49, WALL_THICKNESS); // West segment: -14 to -1.51
   createDoubleDoor(0, 20, 0, 'Arcade Main Entrance');
   createWall(12.755, 20, 22.49, WALL_THICKNESS); // East segment: +1.51 to +24
 
@@ -1063,11 +1065,8 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   // =========================================================================
   // ROW 6: MEGA ARCADE & ENTERTAINMENT GAME ZONE (X = -24 to +24, Z = +20 to +46)
-  // Area: 48m x 26m. North Entrance from Concourse at X = 0, Z = +20.
+  // Area: 50m x 26m. North Entrance from Concourse at X = 0, Z = +20.
   // =========================================================================
-
-  // West Wall along X = -24 (from Z = 20 to 46, span = 26m, center Z = 33)
-  createWall(-24, 33, WALL_THICKNESS, 26);
 
   // East Wall along X = +24 (from Z = 20 to 46, span = 26m)
   // Glass French Double Doors connecting Arcade to Pool Sun Deck at Z = 33 (outer frame: 31.49 to 34.51)
@@ -1273,20 +1272,20 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   southSidewalk.position.set(0, 0.06, 29.5);
   seattleGroup.add(southSidewalk);
 
-  // Broken white lane divider lines on roads
+  // Broken white lane divider lines on outer roadway streets (Z = -54 and Z = +54)
   for (let x = -60; x <= 60; x += 6) {
-    [-38, 38].forEach((z) => {
+    [-54, 54].forEach((z) => {
       const dash = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.02, 0.18), roadMarkMat);
       dash.position.set(x, 0.03, z);
       seattleGroup.add(dash);
     });
   }
 
-  // Crosswalk zebra stripes
+  // Crosswalk zebra stripes on North Street
   [-30, 30].forEach((cx) => {
     for (let i = -4; i <= 4; i++) {
       const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.025, 3.2), roadMarkMat);
-      stripe.position.set(cx + i * 0.75, 0.03, -38);
+      stripe.position.set(cx + i * 0.75, 0.03, -54);
       seattleGroup.add(stripe);
     }
   });

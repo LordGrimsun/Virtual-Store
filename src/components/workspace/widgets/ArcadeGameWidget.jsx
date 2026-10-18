@@ -483,81 +483,152 @@ export default function ArcadeGameWidget({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="relative w-full max-w-3xl bg-slate-950 border-4 border-purple-600/70 rounded-2xl shadow-2xl shadow-purple-900/50 overflow-hidden flex flex-col font-mono text-white">
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999,
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px'
+      }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '740px',
+          background: '#090a16',
+          border: '3px solid #a855f7',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(147, 51, 234, 0.45)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: 'monospace',
+          color: '#ffffff'
+        }}
+      >
         {/* Retro Arcade Bezel Header */}
-        <div className="relative px-6 py-4 bg-gradient-to-r from-purple-900 via-indigo-950 to-purple-900 border-b-2 border-purple-500/40 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-purple-600/30 border border-purple-400 flex items-center justify-center text-purple-300">
-              <Gamepad2 className="w-5 h-5" />
+        <div
+          style={{
+            padding: '14px 20px',
+            background: 'linear-gradient(90deg, #3b0764, #1e1b4b, #3b0764)',
+            borderBottom: '2px solid rgba(168, 85, 247, 0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(168, 85, 247, 0.3)', border: '1px solid #c084fc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#e9d5ff' }}>
+              <Gamepad2 size={20} />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-wider text-purple-200 flex items-center gap-2">
-                SPOT RETRO ARCADE <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, letterSpacing: '1px', color: '#f3e8ff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                SPOT RETRO ARCADE <Sparkles size={16} color="#facc15" />
               </h2>
-              <p className="text-xs text-purple-400/80">AUTHENTIC 1980s CABINET CHIP-SET</p>
+              <p style={{ margin: 0, fontSize: '11px', color: '#c084fc', opacity: 0.85 }}>AUTHENTIC 1980s CABINET CHIP-SET</p>
             </div>
           </div>
 
           {/* Game Switcher Tabs */}
-          <div className="flex items-center gap-2 bg-slate-900/80 p-1 rounded-lg border border-purple-500/30">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(15, 23, 42, 0.8)', padding: '4px', borderRadius: '8px', border: '1px solid rgba(168, 85, 247, 0.3)' }}>
             <button
               onClick={() => setActiveGame('invaders')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                activeGame === 'invaders' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeGame === 'invaders' ? '#9333ea' : 'transparent',
+                color: activeGame === 'invaders' ? '#ffffff' : '#94a3b8'
+              }}
             >
               SPACE INVADERS
             </button>
             <button
               onClick={() => setActiveGame('snake')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                activeGame === 'snake' ? 'bg-cyan-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeGame === 'snake' ? '#0891b2' : 'transparent',
+                color: activeGame === 'snake' ? '#ffffff' : '#94a3b8'
+              }}
             >
               CYBER SNAKE
             </button>
             <button
               onClick={() => setActiveGame('breaker')}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                activeGame === 'breaker' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-              }`}
+              style={{
+                padding: '6px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                borderRadius: '6px',
+                border: 'none',
+                cursor: 'pointer',
+                background: activeGame === 'breaker' ? '#e11d48' : 'transparent',
+                color: activeGame === 'breaker' ? '#ffffff' : '#94a3b8'
+              }}
             >
               BRICK BREAKER
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setSoundEnabled((v) => !v)}
-              className="p-2 rounded-lg bg-slate-900 border border-purple-500/30 hover:bg-slate-800 text-purple-300 transition-colors"
+              style={{ padding: '8px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#d8b4fe', cursor: 'pointer' }}
               title={soundEnabled ? 'Mute' : 'Unmute'}
             >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4 text-rose-400" />}
+              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} color="#fb7185" />}
             </button>
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-900 border border-purple-500/30 hover:bg-rose-900/50 text-slate-400 hover:text-white transition-colors"
+              style={{ padding: '8px', borderRadius: '8px', background: '#0f172a', border: '1px solid rgba(168, 85, 247, 0.3)', color: '#94a3b8', cursor: 'pointer' }}
             >
-              <X className="w-5 h-5" />
+              <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Live Scorebar */}
-        <div className="px-6 py-2.5 bg-slate-900 border-b border-purple-500/20 flex items-center justify-between text-xs font-bold">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-1.5 text-emerald-400">
+        <div
+          style={{
+            padding: '8px 20px',
+            background: '#0f172a',
+            borderBottom: '1px solid rgba(168, 85, 247, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontSize: '12px',
+            fontWeight: 700
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#34d399' }}>
               <span>SCORE:</span>
-              <span className="text-sm font-black text-white">{score.toString().padStart(5, '0')}</span>
+              <span style={{ fontSize: '13px', fontWeight: 900, color: '#ffffff' }}>{score.toString().padStart(5, '0')}</span>
             </div>
-            <div className="flex items-center gap-1.5 text-yellow-400">
-              <Trophy className="w-3.5 h-3.5" />
-              <span>HIGH SCORE:</span>
-              <span className="text-sm font-black text-white">{highScores[activeGame].toString().padStart(5, '0')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#facc15' }}>
+              <Trophy size={14} />
+              <span>HIGH:</span>
+              <span style={{ fontSize: '13px', fontWeight: 900, color: '#ffffff' }}>{highScores[activeGame].toString().padStart(5, '0')}</span>
             </div>
           </div>
-          <div className="text-slate-400 flex items-center gap-3">
+          <div style={{ color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px' }}>
             <span>[A/D or Arrows] Move</span>
             <span>[Space] Shoot/Action</span>
           </div>

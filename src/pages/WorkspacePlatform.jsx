@@ -1249,19 +1249,37 @@ export default function WorkspacePlatform({ user, onExit }) {
               setIsChessOpen(true);
               return;
             }
-            if (clickedObj.name === 'clickable_arcade' || clickedObj.userData?.isArcade) {
+            if (clickedObj.name === 'clickable_arcade' || clickedObj.userData?.isArcade || clickedObj.userData?.isArcadeCabinet) {
               playSound('chime');
               setIsArcadeOpen(true);
               return;
             }
-            if (clickedObj.name === 'clickable_billiards' || clickedObj.userData?.isBilliards) {
+            if (clickedObj.name === 'clickable_billiards' || clickedObj.userData?.isBilliards || clickedObj.userData?.isBilliardsTable) {
               playSound('chime');
               setIsBilliardsOpen(true);
               return;
             }
-            if (clickedObj.name === 'clickable_pingpong' || clickedObj.userData?.isPingPong) {
+            if (clickedObj.name === 'clickable_pingpong' || clickedObj.userData?.isPingPong || clickedObj.userData?.isPingPongTable) {
               playSound('chime');
               setIsPingPongOpen(true);
+              return;
+            }
+            if (clickedObj.name === 'clickable_treadmill' || clickedObj.userData?.gymType === 'treadmill') {
+              playSound('click');
+              setDonutToast('Commercial Treadmill: 8.5 km/h workout in progress! 🏃💨');
+              executeSitOnChair(clickedObj);
+              return;
+            }
+            if (clickedObj.name === 'clickable_spinbike' || clickedObj.userData?.gymType === 'spinbike') {
+              playSound('click');
+              setDonutToast('Stationary Exercise Bike: 95 RPM cadence! 🚴🔥');
+              executeSitOnChair(clickedObj);
+              return;
+            }
+            if (clickedObj.name === 'clickable_benchpress' || clickedObj.userData?.gymType === 'benchpress') {
+              playSound('click');
+              setDonutToast('Olympic Bench Press: 80 kg sets! 🏋️💪');
+              executeSitOnChair(clickedObj);
               return;
             }
             if (clickedObj.name === 'confAudioPuck') {
@@ -1324,11 +1342,17 @@ export default function WorkspacePlatform({ user, onExit }) {
 
           if (chairPos) {
             playSound('click');
+            const isSofa = chairObj.userData?.name?.toLowerCase().includes('sofa') || chairObj.name?.includes('sofa');
+            const fwdOffset = isSofa ? 0.22 : 0.05;
+            const finalX = chairPos.x + Math.sin(chairRotY) * fwdOffset;
+            const finalZ = chairPos.z + Math.cos(chairRotY) * fwdOffset;
+            const sitY = seatHeight - (isSofa ? 0.36 : 0.38);
+
             if (playerMeshRef.current) {
-              playerMeshRef.current.position.set(chairPos.x, seatHeight - 0.40, chairPos.z);
+              playerMeshRef.current.position.set(finalX, sitY, finalZ);
               playerMeshRef.current.rotation.y = chairRotY;
             }
-            targetPosRef.current.set(chairPos.x, 0, chairPos.z);
+            targetPosRef.current.set(finalX, 0, finalZ);
             chairRotYRef.current = chairRotY;
             seatHeightRef.current = seatHeight;
             isSittingRef.current = true;
@@ -1362,11 +1386,17 @@ export default function WorkspacePlatform({ user, onExit }) {
                 const nPos = nearestChair.chair.pos;
                 const nRot = nearestChair.chair.rot ?? 0;
                 const nSeatHeight = nearestChair.chair.seatHeight ?? 0.46;
+                const isSofa = nearestChair.chair.name?.toLowerCase().includes('sofa');
+                const fwdOffset = isSofa ? 0.22 : 0.05;
+                const finalX = nPos.x + Math.sin(nRot) * fwdOffset;
+                const finalZ = nPos.z + Math.cos(nRot) * fwdOffset;
+                const sitY = nSeatHeight - (isSofa ? 0.36 : 0.38);
+
                 if (playerMeshRef.current) {
-                  playerMeshRef.current.position.set(nPos.x, nSeatHeight - 0.40, nPos.z);
+                  playerMeshRef.current.position.set(finalX, sitY, finalZ);
                   playerMeshRef.current.rotation.y = nRot;
                 }
-                targetPosRef.current.set(nPos.x, 0, nPos.z);
+                targetPosRef.current.set(finalX, 0, finalZ);
                 chairRotYRef.current = nRot;
                 seatHeightRef.current = nSeatHeight;
                 isSittingRef.current = true;
@@ -1618,6 +1648,22 @@ export default function WorkspacePlatform({ user, onExit }) {
               }
             }
           }
+
+          // Check solid furniture obstacles (tables, desks, sofas, arcade, stage)
+          const obstacles = scene.userData.furnitureObstacles || [];
+          for (let k = 0; k < obstacles.length; k++) {
+            const obs = obstacles[k];
+            const hw = obs.hw + playerRadius;
+            const hd = obs.hd + playerRadius;
+            if (
+              px >= obs.x - hw &&
+              px <= obs.x + hw &&
+              pz >= obs.z - hd &&
+              pz <= obs.z + hd
+            ) {
+              return true;
+            }
+          }
           return false;
         };
 
@@ -1759,7 +1805,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           avatarSystem.applyAvatarPose(parts, { isMoving: true, walkCycle });
         } else if (isSittingRef.current) {
           // Seated pose on chair cushion naturally with knee bend and outward orientation
-          player.position.y = (seatHeightRef.current || 0.46) - 0.40;
+          player.position.y = (seatHeightRef.current || 0.46) - 0.38;
           player.rotation.y = THREE.MathUtils.lerp(player.rotation.y, chairRotYRef.current, 0.25);
           avatarSystem.applyAvatarPose(parts, { isSitting: true });
         } else {
@@ -1931,11 +1977,12 @@ export default function WorkspacePlatform({ user, onExit }) {
             const fwdDist = Math.min(dist * 0.40, 3.2);
             const lookTargetX = p.x - Math.sin(angle) * fwdDist;
             const lookTargetZ = p.z - Math.cos(angle) * fwdDist;
+            const groundY = isSwimmingRef.current ? -0.48 : (isSittingRef.current ? (seatHeightRef.current || 0.46) - 0.38 : 0);
             const baseLookY = isAuditorium ? 2.0 : 1.40;
-            const lookY = p.y + baseLookY + (cameraTargetYOffsetRef.current || 0);
+            const lookY = groundY + baseLookY + (cameraTargetYOffsetRef.current || 0);
 
             const camX = p.x + Math.sin(angle) * dist * Math.cos(pitch);
-            const camY = Math.max(0.6, p.y + 1.45 + dist * Math.sin(pitch));
+            const camY = Math.max(0.6, groundY + 1.45 + dist * Math.sin(pitch));
             const camZ = p.z + Math.cos(angle) * dist * Math.cos(pitch);
 
             camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.14);

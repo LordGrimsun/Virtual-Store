@@ -402,6 +402,17 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   };
 
   const screensMap = {};
+  const furnitureObstacles = [];
+  scene.userData.furnitureObstacles = furnitureObstacles;
+
+  const registerObstacle = (cx, cz, halfW, halfD, name = 'obstacle') => {
+    furnitureObstacles.push({
+      center: new THREE.Vector2(cx, cz),
+      halfWidth: halfW,
+      halfDepth: halfD,
+      name
+    });
+  };
 
   // Helper: Wall-Mounted Starry Spot Screen (matching media_1791993853484.png & media_1791969444037.png)
   const createSpotWallScreen = (x, y, z, width = 4.8, height = 2.7, rotY = 0, screenKey = 'boardroom', defaultTex = null, displayName = '') => {
@@ -1486,6 +1497,9 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     createCantileverChair(-23.0 + cx, -14.8, Math.PI, `Boardroom South Chair ${idx + 1}`);
   });
 
+  // Register Boardroom Table collision obstacle
+  registerObstacle(-23.0, -16.0, 4.3, 1.2, 'Boardroom Conference Table');
+
   // Potted ficus tree in corner
   createPottedPlant(-30.5, -9.5, 'Boardroom Ficus');
 
@@ -1508,6 +1522,9 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createRoundCoffeeTable(-4.0, -16.0, 0.55, 0.38);
   createFlowerVase(-4.0, 0.38, -16.0);
 
+  // Register Meeting Cabin Lounge Set collision obstacle
+  registerObstacle(-4.0, -16.0, 1.8, 2.5, 'Meeting Cabin Lounge Set');
+
   // Gold side table with dome lamp next to north sofa
   createDrinkTable(-1.6, -18.2);
   const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.10, 0.22, 16), brassGoldMat);
@@ -1517,8 +1534,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   lampDome.position.set(-1.6, 0.70, -18.2);
   furnitureGroup.add(lampDome);
 
-  // Potted ficus plant
-  createPottedPlant(-12.0, -14.5, 'Meeting Cabin Plant');
+  // Potted ficus plant (positioned in southwest corner at Z = -21.5, well clear of the screen face at Z = -16.0)
+  createPottedPlant(-12.8, -21.5, 'Meeting Cabin Plant');
 
   // =========================================================================
   // 3. AUDITORIUM OPEN ATRIUM (East: X: +6 to +32, Z: -24 to +4)
@@ -1548,6 +1565,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   audStage.position.set(29.6, 0.125, -10.0);
   audStage.receiveShadow = true;
   furnitureGroup.add(audStage);
+  registerObstacle(29.6, -10.0, 1.9, 7.8, 'Auditorium Main Stage');
 
   // Sleek Black Speaker Podium / Lectern on stage
   const audPodium = new THREE.Mesh(
@@ -1559,17 +1577,20 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   audPodium.castShadow = true;
   furnitureGroup.add(audPodium);
 
-  // 2 Stepped Stadium Seating Tiers facing East towards the cinema screen (Exact match to media_1792207254846.png)
+  // 5 Stepped Stadium Seating Tiers facing East towards the cinema screen (50 Luxury Cinema Seats)
   const audTiers = [
-    { x: 21.0, y: 0.00, riserH: 0.00 },
-    { x: 17.5, y: 0.32, riserH: 0.32 }
+    { x: 23.5, y: 0.00, riserH: 0.00 },
+    { x: 20.5, y: 0.28, riserH: 0.28 },
+    { x: 17.5, y: 0.56, riserH: 0.56 },
+    { x: 14.5, y: 0.84, riserH: 0.84 },
+    { x: 11.5, y: 1.12, riserH: 1.12 }
   ];
 
   audTiers.forEach((tier, tIdx) => {
     // Stepped concrete/carpet riser floor
     if (tier.riserH > 0) {
       const riserStep = new THREE.Mesh(
-        new THREE.BoxGeometry(2.6, tier.riserH, 14.6),
+        new THREE.BoxGeometry(2.8, tier.riserH, 14.6),
         new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 })
       );
       riserStep.position.set(tier.x, tier.riserH / 2, -10.0);
@@ -1577,7 +1598,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       furnitureGroup.add(riserStep);
     }
 
-    // Long dark charcoal stadium bench (matching media_1792165933914.png)
+    // Long dark charcoal stadium bench
     const bench = new THREE.Mesh(
       roundedBox(0.85, 0.22, 14.0, 0.06),
       blackLeatherMat
@@ -1594,13 +1615,13 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     };
     furnitureGroup.add(bench);
 
-    // 8 Individually clickable seat cushions along each bench
-    for (let s = 0; s < 8; s++) {
-      const sz = -15.25 + s * 1.5;
+    // 10 Individually clickable seat cushions along each bench (50 seats total)
+    for (let s = 0; s < 10; s++) {
+      const sz = -16.0 + s * 1.33;
       const seatWorldPos = new THREE.Vector3(tier.x, tier.y, sz);
       const facingEastRot = Math.PI / 2; // Facing East towards the big cinema screen
 
-      const cushion = new THREE.Mesh(roundedBox(0.72, 0.08, 1.25, 0.04), blackMat);
+      const cushion = new THREE.Mesh(roundedBox(0.72, 0.08, 1.15, 0.04), blackMat);
       cushion.position.set(tier.x, tier.y + 0.47, sz);
       cushion.castShadow = true;
       cushion.name = 'clickable_chair';
@@ -1788,7 +1809,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // Exact match to media_1792165933867.png & media_1792165933914.png
   // Pairs of curved black armchairs with cocktail tables looking out at Seattle
   // =========================================================================
-  [7.0, 12.0, 17.0, 22.0].forEach((wz, idx) => {
+  // Moved to Z >= 13.0 so chairs never clip into the pool wall at Z = 8.0 (fixes media_1792311429902.png)
+  [13.0, 18.0, 23.0, 28.0, 33.0].forEach((wz, idx) => {
     // Round cocktail table
     createRoundCoffeeTable(29.4, wz, 0.52, 0.46);
     createFlowerVase(29.4, 0.46, wz);
@@ -1800,34 +1822,61 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   });
 
   // =========================================================================
-  // 6. SOUTH WING: FOCUS CUBICLES, WORKSPACE A & PATIO
+  // 6. SOUTH WING: COLLABORATIVE BREAKOUT SUITES 1 & 2, WORKSPACE A & PATIO
   // =========================================================================
 
-  // Focus Cubicle 1 (Private pod at x = -22.5, z = 11.0)
-  const cubicle1Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
-  cubicle1Desk.position.set(-22.5, 0.74, 11.0);
-  furnitureGroup.add(cubicle1Desk);
+  // --- COLLABORATIVE BREAKOUT SUITE 1 (North Suite: X: -26 to -14, Z: 8 to 14) ---
+  // Executive meeting table for 4 to 6 people + 4K Presentation Wall Screen
+  const suite1Table = new THREE.Mesh(roundedBox(3.2, 0.07, 1.4, 0.04), smokedWalnutMat);
+  suite1Table.position.set(-20.0, 0.74, 11.0);
+  suite1Table.castShadow = true;
+  furnitureGroup.add(suite1Table);
 
-  createWorkstationMonitor(
-    -22.5, 0.78, 10.65, 0,
-    'desk_cubicle_1',
-    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('FocusProject.rs') : screenTextures?.codeEditorTexture,
-    'Focus Cubicle 1 Workstation'
+  const suite1Bezel = new THREE.Mesh(roundedBox(3.24, 0.074, 1.44, 0.04), brassGoldMat);
+  suite1Bezel.position.set(-20.0, 0.738, 11.0);
+  furnitureGroup.add(suite1Bezel);
+
+  // Twin walnut pedestals with brass shoes
+  [-0.9, 0.9].forEach((px) => {
+    const plinth = new THREE.Mesh(roundedBox(0.22, 0.65, 0.85, 0.03), smokedWalnutMat);
+    plinth.position.set(-20.0 + px, 0.35, 11.0);
+    plinth.castShadow = true;
+    furnitureGroup.add(plinth);
+
+    const shoe = new THREE.Mesh(roundedBox(0.24, 0.025, 0.88, 0.02), brassGoldMat);
+    shoe.position.set(-20.0 + px, 0.012, 11.0);
+    furnitureGroup.add(shoe);
+  });
+
+  // 4 Cantilever Chairs (2 North facing South, 2 South facing North)
+  createCantileverChair(-20.8, 9.8, 0, 'Collaborative Suite 1 North Chair 1');
+  createCantileverChair(-19.2, 9.8, 0, 'Collaborative Suite 1 North Chair 2');
+  createCantileverChair(-20.8, 12.2, Math.PI, 'Collaborative Suite 1 South Chair 1');
+  createCantileverChair(-19.2, 12.2, Math.PI, 'Collaborative Suite 1 South Chair 2');
+
+  // Big 4K Ultra-HD Wall Screen mounted flush on West wall (X = -25.82)
+  createSpotWallScreen(
+    -25.82, 1.70, 11.0, 4.0, 2.2, Math.PI / 2, 'suite_1_screen',
+    screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('SuiteArchitecture.ts') : screenTextures?.starryLogoTexture,
+    'Collaborative Suite 1 4K Presentation Screen'
   );
-  createCantileverChair(-22.5, 11.8, Math.PI, 'Focus Cubicle 1 Chair');
+  registerObstacle(-20.0, 11.0, 1.8, 0.9, 'Suite 1 Meeting Table');
 
-  // Focus Cubicle 2 (Private pod at x = -16.5, z = 11.0)
-  const cubicle2Desk = new THREE.Mesh(roundedBox(2.2, 0.08, 1.2, 0.04), woodDeskMat);
-  cubicle2Desk.position.set(-16.5, 0.74, 11.0);
-  furnitureGroup.add(cubicle2Desk);
+  // --- COLLABORATIVE BREAKOUT SUITE 2 (South Suite: X: -26 to -14, Z: 14 to 20) ---
+  // Luxury creative lounge suite: Curved cream bouclé sofa + 2 tub armchairs + marble table + 4K Screen
+  createCreamCurvedSofa(-20.0, 18.2, Math.PI, 'Collaborative Suite 2 Curved Sofa');
+  createTubArmchair(-22.2, 16.5, Math.PI / 2, 'Collaborative Suite 2 West Tub Chair');
+  createTubArmchair(-17.8, 16.5, -Math.PI / 2, 'Collaborative Suite 2 East Tub Chair');
+  createRoundCoffeeTable(-20.0, 16.5, 0.65, 0.42, { isTeaTable: true });
+  createFlowerVase(-20.0, 0.42, 16.5);
 
-  createWorkstationMonitor(
-    -16.5, 0.78, 10.65, 0,
-    'desk_cubicle_2',
+  // Big 4K Ultra-HD Wall Screen mounted flush on West wall (X = -25.82)
+  createSpotWallScreen(
+    -25.82, 1.70, 17.0, 4.0, 2.2, Math.PI / 2, 'suite_2_screen',
     screenTextures?.createDesignCanvasTexture ? screenTextures.createDesignCanvasTexture() : screenTextures?.chartTexture,
-    'Focus Cubicle 2 Workstation'
+    'Collaborative Suite 2 4K Creative Screen'
   );
-  createCantileverChair(-16.5, 11.8, Math.PI, 'Focus Cubicle 2 Chair');
+  registerObstacle(-20.0, 17.2, 2.0, 1.8, 'Suite 2 Lounge Suite');
 
   // Workspace A: 2 Collaboration Desks with properly oriented monitors (x: -4 and +4, z: 16)
   const createCollabPod = (px, pz, podId) => {
@@ -1967,13 +2016,20 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // 1. Commercial Treadmills
   const createTreadmill = (tx, tz, rotY = 0) => {
     const tm = new THREE.Group();
+    tm.name = 'clickable_treadmill';
+    tm.userData = { isGymEquipment: true, gymType: 'treadmill', name: 'Commercial Treadmill' };
+
     const base = new THREE.Mesh(roundedBox(1.1, 0.22, 2.2, 0.05), blackMat);
     base.position.y = 0.11;
     base.castShadow = true;
+    base.name = 'clickable_treadmill';
+    base.userData = { isGymEquipment: true, gymType: 'treadmill', name: 'Commercial Treadmill' };
     tm.add(base);
 
     const belt = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.04, 1.8), new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.95 }));
     belt.position.set(0, 0.23, 0.1);
+    belt.name = 'clickable_treadmill';
+    belt.userData = { isGymEquipment: true, gymType: 'treadmill', name: 'Commercial Treadmill' };
     tm.add(belt);
 
     [-0.48, 0.48].forEach((rx) => {
@@ -2000,15 +2056,28 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     tm.position.set(tx, 0, tz);
     tm.rotation.y = rotY;
     furnitureGroup.add(tm);
+
+    chairsRef.current.push({
+      name: 'Commercial Treadmill',
+      pos: new THREE.Vector3(tx, 0.45, tz + 0.1),
+      rot: rotY,
+      seatHeight: 0.45,
+      isGym: true,
+      gymType: 'treadmill'
+    });
   };
 
   [-48, -44, -40, -36].forEach((x) => {
     createTreadmill(x, 14, Math.PI);
   });
+  registerObstacle(-42, 14, 7.0, 1.3, 'Treadmills Row');
 
   // 2. Stationary Spin Exercise Bikes
   const createSpinBike = (bx, bz, rotY = 0) => {
     const sb = new THREE.Group();
+    sb.name = 'clickable_spinbike';
+    sb.userData = { isGymEquipment: true, gymType: 'spinbike', name: 'Spin Exercise Bike' };
+
     const feet = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.05, 1.2), chromeMat);
     feet.position.y = 0.025;
     sb.add(feet);
@@ -2025,15 +2094,25 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
     const seat = new THREE.Mesh(roundedBox(0.28, 0.08, 0.32, 0.04), blackLeatherMat);
     seat.position.set(0, 0.82, -0.35);
+    seat.name = 'clickable_spinbike';
     seat.userData = {
       isChair: true,
+      isGymEquipment: true,
+      gymType: 'spinbike',
       name: 'Spin Exercise Bike',
       chairPos: new THREE.Vector3(bx, 0.82, bz),
       chairRotY: rotY,
       seatHeight: 0.82
     };
     sb.add(seat);
-    chairsRef.current.push({ name: 'Spin Exercise Bike', pos: new THREE.Vector3(bx, 0.82, bz), rot: rotY, seatHeight: 0.82 });
+    chairsRef.current.push({
+      name: 'Spin Exercise Bike',
+      pos: new THREE.Vector3(bx, 0.82, bz),
+      rot: rotY,
+      seatHeight: 0.82,
+      isGym: true,
+      gymType: 'spinbike'
+    });
 
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.55, 12), chromeMat);
     bar.rotation.z = Math.PI / 2;
@@ -2048,10 +2127,14 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   [-46, -42, -38].forEach((x) => {
     createSpinBike(x, 22, Math.PI);
   });
+  registerObstacle(-42, 22, 5.0, 0.9, 'Spin Bikes Row');
 
   // 3. Olympic Bench Press Stations
   const createBenchPress = (px, pz, rotY = 0) => {
     const bp = new THREE.Group();
+    bp.name = 'clickable_benchpress';
+    bp.userData = { isGymEquipment: true, gymType: 'benchpress', name: 'Olympic Bench Press' };
+
     [-0.6, 0.6].forEach((x) => {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.35, 0.08), chromeMat);
       post.position.set(x, 0.675, -0.4);
@@ -2065,15 +2148,25 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     const bench = new THREE.Mesh(roundedBox(0.45, 0.12, 1.45, 0.04), blackLeatherMat);
     bench.position.set(0, 0.46, 0.1);
     bench.castShadow = true;
+    bench.name = 'clickable_benchpress';
     bench.userData = {
       isChair: true,
+      isGymEquipment: true,
+      gymType: 'benchpress',
       name: 'Olympic Bench Press',
       chairPos: new THREE.Vector3(px, 0.46, pz),
       chairRotY: rotY,
       seatHeight: 0.46
     };
     bp.add(bench);
-    chairsRef.current.push({ name: 'Olympic Bench Press', pos: new THREE.Vector3(px, 0.46, pz), rot: rotY, seatHeight: 0.46 });
+    chairsRef.current.push({
+      name: 'Olympic Bench Press',
+      pos: new THREE.Vector3(px, 0.46, pz),
+      rot: rotY,
+      seatHeight: 0.46,
+      isGym: true,
+      gymType: 'benchpress'
+    });
 
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 2.2, 16), chromeMat);
     bar.rotation.z = Math.PI / 2;
@@ -2094,6 +2187,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   createBenchPress(-46, 32, 0);
   createBenchPress(-38, 32, 0);
+  registerObstacle(-42, 32, 5.2, 1.1, 'Bench Press Stations');
 
   // 4. Dumbbell Rack
   const createDumbbellRack = (rx, rz, rotY = 0) => {
@@ -2136,9 +2230,11 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   };
 
   createDumbbellRack(-55, 26, Math.PI / 2);
+  registerObstacle(-55, 26, 0.6, 2.0, 'Dumbbell Rack');
 
-  // Gym TV display
-  createSpotWallScreen(-42, 1.8, 8.2, 3.4, 1.9, 0, 'gym_screen', screenTextures?.videoTexture, 'Fitness Center Keynote Wall');
+  // Gym Keynote TV Wall Screen mounted flush on South Wall (Z = 45.8) facing North
+  // Completely clear of the entrance glass doors at (X = -42, Z = 8)
+  createSpotWallScreen(-42, 2.1, 45.8, 5.4, 3.0, Math.PI, 'gym_screen', screenTextures?.videoTexture, 'Fitness Center Keynote Wall');
 
   // =========================================================================
   // MEGA-CAMPUS EXPANSION: 2. LUXURY SWIMMING POOL & RESORT DECK (X: +26 to +58, Z: +8 to +46)
@@ -2740,9 +2836,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       seatHeight: 0.46
     });
 
-    // Monitors positioned in world space on desk (ex, ez)
-    createWorkstationMonitor(ex - 0.55, 0.75, ez - 0.05, 0.16, `${screenKey}_mon1`, null, `${name} Left Monitor`);
-    createWorkstationMonitor(ex + 0.55, 0.75, ez - 0.05, -0.16, `${screenKey}_mon2`, null, `${name} Right Monitor`);
+    // Monitors positioned on desk facing the executive chair at (ex, ez - 0.82)
+    createWorkstationMonitor(ex - 0.55, 0.75, ez + 0.10, Math.PI - 0.16, `${screenKey}_mon1`, null, `${name} Left Monitor`);
+    createWorkstationMonitor(ex + 0.55, 0.75, ez + 0.10, Math.PI + 0.16, `${screenKey}_mon2`, null, `${name} Right Monitor`);
+
+    // Two luxury visitor chairs facing the desk from the south
+    createCantileverChair(ex - 0.75, ez + 0.85, 0, `${name} Visitor Chair 1`, blackLeatherMat);
+    createCantileverChair(ex + 0.75, ez + 0.85, 0, `${name} Visitor Chair 2`, blackLeatherMat);
+
+    registerObstacle(ex, ez, 1.6, 0.8, `${name} Desk`);
 
     es.position.set(ex, 0, ez);
     es.rotation.y = rotY;
@@ -2751,10 +2853,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // 1. CEO Executive Penthouse Suite (North-West)
   createExecutiveSuite(-50, -36, 0, 'CEO Executive Suite', 'ceo_screen');
+  createSpotWallScreen(-50, 1.8, -45.8, 4.4, 2.4, 0, 'ceo_wall_screen', screenTextures?.videoTexture, 'CEO Penthouse Keynote Screen');
+
   // 2. VP Executive Suite (North-East of Wing)
   createExecutiveSuite(-38, -36, 0, 'VP Executive Suite', 'vp_screen');
+  createSpotWallScreen(-38, 1.8, -45.8, 4.4, 2.4, 0, 'vp_wall_screen', screenTextures?.starryLogoTexture, 'VP Suite Keynote Screen');
+
   // 3. Principal Director Suite (South-West of Wing)
   createExecutiveSuite(-50, -18, 0, 'Principal Suite', 'principal_screen');
+  createSpotWallScreen(-57.8, 1.8, -18, 4.4, 2.4, Math.PI / 2, 'principal_wall_screen', screenTextures?.chartTexture, 'Principal Suite Presentation Screen');
 
   // 4. Executive Private Board Meeting Suite (South-East of Wing: -38, -18)
   const execBoard = new THREE.Group();
@@ -2799,6 +2906,15 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     createCantileverChair(-38 + cx, -18 - 1.15, 0, `Exec Board North Chair ${idx + 1}`, blackLeatherMat);
     createCantileverChair(-38 + cx, -18 + 1.15, Math.PI, `Exec Board South Chair ${idx + 1}`, blackLeatherMat);
   });
+
+  createSpotWallScreen(-38, 1.8, -27.8, 4.4, 2.4, 0, 'exec_board_wall_screen', screenTextures?.videoTexture, 'Executive Board Keynote Screen');
+  registerObstacle(-38, -18, 1.9, 1.0, 'Executive Board Conference Table');
+
+  // Register Mega Arcade & Games obstacles
+  registerObstacle(-14, 32, 2.8, 2.8, 'Tournament Chessboard');
+  registerObstacle(-14, 40, 1.3, 1.8, 'Tournament Billiards Table');
+  registerObstacle(12, 32, 1.6, 1.0, 'Ping Pong Table');
+  registerObstacle(10, 44, 7.0, 0.6, 'Arcade Machines Bank');
 
   return { ...screensMap, furnitureGroup };
 }

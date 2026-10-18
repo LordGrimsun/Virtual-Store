@@ -215,7 +215,22 @@ export default function PingPongGameWidget({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999,
+        background: 'rgba(0, 0, 0, 0.85)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px'
+      }}
+    >
       <div className="relative w-full max-w-2xl bg-slate-950 border-4 border-blue-600/70 rounded-2xl shadow-2xl shadow-blue-950/60 overflow-hidden flex flex-col font-sans text-white">
         {/* Header */}
         <div className="px-6 py-4 bg-gradient-to-r from-blue-950 via-slate-900 to-blue-950 border-b-2 border-blue-500/40 flex items-center justify-between">
