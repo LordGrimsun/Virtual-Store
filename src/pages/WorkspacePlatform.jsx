@@ -108,6 +108,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [roomSettingsTab, setRoomSettingsTab] = useState('overview');
   const [hoveredToolbarTooltip, setHoveredToolbarTooltip] = useState(null);
   const [hoverChairScreenPos, setHoverChairScreenPos] = useState(null);
+  const [hoveredAvatarPopup, setHoveredAvatarPopup] = useState(null);
   const [proximityMode, setProximityMode] = useState(true);
   const [roomChatDraft, setRoomChatDraft] = useState('');
   const [roomMessages, setRoomMessages] = useState([
@@ -1462,6 +1463,57 @@ export default function WorkspacePlatform({ user, onExit }) {
       }
     };
 
+    // Helper: Precise Acoustic Zone & Room Detection
+    const getAcousticZone = (pos) => {
+      if (!pos) return 'open-floor';
+      const { x, z } = pos;
+      if (z < -25) return 'lobby';
+      if (x < -26 && z > 8) return 'gym';
+      if (x > 26 && z > 8) return 'swimming-pool';
+      if (x >= -20 && x <= 20 && z > 20) return 'game-zone';
+      if (x < -26 && z < -8) return 'executive-cabins';
+      if (x >= -16 && x <= 16 && z >= -8 && z <= 16) return 'grand-atrium';
+      if (x >= -26 && x <= -14 && z >= 8 && z <= 14) {
+        return x < -19.5 ? 'cubicle-1' : 'cubicle-2';
+      }
+      if (z < -8) {
+        if (x < -14) return 'boardroom';
+        if (x < 6) return 'conference-b';
+        return 'auditorium';
+      }
+      if (x >= 6 && z < 4) return 'auditorium';
+      if (x >= 22 && z >= 4) return 'conference-a';
+      if (z > 8) {
+        if (x < -14 && z > 14) return 'patio';
+        return 'workspace-a';
+      }
+      return 'open-floor';
+    };
+
+    const getRoomDisplayName = (pos) => {
+      if (!pos) return 'Workspace';
+      const { x, z } = pos;
+      if (z < -25) return 'Lobby';
+      if (x < -26 && z > 8) return 'Fitness & Gym Center';
+      if (x > 26 && z > 8) return 'Swimming Pool & Sun Deck';
+      if (x >= -20 && x <= 20 && z > 20) return 'Arcade & Game Zone';
+      if (x < -26 && z < -8) return 'Executive Cabins';
+      if (x >= -16 && x <= 16 && z >= -8 && z <= 16) return 'Grand Central Atrium';
+      if (z < -8) {
+        if (x < -14) return 'Boardroom';
+        if (x < 6) return 'Meeting Cabin';
+        return 'Auditorium';
+      }
+      if (x >= 6 && z < 4) return 'Auditorium';
+      if (x >= 22 && z >= 4) return 'Window Promenade';
+      if (x < -14 && z >= -8) {
+        if (z > 14) return 'Patio';
+        if (x < -19.5) return 'Focus Cubicle 1';
+        return 'Focus Cubicle 2';
+      }
+      return 'Workspace A';
+    };
+
     // Animation Loop (Silky 60 FPS without React lag)
     let animId;
     let lastTime = performance.now();
@@ -1722,58 +1774,57 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (currentTime - lastUiUpdateRef.current > 120) {
         lastUiUpdateRef.current = currentTime;
 
-        // Project Avatar Names to 2D Screen Space
-        const projected = [];
-        avatarsRef.current.forEach((av) => {
-          const pos = new THREE.Vector3();
-          av.mesh.getWorldPosition(pos);
-          pos.y += 2.65;
-          pos.project(camera);
-
-          const x = ((pos.x + 1) * width) / 2;
-          const y = ((-pos.y + 1) * height) / 2;
-
-          projected.push({
-            name: av.name,
-            x,
-            y,
-            isPlayer: av.isPlayer,
-            status: av.status
-          });
-        });
-        setScreenAvatars(projected);
-
-        // Proximity Detection with Acoustic Zone Isolation
+        // Proximity Detection with Acoustic Zone Isolation & Room-Culled Nameplates
         if (playerMeshRef.current) {
           const pPos = playerMeshRef.current.position;
-
-          const getAcousticZone = (pos) => {
-            const { x, z } = pos;
-            if (x < -26 && z > 8) return 'gym';
-            if (x > 26 && z > 8) return 'swimming-pool';
-            if (x >= -20 && x <= 20 && z > 20) return 'game-zone';
-            if (x < -26 && z < -8) return 'executive-cabins';
-            if (x >= -16 && x <= 16 && z >= -8 && z <= 16) return 'grand-atrium';
-            if (x >= -26 && x <= -14 && z >= 8 && z <= 14) {
-              return x < -19.5 ? 'cubicle-1' : 'cubicle-2';
-            }
-            if (z < -8) {
-              if (x < -14) return 'boardroom';
-              if (x < 6) return 'conference-b';
-              return 'auditorium';
-            }
-            if (x >= 6 && z < 4) return 'auditorium';
-            if (x >= 22 && z >= 4) return 'conference-a';
-            if (z > 8) {
-              if (x < -14 && z > 14) return 'patio';
-              return 'workspace-a';
-            }
-            return 'open-floor';
-          };
-
           const playerZone = getAcousticZone(pPos);
-          const privateZones = ['cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'workspace-a', 'patio', 'executive-cabins', 'gym', 'swimming-pool', 'game-zone'];
+          const privateZones = ['lobby', 'cubicle-1', 'cubicle-2', 'auditorium', 'boardroom', 'conference-b', 'workspace-a', 'patio', 'executive-cabins', 'gym', 'swimming-pool', 'game-zone'];
           const isPlayerInPrivateRoom = privateZones.includes(playerZone);
+
+          // Project Avatar Names to 2D Screen Space ONLY if:
+          // 1. Not player's own avatar (keeps third-person camera clear and clean)
+          // 2. In front of camera (sPos.z >= -1.0 && sPos.z <= 1.0)
+          // 3. In the same acoustic zone/room
+          // 4. Within close conversational distance (< 6.5 meters)
+          const projected = [];
+          avatarsRef.current.forEach((av) => {
+            if (av.isPlayer || !av.mesh) return;
+
+            const avPos = new THREE.Vector3();
+            av.mesh.getWorldPosition(avPos);
+
+            // Proximity check: must be in close conversational range (< 6.5m)
+            const dist = pPos.distanceTo(avPos);
+            if (dist > 6.5) return;
+
+            // Room / Zone check: must be in same acoustic space
+            const avZone = getAcousticZone(avPos);
+            if (avZone !== playerZone) return;
+
+            // Frustum projection:
+            const sPos = avPos.clone();
+            sPos.y += 2.65;
+            sPos.project(camera);
+
+            if (sPos.z < -1.0 || sPos.z > 1.0) return;
+
+            const x = ((sPos.x + 1) * width) / 2;
+            const y = ((-sPos.y + 1) * height) / 2;
+
+            if (x < 10 || x > width - 10 || y < 10 || y > height - 10) return;
+
+            projected.push({
+              name: av.name,
+              x,
+              y,
+              isPlayer: false,
+              status: av.status,
+              role: av.role || 'Teammate',
+              dist,
+              avatarObj: av
+            });
+          });
+          setScreenAvatars(projected);
 
           const nearby = [];
           avatarsRef.current.forEach((av) => {
@@ -2160,6 +2211,33 @@ export default function WorkspacePlatform({ user, onExit }) {
       setIsRoomSettingsOpen(false);
     };
 
+    window.__spotHoverAvatar = (name = 'Phil') => {
+      const av = avatarsRef.current.find((a) => a.name.toLowerCase().includes(name.toLowerCase()));
+      if (av && cameraRef.current && renderer?.domElement) {
+        const headVec = new THREE.Vector3();
+        av.mesh.getWorldPosition(headVec);
+        headVec.y += 2.5;
+        headVec.project(cameraRef.current);
+        const rect = renderer.domElement.getBoundingClientRect();
+        const sx = ((headVec.x + 1) * rect.width) / 2 + rect.left;
+        const sy = ((-headVec.y + 1) * rect.height) / 2 + rect.top;
+        setHoveredAvatarPopup({
+          name: av.name,
+          role: av.role || (av.status === 'ai-agent' ? 'Autonomous AI Agent' : 'Team Member'),
+          status: av.status,
+          room: getRoomDisplayName(av.mesh.position),
+          x: sx,
+          y: sy,
+          isAI: av.status === 'ai-agent' || av.name.includes('DevBot'),
+          avatarObj: av
+        });
+      }
+    };
+
+    window.__spotCloseAvatarPopup = () => {
+      setHoveredAvatarPopup(null);
+    };
+
     const checkSettingsUrl = () => {
       const fullUrl = window.location.pathname + window.location.hash + window.location.search;
       if (fullUrl.includes('/settings/transcription')) {
@@ -2288,6 +2366,54 @@ export default function WorkspacePlatform({ user, onExit }) {
         setHoverChairScreenPos({ x: sx, y: sy, chairObj, hitPoint: hoveredChair.hitPoint });
       } else {
         setHoverChairScreenPos(null);
+      }
+
+      // Check for hovered avatar to display interactive Spot Virtual profile name popup ("who is who")
+      let hoveredAv = null;
+      for (let i = 0; i < Math.min(hits.length, 12); i++) {
+        let obj = hits[i].object;
+        while (obj && obj !== scene) {
+          if (obj.userData?.isAvatar || obj.name?.startsWith('avatar_')) {
+            const rawName = obj.userData?.name || obj.name?.replace('avatar_head_', '').replace('avatar_', '');
+            const match = avatarsRef.current.find((a) => !a.isPlayer && (a.name === rawName || a.name.includes(rawName)));
+            if (match) {
+              hoveredAv = match;
+              break;
+            }
+          }
+          const matchAv = avatarsRef.current.find((a) => !a.isPlayer && (a.mesh === obj || a.mesh === obj.parent || a.mesh === obj.parent?.parent));
+          if (matchAv) {
+            hoveredAv = matchAv;
+            break;
+          }
+          obj = obj.parent;
+        }
+        if (hoveredAv) break;
+      }
+
+      if (hoveredAv) {
+        const headVec = new THREE.Vector3();
+        hoveredAv.mesh.getWorldPosition(headVec);
+        headVec.y += 2.5;
+        headVec.project(camera);
+
+        if (headVec.z >= -1 && headVec.z <= 1) {
+          const sx = ((headVec.x + 1) * rect.width) / 2 + rect.left;
+          const sy = ((-headVec.y + 1) * rect.height) / 2 + rect.top;
+
+          setHoveredAvatarPopup({
+            name: hoveredAv.name,
+            role: hoveredAv.role || (hoveredAv.status === 'ai-agent' ? 'Autonomous AI Agent' : 'Team Member'),
+            status: hoveredAv.status,
+            room: getRoomDisplayName(hoveredAv.mesh.position),
+            x: sx,
+            y: sy,
+            isAI: hoveredAv.status === 'ai-agent' || hoveredAv.name.includes('DevBot'),
+            avatarObj: hoveredAv
+          });
+        }
+      } else {
+        setHoveredAvatarPopup(null);
       }
     };
 
@@ -3754,16 +3880,32 @@ export default function WorkspacePlatform({ user, onExit }) {
       <main style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <div ref={mountRef} style={{ width: '100%', height: '100%', cursor: 'grab' }} />
 
-        {/* Projected 2D Floating Nameplates */}
+        {/* Projected 2D Floating In-Room Nameplates */}
         {showNameplates && screenAvatars.map((av, idx) => (
           <div
             key={idx}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (av.avatarObj) {
+                setHoveredAvatarPopup({
+                  name: av.name,
+                  role: av.role || (av.status === 'ai-agent' ? 'Autonomous AI Agent' : 'Team Member'),
+                  status: av.status,
+                  room: getRoomDisplayName(av.avatarObj.mesh.position),
+                  x: av.x,
+                  y: av.y,
+                  isAI: av.status === 'ai-agent' || av.name.includes('DevBot'),
+                  avatarObj: av.avatarObj
+                });
+              }
+            }}
             style={{
               position: 'absolute',
               left: `${av.x}px`,
               top: `${av.y}px`,
               transform: 'translate(-50%, -100%)',
-              pointerEvents: 'none',
+              pointerEvents: 'auto',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
@@ -3776,7 +3918,16 @@ export default function WorkspacePlatform({ user, onExit }) {
               fontSize: '12px',
               fontWeight: 600,
               whiteSpace: 'nowrap',
-              zIndex: 10
+              zIndex: 10,
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translate(-50%, -100%) scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translate(-50%, -100%) scale(1)';
+              e.currentTarget.style.boxShadow = '0 2px 7px rgba(15, 23, 42, 0.16)';
             }}
           >
             <span style={{
@@ -5213,6 +5364,204 @@ export default function WorkspacePlatform({ user, onExit }) {
             }}
           >
             Sit down
+          </div>
+        )}
+
+        {/* 21b. Interactive Avatar Profile Name Popup ("Who is who") */}
+        {hoveredAvatarPopup && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'fixed',
+              left: `${hoveredAvatarPopup.x}px`,
+              top: `${hoveredAvatarPopup.y - 12}px`,
+              transform: 'translate(-50%, -100%)',
+              pointerEvents: 'auto',
+              zIndex: 2000,
+              background: '#0f172a',
+              color: '#ffffff',
+              borderRadius: '10px',
+              padding: '12px 14px',
+              boxShadow: '0 16px 36px -4px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.12)',
+              minWidth: '220px',
+              maxWidth: '260px',
+              fontFamily: 'Inter, -apple-system, sans-serif',
+              animation: 'fadeIn 0.15s ease-out'
+            }}
+          >
+            {/* Header: Initial/Icon + Name + Status Dot */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+              <div
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  background: hoveredAvatarPopup.isAI ? '#10b981' : '#0091ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                  flexShrink: 0
+                }}
+              >
+                {hoveredAvatarPopup.isAI ? '🤖' : hoveredAvatarPopup.name[0]}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {hoveredAvatarPopup.name}
+                  </span>
+                  <span
+                    style={{
+                      width: '7px',
+                      height: '7px',
+                      borderRadius: '50%',
+                      background: hoveredAvatarPopup.isAI ? '#10b981' : '#22c55e',
+                      boxShadow: '0 0 6px rgba(34, 197, 94, 0.8)',
+                      flexShrink: 0
+                    }}
+                  />
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {hoveredAvatarPopup.role}
+                </div>
+              </div>
+            </div>
+
+            {/* Room Location Badge */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(255, 255, 255, 0.08)',
+                padding: '3px 8px',
+                borderRadius: '5px',
+                fontSize: '11px',
+                color: '#cbd5e1',
+                marginBottom: '10px'
+              }}
+            >
+              <span>📍</span>
+              <span>{hoveredAvatarPopup.room}</span>
+            </div>
+
+            {/* Quick Actions */}
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playSound('highfive');
+                  triggerGesture('wave', 'Waved at ' + hoveredAvatarPopup.name, '👋');
+                  setToastMessage(`Waved at ${hoveredAvatarPopup.name}! 👋`);
+                  setTimeout(() => setToastMessage(null), 2500);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '5px 6px',
+                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)')}
+              >
+                <span>👋 Wave</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsRoomChatOpen(true);
+                  setHoveredAvatarPopup(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '5px 6px',
+                  borderRadius: '6px',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.22)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)')}
+              >
+                <span>💬 Chat</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (hoveredAvatarPopup.avatarObj?.mesh) {
+                    const target = hoveredAvatarPopup.avatarObj.mesh.position.clone();
+                    target.z += 1.5;
+                    targetPosRef.current.copy(target);
+                    playSound('click');
+                    setToastMessage(`Walking to ${hoveredAvatarPopup.name}... 🚶`);
+                    setTimeout(() => setToastMessage(null), 2500);
+                  }
+                  setHoveredAvatarPopup(null);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '5px 6px',
+                  borderRadius: '6px',
+                  background: '#0091ff',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#007be5')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = '#0091ff')}
+              >
+                <span>🚶 Go To</span>
+              </button>
+            </div>
+
+            {/* Downward Pointer Triangle */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '-6px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 0,
+                height: 0,
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderTop: '6px solid #0f172a'
+              }}
+            />
           </div>
         )}
 
