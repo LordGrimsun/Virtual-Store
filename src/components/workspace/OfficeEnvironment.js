@@ -1469,6 +1469,9 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createTerraceLoungeSet(2, -28.5);
   createTerraceLoungeSet(14, -28.5);
 
+  // Add Seattle City Environment to scene so roads, crosswalks, skyline, and hills render
+  scene.add(seattleGroup);
+
   // Register interactive doors and office walls on scene.userData
   scene.userData.interactiveDoors = doorsList;
   scene.userData.officeWalls = wallsList;

@@ -8,7 +8,7 @@ import {
   Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
   TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag,
   Grid, Mail, Clock, Hammer, Search, Home, MoreVertical, MoreHorizontal,
-  Paperclip, BarChart3, Crosshair, Globe, Youtube, ArrowLeft
+  Paperclip, BarChart3, Crosshair, Globe, Youtube, ArrowLeft, UserPlus
 } from 'lucide-react';
 
 import { createOfficeScreenTextures } from '../components/workspace/OfficeScreens';
@@ -22,6 +22,7 @@ import ConnectFourWidget from '../components/workspace/widgets/ConnectFourWidget
 import SpinWheelWidget from '../components/workspace/widgets/SpinWheelWidget';
 import WatercoolerWidget from '../components/workspace/widgets/WatercoolerWidget';
 import SpotLinkModal from '../components/workspace/SpotLinkModal';
+import RoomSettingsModal from '../components/workspace/RoomSettingsModal';
 import ChessGameWidget from '../components/workspace/widgets/ChessGameWidget';
 import ArcadeGameWidget from '../components/workspace/widgets/ArcadeGameWidget';
 import BilliardsGameWidget from '../components/workspace/widgets/BilliardsGameWidget';
@@ -103,6 +104,9 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [isRoomMenuOpen, setIsRoomMenuOpen] = useState(false);
   const [isPresenterMode, setIsPresenterMode] = useState(false);
   const [isRoomChatOpen, setIsRoomChatOpen] = useState(false);
+  const [isRoomSettingsOpen, setIsRoomSettingsOpen] = useState(false);
+  const [roomSettingsTab, setRoomSettingsTab] = useState('overview');
+  const [hoveredToolbarTooltip, setHoveredToolbarTooltip] = useState(null);
   const [hoverChairScreenPos, setHoverChairScreenPos] = useState(null);
   const [proximityMode, setProximityMode] = useState(true);
   const [roomChatDraft, setRoomChatDraft] = useState('');
@@ -2146,6 +2150,32 @@ export default function WorkspacePlatform({ user, onExit }) {
         setHoverChairScreenPos({ x: sx, y: sy, chairObj: sofa, hitPoint: sofa.pos });
       }
     };
+
+    window.__spotOpenRoomSettings = (tab = 'overview') => {
+      setRoomSettingsTab(tab);
+      setIsRoomSettingsOpen(true);
+    };
+
+    window.__spotCloseRoomSettings = () => {
+      setIsRoomSettingsOpen(false);
+    };
+
+    const checkSettingsUrl = () => {
+      const fullUrl = window.location.pathname + window.location.hash + window.location.search;
+      if (fullUrl.includes('/settings/transcription')) {
+        setRoomSettingsTab('transcription');
+        setIsRoomSettingsOpen(true);
+      } else if (fullUrl.includes('/settings/advanced')) {
+        setRoomSettingsTab('advanced');
+        setIsRoomSettingsOpen(true);
+      } else if (fullUrl.includes('/settings/overview') || fullUrl.includes('/settings')) {
+        setRoomSettingsTab('overview');
+        setIsRoomSettingsOpen(true);
+      }
+    };
+    checkSettingsUrl();
+    window.addEventListener('hashchange', checkSettingsUrl);
+    window.addEventListener('popstate', checkSettingsUrl);
 
     // Mouse Wheel Zoom: GTA San Andreas zoom range between 1.2m (close over-shoulder) and 16.0m (tactical chase)
     const handleWheel = (e) => {
@@ -4346,46 +4376,114 @@ export default function WorkspacePlatform({ user, onExit }) {
 
             <div style={{ width: '1px', height: '24px', background: '#334155', margin: '0 4px' }} />
 
-            {/* Add Teammate / Invite */}
-            <button
-              onClick={() => {
-                navigator.clipboard?.writeText(window.location.href);
-                alert('Spot workspace link copied to clipboard!');
-              }}
-              title="Invite Members"
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
-            >
-              <Users size={18} />
-            </button>
+            {/* Add Teammate / Invite with Tooltip */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsSpotLinkModalOpen(true)}
+                onMouseEnter={() => setHoveredToolbarTooltip('invite')}
+                onMouseLeave={() => setHoveredToolbarTooltip(null)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+              >
+                <UserPlus size={18} />
+              </button>
+              {hoveredToolbarTooltip === 'invite' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                  pointerEvents: 'none',
+                  zIndex: 1500
+                }}>
+                  Invite people
+                </div>
+              )}
+            </div>
 
-            {/* Hammer / Build Tool (Toggles Build Mode!) */}
-            <button
-              onClick={() => setIsBuildModeOpen(!isBuildModeOpen)}
-              title="Toggle Build Mode"
-              style={{
-                background: isBuildModeOpen ? '#0091ff' : 'transparent',
-                border: 'none',
-                color: isBuildModeOpen ? '#ffffff' : '#94a3b8',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '6px',
-                transition: 'background 0.15s ease'
-              }}
-            >
-              <Hammer size={18} />
-            </button>
+            {/* Hammer / Build Tool with Tooltip matching media_1792295911672.png */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsBuildModeOpen(!isBuildModeOpen)}
+                onMouseEnter={() => setHoveredToolbarTooltip('build')}
+                onMouseLeave={() => setHoveredToolbarTooltip(null)}
+                style={{
+                  background: isBuildModeOpen ? '#0091ff' : 'transparent',
+                  border: 'none',
+                  color: isBuildModeOpen ? '#ffffff' : '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  borderRadius: '6px',
+                  transition: 'background 0.15s ease',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <Hammer size={18} />
+              </button>
+              {hoveredToolbarTooltip === 'build' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                  pointerEvents: 'none',
+                  zIndex: 1500
+                }}>
+                  Build mode
+                </div>
+              )}
+            </div>
 
-            {/* Expand / Fullscreen View */}
-            <button
-              onClick={() => {
-                if (!document.fullscreenElement) document.documentElement.requestFullscreen();
-                else document.exitFullscreen();
-              }}
-              title="Toggle Fullscreen"
-              style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
-            >
-              <Maximize2 size={18} />
-            </button>
+            {/* Expand / Fullscreen View with Tooltip */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => {
+                  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+                  else document.exitFullscreen();
+                }}
+                onMouseEnter={() => setHoveredToolbarTooltip('fullscreen')}
+                onMouseLeave={() => setHoveredToolbarTooltip(null)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
+              >
+                <Maximize2 size={18} />
+              </button>
+              {hoveredToolbarTooltip === 'fullscreen' && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  background: '#0f172a',
+                  color: '#ffffff',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                  pointerEvents: 'none',
+                  zIndex: 1500
+                }}>
+                  Full screen
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Center Pill Dock: Media Controls, Reactions, Hand Raise, Views */}
@@ -4809,8 +4907,9 @@ export default function WorkspacePlatform({ user, onExit }) {
                   </button>
                   <button
                     onClick={() => {
-                      setIsUserProfileOpen(true);
                       setIsRoomMenuOpen(false);
+                      setRoomSettingsTab('overview');
+                      setIsRoomSettingsOpen(true);
                     }}
                     style={{
                       width: '100%',
@@ -5036,6 +5135,19 @@ export default function WorkspacePlatform({ user, onExit }) {
           workspaceSlug={workspaceSlug}
           userName={userName}
           onTeleportToRoom={jumpToRoom}
+        />
+
+        {/* 15b. Spot Room Settings Modal (Overview / Transcription / Advanced) */}
+        <RoomSettingsModal
+          isOpen={isRoomSettingsOpen}
+          onClose={() => setIsRoomSettingsOpen(false)}
+          initialTab={roomSettingsTab}
+          roomName={currentRoom}
+          onSave={(settings) => {
+            if (settings.roomName && settings.roomName !== currentRoom) {
+              setCurrentRoom(settings.roomName);
+            }
+          }}
         />
 
         {/* 16. Interactive Sticky Note Widget */}
