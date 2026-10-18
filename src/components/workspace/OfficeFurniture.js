@@ -256,11 +256,65 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return tex;
   };
 
+  // 6. Photorealistic Ficus Lyrata (Fiddle-Leaf Fig) Leaf Texture
+  const createFicusLeafTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Deep glossy emerald green leaf blade gradient
+    const grad = ctx.createRadialGradient(256, 256, 40, 256, 256, 256);
+    grad.addColorStop(0, '#1e4d2b');
+    grad.addColorStop(0.7, '#153a20');
+    grad.addColorStop(1, '#0e2916');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Prominent central rib spine (light chartreuse / lime green)
+    ctx.strokeStyle = '#84cc16';
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(256, 512);
+    ctx.lineTo(256, 25);
+    ctx.stroke();
+
+    // Radiating pinnate lateral veins
+    ctx.strokeStyle = 'rgba(163, 230, 53, 0.45)';
+    ctx.lineWidth = 2.8;
+    for (let y = 460; y > 60; y -= 36) {
+      // Left vein
+      ctx.beginPath();
+      ctx.moveTo(256, y);
+      ctx.quadraticCurveTo(140, y - 25, 30, y - 55);
+      ctx.stroke();
+
+      // Right vein
+      ctx.beginPath();
+      ctx.moveTo(256, y);
+      ctx.quadraticCurveTo(372, y - 25, 482, y - 55);
+      ctx.stroke();
+    }
+
+    // Leaf cuticle waxy specular sheen
+    const glossGrad = ctx.createLinearGradient(0, 0, 512, 512);
+    glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.14)');
+    glossGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.0)');
+    glossGrad.addColorStop(1, 'rgba(255, 255, 255, 0.08)');
+    ctx.fillStyle = glossGrad;
+    ctx.fillRect(0, 0, 512, 512);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
   const neroMarbleTex = createNeroMarquinaTexture();
   const calacattaMarbleTex = createCalacattaGoldTexture();
   const smokedWalnutTex = createSmokedWalnutTexture();
   const boucleTex = createBoucleTexture();
   const leatherTex = createLeatherTexture();
+  const ficusLeafTex = createFicusLeafTexture();
 
   // Premium Luxury Materials Suite
   const blackMat = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.65 });
@@ -979,48 +1033,170 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return vaseGrp;
   };
 
-  // Helper: Stylized Potted Ficus Tree (media_1792165933956.png & media_1792165947435.png)
-  const createPottedPlant = (cx, cz, plantName = 'Ficus Plant') => {
+  // Helper: Photorealistic Ficus Lyrata (Fiddle-Leaf Fig) Architectural Tree
+  const createPottedPlant = (cx, cz, plantName = 'Ficus Lyrata Plant') => {
     const plant = new THREE.Group();
-    // Ceramic cylindrical pot
-    const pot = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.32, 0.26, 0.58, 20),
-      new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 })
+
+    // 1. Recessed Champagne Brass Plinth Reveal Ring
+    const brassReveal = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.24, 0.24, 0.035, 24),
+      brassGoldMat
     );
-    pot.position.y = 0.29;
+    brassReveal.position.y = 0.0175;
+    plant.add(brassReveal);
+
+    // 2. Architectural Fluted Matte White Ceramic Cylinder Pot (openEnded to eliminate coplanar top face)
+    const potMat = new THREE.MeshStandardMaterial({
+      color: 0xf8fafc,
+      roughness: 0.38,
+      metalness: 0.05
+    });
+    const pot = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.32, 0.26, 0.56, 28, 1, true),
+      potMat
+    );
+    pot.position.y = 0.30;
     pot.castShadow = true;
+    pot.receiveShadow = true;
     plant.add(pot);
 
-    // Soil
-    const soil = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.30, 0.30, 0.05, 16),
-      new THREE.MeshStandardMaterial({ color: 0x271c19, roughness: 0.95 })
+    // Pot base plate
+    const potBase = new THREE.Mesh(new THREE.CircleGeometry(0.26, 24), potMat);
+    potBase.rotation.x = Math.PI / 2;
+    potBase.position.y = 0.025;
+    plant.add(potBase);
+
+    // 3. Polished Champagne Brass Top Rim Collar
+    const brassRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.32, 0.018, 12, 28),
+      brassGoldMat
     );
-    soil.position.y = 0.56;
+    brassRim.rotation.x = Math.PI / 2;
+    brassRim.position.y = 0.58;
+    plant.add(brassRim);
+
+    // 4. Dark Organic Potting Soil Bed with Micro-Mulch Top Layer (recessed below rim)
+    const soil = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.30, 0.30, 0.06, 24),
+      new THREE.MeshStandardMaterial({
+        color: 0x221811,
+        roughness: 0.95,
+        metalness: 0.0
+      })
+    );
+    soil.position.y = 0.52;
     plant.add(soil);
 
-    // Branches & vibrant green leaves
-    const branchMat = new THREE.MeshStandardMaterial({ color: 0x4a3728, roughness: 0.9 });
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.65 });
+    // 5. Natural Branching Stems & Woody Trunks
+    const stemMat = new THREE.MeshStandardMaterial({
+      color: 0x423223,
+      roughness: 0.88,
+      metalness: 0.04
+    });
 
-    const stem1 = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 1.2, 8), branchMat);
-    stem1.position.set(0, 0.95, 0);
-    plant.add(stem1);
+    // Central primary trunk
+    const mainTrunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.026, 0.038, 1.48, 10),
+      stemMat
+    );
+    mainTrunk.position.set(0.01, 1.25, -0.01);
+    mainTrunk.rotation.z = -0.025;
+    mainTrunk.castShadow = true;
+    plant.add(mainTrunk);
 
-    const leaves = [
-      { x: 0, y: 1.5, z: 0, s: 0.45 },
-      { x: 0.22, y: 1.3, z: 0.15, s: 0.35 },
-      { x: -0.20, y: 1.25, z: -0.15, s: 0.36 },
-      { x: 0.15, y: 1.05, z: -0.22, s: 0.32 },
-      { x: -0.18, y: 0.95, z: 0.20, s: 0.32 }
+    // Branch bough 1 (left lateral)
+    const branch1 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.016, 0.022, 0.65, 8),
+      stemMat
+    );
+    branch1.position.set(-0.08, 1.28, 0.04);
+    branch1.rotation.set(-0.15, 0.2, 0.32);
+    branch1.castShadow = true;
+    plant.add(branch1);
+
+    // Branch bough 2 (right lateral)
+    const branch2 = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.016, 0.022, 0.58, 8),
+      stemMat
+    );
+    branch2.position.set(0.07, 1.38, -0.03);
+    branch2.rotation.set(0.18, -0.25, -0.30);
+    branch2.castShadow = true;
+    plant.add(branch2);
+
+    // 6. Sculpted Fiddle-Leaf Fig Leaf Blades with Curvature & Vein Texture
+    const ficusMat = new THREE.MeshStandardMaterial({
+      map: ficusLeafTex,
+      roughness: 0.28,
+      metalness: 0.05,
+      side: THREE.DoubleSide
+    });
+
+    // Function to build a custom curved 3D fiddle-leaf geometry
+    const createCurvedLeafGeometry = (width, height) => {
+      const geom = new THREE.PlaneGeometry(width, height, 6, 8);
+      const pos = geom.attributes.position;
+      const hw = width / 2;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const y = pos.getY(i);
+        // Normalized coordinate along length (-0.5 at base to +0.5 at tip)
+        const ny = y / height;
+        // Fiddle violin shape: taper base, flare mid, slight waist, wide obovate tip
+        const taper = 0.55 + 0.65 * Math.sin((ny + 0.5) * Math.PI);
+        pos.setX(i, x * taper);
+        // Transverse concave bowl curvature (cupped leaf blade)
+        const nx = x / hw;
+        const cup = (1.0 - nx * nx) * 0.032;
+        // Longitudinal arch bend
+        const arch = Math.sin((ny + 0.5) * Math.PI) * 0.045;
+        pos.setZ(i, cup - arch);
+      }
+      geom.computeVertexNormals();
+      return geom;
+    };
+
+    const leafConfigs = [
+      { y: 0.92, rad: 0.22, angle: 0.35, pitch: 0.58, roll: 0.12, w: 0.32, h: 0.48 },
+      { y: 1.06, rad: 0.25, angle: 2.15, pitch: 0.52, roll: -0.15, w: 0.35, h: 0.52 },
+      { y: 1.20, rad: 0.27, angle: 4.25, pitch: 0.46, roll: 0.18, w: 0.38, h: 0.56 },
+      { y: 1.28, rad: 0.26, angle: 5.85, pitch: 0.42, roll: -0.22, w: 0.36, h: 0.54 },
+      { y: 1.38, rad: 0.28, angle: 1.25, pitch: 0.38, roll: -0.10, w: 0.40, h: 0.60 },
+      { y: 1.48, rad: 0.27, angle: 2.50, pitch: 0.35, roll: 0.18, w: 0.40, h: 0.60 },
+      { y: 1.58, rad: 0.26, angle: 3.40, pitch: 0.32, roll: 0.14, w: 0.38, h: 0.58 },
+      { y: 1.68, rad: 0.24, angle: 5.20, pitch: 0.28, roll: -0.12, w: 0.36, h: 0.54 },
+      { y: 1.78, rad: 0.21, angle: 0.85, pitch: 0.24, roll: 0.08, w: 0.34, h: 0.50 },
+      { y: 1.88, rad: 0.18, angle: 2.80, pitch: 0.20, roll: -0.14, w: 0.32, h: 0.48 },
+      { y: 1.96, rad: 0.14, angle: 4.60, pitch: 0.16, roll: 0.10, w: 0.30, h: 0.44 },
+      { y: 2.05, rad: 0.10, angle: 1.60, pitch: 0.12, roll: -0.06, w: 0.28, h: 0.40 },
+      { y: 2.12, rad: 0.06, angle: 3.75, pitch: 0.08, roll: 0.04, w: 0.26, h: 0.38 },
+      { y: 2.18, rad: 0.02, angle: 0.00, pitch: 0.04, roll: 0.00, w: 0.24, h: 0.34 }
     ];
 
-    leaves.forEach((lf) => {
-      const leaf = new THREE.Mesh(new THREE.SphereGeometry(lf.s, 7, 7), leafMat);
-      leaf.position.set(lf.x, lf.y, lf.z);
-      leaf.scale.set(1.2, 0.7, 1.1);
-      leaf.castShadow = true;
-      plant.add(leaf);
+    leafConfigs.forEach((cfg) => {
+      const leafMesh = new THREE.Mesh(createCurvedLeafGeometry(cfg.w, cfg.h), ficusMat);
+
+      // Position leaf along radial offset from stem
+      const lx = Math.cos(cfg.angle) * cfg.rad;
+      const lz = Math.sin(cfg.angle) * cfg.rad;
+      leafMesh.position.set(lx, cfg.y, lz);
+
+      // Orient leaf pointing outwards and slightly drooping
+      leafMesh.rotation.y = -cfg.angle + Math.PI / 2;
+      leafMesh.rotation.x = cfg.pitch;
+      leafMesh.rotation.z = cfg.roll;
+      leafMesh.castShadow = true;
+      plant.add(leafMesh);
+
+      // Short leaf petiole connector to trunk
+      const petiole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.007, 0.009, cfg.rad * 0.95, 6),
+        stemMat
+      );
+      petiole.position.set(lx * 0.48, cfg.y - 0.02, lz * 0.48);
+      petiole.rotation.y = -cfg.angle + Math.PI / 2;
+      petiole.rotation.z = Math.PI / 2 - cfg.pitch * 0.5;
+      plant.add(petiole);
     });
 
     plant.position.set(cx, 0, cz);

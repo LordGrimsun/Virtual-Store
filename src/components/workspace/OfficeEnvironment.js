@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 /**
  * Builds the architectural environment matching the Spot Virtual desktop reference:
@@ -1117,12 +1118,136 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   const seattleGroup = new THREE.Group();
   seattleGroup.name = 'env_seattle_group';
 
-  // Asphalt roads
+  // Procedural Nature Textures (Canvas2D)
+  const createTreeBarkTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Rich organic grey-brown bark base
+    ctx.fillStyle = '#3a2d24';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Vertical furrowed ridges with varying depth and tones
+    for (let x = 0; x < 512; x += 3) {
+      const w = 2 + Math.random() * 4;
+      const shade = Math.sin(x * 0.15) * 20;
+      ctx.fillStyle = shade > 0 ? '#4e3c31' : '#261c16';
+      ctx.fillRect(x, 0, w, 512);
+    }
+
+    // Fiber striations and organic knots
+    for (let i = 0; i < 800; i++) {
+      const rx = Math.random() * 512;
+      const ry = Math.random() * 512;
+      const rh = 20 + Math.random() * 60;
+      ctx.fillStyle = Math.random() > 0.5 ? 'rgba(92, 73, 60, 0.45)' : 'rgba(20, 15, 12, 0.45)';
+      ctx.fillRect(rx, ry, 2, rh);
+    }
+
+    // Subtle pale lichen and moss flecks
+    for (let i = 0; i < 200; i++) {
+      const lx = Math.random() * 512;
+      const ly = Math.random() * 512;
+      ctx.fillStyle = Math.random() > 0.6 ? 'rgba(110, 125, 105, 0.25)' : 'rgba(75, 90, 70, 0.25)';
+      ctx.beginPath();
+      ctx.arc(lx, ly, 1.5 + Math.random() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 4);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  const createTreeFoliageTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Base deep shadow foliage green
+    ctx.fillStyle = '#1b381e';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Overlapping leaf clusters in natural chlorophyll tones
+    const leafColors = ['#234a28', '#2e5e34', '#3d7844', '#4e9255', '#65a86a', '#3f6d38'];
+    for (let i = 0; i < 2400; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const rad = 4 + Math.random() * 9;
+      ctx.fillStyle = leafColors[Math.floor(Math.random() * leafColors.length)];
+      ctx.beginPath();
+      ctx.ellipse(x, y, rad, rad * 0.65, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Subtle sunlight highlights on outer canopy leaves
+    ctx.fillStyle = 'rgba(132, 204, 22, 0.35)'; // Spring lime highlight
+    for (let i = 0; i < 400; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + Math.random() * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(3, 3);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  const createBoxwoodHedgeTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    // Dense dark undergrowth
+    ctx.fillStyle = '#122415';
+    ctx.fillRect(0, 0, 512, 512);
+
+    // Thousands of tiny overlapping boxwood oval leaves
+    const colors = ['#1a3a1f', '#254e2b', '#316339', '#417e4a', '#54995f'];
+    for (let i = 0; i < 3500; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+      ctx.beginPath();
+      ctx.ellipse(x, y, 3 + Math.random() * 4, 2 + Math.random() * 2.5, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 2);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  const barkTex = createTreeBarkTexture();
+  const foliageTex = createTreeFoliageTexture();
+  const hedgeTex = createBoxwoodHedgeTexture();
+
+  const roundedBox = (width, height, depth, radius = 0.045) => {
+    const safeRadius = Math.max(0.005, Math.min(radius, width * 0.45, height * 0.45, depth * 0.45));
+    return new RoundedBoxGeometry(width, height, depth, 3, safeRadius);
+  };
+
+  // Asphalt roads & street furniture
   const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.94 });
   const sidewalkMat = new THREE.MeshStandardMaterial({ color: 0xd1d5db, roughness: 0.88 });
   const roadMarkMat = new THREE.MeshBasicMaterial({ color: 0xf8fafc });
-  const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.75 });
-  const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x475569, metalness: 0.8, roughness: 0.3 });
+  const benchWoodMat = new THREE.MeshStandardMaterial({ color: 0x854d0e, roughness: 0.55 }); // Warm teak wood
+  const benchMetalMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.35 }); // Dark cast iron
 
   // North Street (Z = -54)
   const northRoad = new THREE.Mesh(new THREE.BoxGeometry(160, 0.08, 14), asphaltMat);
@@ -1140,12 +1265,12 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   seattleGroup.add(westRoad);
 
   // Sidewalks directly outside north and south clerestory
-  const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 4), sidewalkMat);
-  northSidewalk.position.set(0, 0.06, -48.5);
+  const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 6), sidewalkMat);
+  northSidewalk.position.set(0, 0.06, -29.5);
   seattleGroup.add(northSidewalk);
 
-  const southSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 4), sidewalkMat);
-  southSidewalk.position.set(0, 0.06, 48.5);
+  const southSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 6), sidewalkMat);
+  southSidewalk.position.set(0, 0.06, 29.5);
   seattleGroup.add(southSidewalk);
 
   // Broken white lane divider lines on roads
@@ -1166,13 +1291,14 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     }
   });
 
-  // Helper: Wooden Park Bench matching media_1791969444037.png and media_1791969444163.png
-  const createParkBench = (x, z, rotY = 0) => {
+  // Helper: Luxury Architectural Park Bench (properly oriented facing walkway & scenery)
+  const createParkBench = (x, z, rotY = Math.PI) => {
     const bench = new THREE.Group();
+    const benchPos = new THREE.Vector3(x, 0, z);
 
-    // Wood seat slats
+    // Wood seat slats with rounded chamfered profile
     for (let s = -0.22; s <= 0.22; s += 0.11) {
-      const slat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.04, 0.09), benchWoodMat);
+      const slat = new THREE.Mesh(roundedBox(2.2, 0.038, 0.09, 0.012), benchWoodMat);
       slat.position.set(0, 0.45, s);
       slat.castShadow = true;
       bench.add(slat);
@@ -1180,82 +1306,191 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
     // Wood backrest slats
     for (let b = 0.58; b <= 0.88; b += 0.12) {
-      const bSlat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.09, 0.04), benchWoodMat);
+      const bSlat = new THREE.Mesh(roundedBox(2.2, 0.09, 0.038, 0.012), benchWoodMat);
       bSlat.position.set(0, b, -0.26);
       bSlat.castShadow = true;
       bench.add(bSlat);
     }
 
-    // Metal legs
+    // Heavy Cast Iron legs with curved armrests
     [-0.95, 0.95].forEach((lx) => {
-      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.52), benchMetalMat);
+      const leg = new THREE.Mesh(roundedBox(0.06, 0.45, 0.52, 0.02), benchMetalMat);
       leg.position.set(lx, 0.22, 0);
       leg.castShadow = true;
       bench.add(leg);
 
-      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.35, 0.06), benchMetalMat);
+      const arm = new THREE.Mesh(roundedBox(0.06, 0.35, 0.06, 0.02), benchMetalMat);
       arm.position.set(lx, 0.55, -0.24);
       bench.add(arm);
     });
 
     bench.position.set(x, 0.14, z);
     bench.rotation.y = rotY;
+    bench.name = 'clickable_chair';
+    bench.userData = {
+      isChair: true,
+      name: 'Sidewalk Park Bench',
+      chairPos: benchPos,
+      chairRotY: rotY,
+      seatHeight: 0.46
+    };
     seattleGroup.add(bench);
   };
 
-  // Place Park Benches outside north glass wall (media_1791969444037.png)
-  createParkBench(-12, -26.5, 0);
-  createParkBench(-6, -26.5, 0);
-  createParkBench(6, -26.5, 0);
-  createParkBench(14, -26.5, 0);
+  // Place Park Benches outside north glass wall FACING NORTH towards sidewalk, trees, and city skyline (rotY = Math.PI)
+  createParkBench(-18, -26.4, Math.PI);
+  createParkBench(-8, -26.4, Math.PI);
+  createParkBench(2, -26.4, Math.PI);
+  createParkBench(12, -26.4, Math.PI);
 
-  // Place Park Benches outside south glass wall (media_1791969444094.png)
-  createParkBench(-10, 26.5, Math.PI);
-  createParkBench(-4, 26.5, Math.PI);
+  // Place Park Benches outside south glass wall FACING SOUTH towards courtyard and trees (rotY = 0)
+  createParkBench(-10, 26.4, 0);
+  createParkBench(-4, 26.4, 0);
+  createParkBench(4, 26.4, 0);
+  createParkBench(10, 26.4, 0);
 
-  // Helper: Low-poly Street Tree matching Spot Virtual (media_1791969444037.png)
-  const createStreetTree = (x, z, scale = 1) => {
+  // Helper: Photorealistic Architectural Street Tree with Cast Iron Grate, Mulch, & Branching Foliage
+  const createStreetTree = (x, z, scale = 1.0) => {
     const tree = new THREE.Group();
 
-    // Trunk
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18 * scale, 0.25 * scale, 2.4 * scale, 7),
-      new THREE.MeshStandardMaterial({ color: 0x5c3d2e, roughness: 0.9 })
+    // 1. Sidewalk Architectural Cast Iron Tree Grate & Mulch Pit (flush on sidewalk top at y = 0.13)
+    const grateSize = 2.4 * scale;
+    const grate = new THREE.Mesh(
+      new THREE.BoxGeometry(grateSize, 0.02, grateSize),
+      new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.85, roughness: 0.35 })
     );
-    trunk.position.y = 1.2 * scale;
-    trunk.castShadow = true;
-    tree.add(trunk);
+    grate.position.y = 0.138;
+    grate.receiveShadow = true;
+    tree.add(grate);
 
-    // Green faceted foliage crown
-    const foliageMat = new THREE.MeshStandardMaterial({
-      color: 0x367c3b,
-      roughness: 0.85,
-      flatShading: true
+    // Inner circular aperture with dark shredded mulch bed
+    const mulch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55 * scale, 0.55 * scale, 0.025, 20),
+      new THREE.MeshStandardMaterial({ color: 0x1f1612, roughness: 0.95 })
+    );
+    mulch.position.y = 0.145;
+    tree.add(mulch);
+
+    // Cast iron radial inner rim ring
+    const innerRim = new THREE.Mesh(
+      new THREE.TorusGeometry(0.55 * scale, 0.025 * scale, 8, 20),
+      new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.9, roughness: 0.3 })
+    );
+    innerRim.rotation.x = Math.PI / 2;
+    innerRim.position.y = 0.15;
+    tree.add(innerRim);
+
+    // 2. Sculptural Branching Trunk with Natural Bark Texture
+    const trunkMat = new THREE.MeshStandardMaterial({
+      map: barkTex,
+      roughness: 0.88,
+      metalness: 0.02
     });
 
-    [
-      { r: 1.4 * scale, y: 2.8 * scale, x: 0, z: 0 },
-      { r: 1.1 * scale, y: 3.8 * scale, x: 0.2 * scale, z: -0.1 * scale },
-      { r: 0.9 * scale, y: 3.2 * scale, x: -0.4 * scale, z: 0.3 * scale }
-    ].forEach((tier) => {
-      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(tier.r, 1), foliageMat);
-      crown.position.set(tier.x, tier.y, tier.z);
-      crown.castShadow = true;
-      tree.add(crown);
+    // Root flare & main trunk base (starting at sidewalk surface)
+    const trunkBase = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22 * scale, 0.34 * scale, 0.7 * scale, 14),
+      trunkMat
+    );
+    trunkBase.position.y = 0.14 + 0.35 * scale;
+    trunkBase.castShadow = true;
+    tree.add(trunkBase);
+
+    // Mid trunk with slight organic lean
+    const midTrunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18 * scale, 0.22 * scale, 1.3 * scale, 14),
+      trunkMat
+    );
+    midTrunk.position.set(0.04 * scale, 0.14 + 1.25 * scale, 0.02 * scale);
+    midTrunk.rotation.z = 0.05;
+    midTrunk.castShadow = true;
+    tree.add(midTrunk);
+
+    // 4 Primary Spreading Scaffold Boughs (pivoted from base so they branch naturally into canopy)
+    const branchConfigs = [
+      { len: 1.15, r1: 0.11, r2: 0.06, rot: [-0.28, 0.35, -0.42] },
+      { len: 1.10, r1: 0.10, r2: 0.05, rot: [0.32, 0.20, 0.45] },
+      { len: 1.20, r1: 0.11, r2: 0.06, rot: [-0.35, -0.45, -0.32] },
+      { len: 1.05, r1: 0.10, r2: 0.05, rot: [0.28, -0.30, 0.38] },
+      { len: 0.95, r1: 0.09, r2: 0.05, rot: [0.08, 0.0, -0.06] } // center leader
+    ];
+
+    branchConfigs.forEach((bc) => {
+      const bGeom = new THREE.CylinderGeometry(bc.r2 * scale, bc.r1 * scale, bc.len * scale, 10);
+      bGeom.translate(0, (bc.len * scale) / 2, 0); // set pivot at base
+      const branch = new THREE.Mesh(bGeom, trunkMat);
+      branch.position.set(0.04 * scale, 0.14 + 1.75 * scale, 0.02 * scale);
+      branch.rotation.set(bc.rot[0], bc.rot[1], bc.rot[2]);
+      branch.castShadow = true;
+      tree.add(branch);
+    });
+
+    // 3. Volumetric Organic Leaf Canopy Clusters with Natural Ruffle Contour
+    const foliageMat = new THREE.MeshStandardMaterial({
+      map: foliageTex,
+      roughness: 0.72,
+      metalness: 0.02
+    });
+
+    const createOrganicFoliageGeom = (rx, ry, rz) => {
+      const geo = new THREE.SphereGeometry(1.0, 16, 12);
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const vx = pos.getX(i);
+        const vy = pos.getY(i);
+        const vz = pos.getZ(i);
+        const ruffle = 1.0 + 0.07 * Math.sin(vx * 4.5 + vy * 3.5) * Math.cos(vz * 4.5);
+        pos.setXYZ(i, vx * rx * ruffle * scale, vy * ry * ruffle * scale, vz * rz * ruffle * scale);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    };
+
+    // Lush, interconnected canopy lobes forming a full sculptural crown
+    const canopyClusters = [
+      // Primary central crown mass
+      { x: 0.0, y: 3.5, z: 0.0, rx: 1.6, ry: 1.3, rz: 1.6 },
+      // High crown crest
+      { x: 0.1, y: 4.3, z: -0.1, rx: 1.25, ry: 1.05, rz: 1.25 },
+      // East bough canopy lobe
+      { x: 1.15, y: 3.1, z: 0.45, rx: 1.2, ry: 0.95, rz: 1.15 },
+      // West bough canopy lobe
+      { x: -1.15, y: 3.2, z: 0.35, rx: 1.15, ry: 0.95, rz: 1.1 },
+      // North bough canopy lobe
+      { x: 0.25, y: 3.3, z: -1.15, rx: 1.2, ry: 1.0, rz: 1.2 },
+      // South bough canopy lobe
+      { x: -0.25, y: 3.3, z: 1.15, rx: 1.15, ry: 0.95, rz: 1.15 },
+      // Lower skirt foliage mounds
+      { x: 0.8, y: 2.7, z: -0.6, rx: 0.95, ry: 0.8, rz: 0.95 },
+      { x: -0.8, y: 2.75, z: -0.5, rx: 0.95, ry: 0.8, rz: 0.95 },
+      { x: 0.7, y: 2.75, z: 0.75, rx: 1.0, ry: 0.85, rz: 1.0 },
+      { x: -0.7, y: 2.7, z: 0.7, rx: 0.95, ry: 0.8, rz: 0.95 }
+    ];
+
+    canopyClusters.forEach((cc) => {
+      const cl = new THREE.Mesh(createOrganicFoliageGeom(cc.rx, cc.ry, cc.rz), foliageMat);
+      cl.position.set(cc.x * scale, cc.y * scale, cc.z * scale);
+      cl.castShadow = true;
+      tree.add(cl);
     });
 
     tree.position.set(x, 0, z);
     seattleGroup.add(tree);
   };
 
-  // Trees outside north clerestory
-  createStreetTree(0, -28, 1.1);
-  createStreetTree(-20, -28, 0.95);
-  createStreetTree(22, -28, 1.05);
+  // Trees planted outside north clerestory along sidewalk
+  createStreetTree(-24, -29.5, 1.05);
+  createStreetTree(-13, -29.5, 1.15);
+  createStreetTree(-3, -29.5, 1.0);
+  createStreetTree(7, -29.5, 1.10);
+  createStreetTree(17, -29.5, 1.05);
+  createStreetTree(27, -29.5, 1.15);
 
-  // Trees outside south clerestory
-  createStreetTree(-16, 28, 1.0);
-  createStreetTree(2, 28, 1.15);
+  // Trees outside south clerestory along courtyard sidewalk
+  createStreetTree(-16, 29.5, 1.05);
+  createStreetTree(-6, 29.5, 1.12);
+  createStreetTree(6, 29.5, 1.08);
+  createStreetTree(16, 29.5, 1.15);
 
   // 8. Scenic Outer Zone Environment matching Spot Virtual reference (media_1792144700841.png)
   // Procedural Sky Dome with soft clouds
@@ -1398,76 +1633,58 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   const createTerracePlanter = (px, pz, length = 12) => {
     const pGroup = new THREE.Group();
-    // Long black trough
-    const box = new THREE.Mesh(new THREE.BoxGeometry(length, 0.75, 0.9), planterMat);
-    box.position.y = 0.38;
+
+    // 1. Architectural basalt planter trough
+    const box = new THREE.Mesh(roundedBox(length, 0.70, 0.85, 0.04), planterMat);
+    box.position.y = 0.35;
     box.castShadow = true;
     pGroup.add(box);
 
-    // Green hedge shrubs filling box
-    const shrubs = Math.floor(length / 1.5);
-    for (let i = 0; i < shrubs; i++) {
-      const sx = -length / 2 + 0.75 + i * 1.5;
-      const hedge = new THREE.Mesh(new THREE.SphereGeometry(0.65, 8, 8), hedgeMat);
-      hedge.position.set(sx, 0.9, 0);
-      hedge.scale.set(1.2, 0.85, 0.9);
-      pGroup.add(hedge);
+    // Champagne brass top casing trim
+    const topBezel = new THREE.Mesh(roundedBox(length + 0.04, 0.035, 0.89, 0.02), goldTrimMat);
+    topBezel.position.y = 0.71;
+    pGroup.add(topBezel);
 
-      // Purple flower buds
-      const fl = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 6), flowerMat);
-      fl.position.set(sx + 0.2, 1.35, 0.1);
-      pGroup.add(fl);
+    // Dark organic potting soil
+    const soil = new THREE.Mesh(
+      new THREE.BoxGeometry(length - 0.12, 0.06, 0.74),
+      new THREE.MeshStandardMaterial({ color: 0x1a1512, roughness: 0.95 })
+    );
+    soil.position.y = 0.69;
+    pGroup.add(soil);
+
+    // 2. Continuous Manicured English Boxwood Hedge
+    const hedgeMaterial = new THREE.MeshStandardMaterial({
+      map: hedgeTex,
+      roughness: 0.75,
+      metalness: 0.02
+    });
+
+    // Solid hedge base volume with rounded organic crown
+    const hedgeCore = new THREE.Mesh(roundedBox(length - 0.10, 0.58, 0.72, 0.16), hedgeMaterial);
+    hedgeCore.position.y = 0.96;
+    hedgeCore.castShadow = true;
+    pGroup.add(hedgeCore);
+
+    // Soft organic topiary mounds along the length
+    const moundCount = Math.floor(length / 1.6);
+    for (let i = 0; i < moundCount; i++) {
+      const mx = -length / 2 + 0.8 + (i / (moundCount - 1 || 1)) * (length - 1.6);
+      const mound = new THREE.Mesh(new THREE.SphereGeometry(0.42, 14, 10), hedgeMaterial);
+      mound.position.set(mx, 1.22, (Math.random() - 0.5) * 0.06);
+      mound.scale.set(1.4, 0.55, 0.95);
+      mound.castShadow = true;
+      pGroup.add(mound);
     }
 
     pGroup.position.set(px, 0, pz);
     seattleGroup.add(pGroup);
   };
 
-  // Place continuous planter boxes directly outside the clerestory glass
+  // Place continuous luxury boxwood hedge planter boxes directly outside the clerestory glass
   createTerracePlanter(-18, -25.2, 14);
   createTerracePlanter(0, -25.2, 14);
   createTerracePlanter(18, -25.2, 14);
-
-  // Modern Outdoor Curved Lounge Sofas & Round Cocktail Tables (matching media_1792144700841.png)
-  const createTerraceLoungeSet = (lx, lz) => {
-    const lGroup = new THREE.Group();
-    // Curved banquette sofa
-    const sofaBase = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.6, 1.6, 0.42, 16, 1, false, 0, Math.PI),
-      outdoorSofaMat
-    );
-    sofaBase.position.y = 0.21;
-    sofaBase.castShadow = true;
-    lGroup.add(sofaBase);
-
-    const cushion = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.5, 1.5, 0.12, 16, 1, false, 0, Math.PI),
-      outdoorCushionMat
-    );
-    cushion.position.y = 0.45;
-    lGroup.add(cushion);
-
-    // Curved backrest with gold base trim
-    const backrest = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.6, 1.6, 0.45, 16, 1, true, 0, Math.PI),
-      outdoorSofaMat
-    );
-    backrest.position.y = 0.65;
-    lGroup.add(backrest);
-
-    // Low round brass coffee table in front of lounge
-    const table = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.35, 16), goldTrimMat);
-    table.position.set(0, 0.18, 0.6);
-    table.castShadow = true;
-    lGroup.add(table);
-
-    lGroup.position.set(lx, 0.08, lz);
-    seattleGroup.add(lGroup);
-  };
-
-  createTerraceLoungeSet(-10, -28.5);
-  createTerraceLoungeSet(2, -28.5);
-  createTerraceLoungeSet(14, -28.5);
 
   // Add Seattle City Environment to scene so roads, crosswalks, skyline, and hills render
   scene.add(seattleGroup);
