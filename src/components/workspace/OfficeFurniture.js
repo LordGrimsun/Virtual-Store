@@ -1826,41 +1826,42 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // =========================================================================
 
   // --- COLLABORATIVE BREAKOUT SUITE 1 (North Suite: X: -26 to -14, Z: 8 to 14) ---
+  // --- COLLABORATIVE BREAKOUT SUITE 1 (North Suite: X: -26 to -14, Z: 8 to 14) ---
   // Executive meeting table for 4 to 6 people + 4K Presentation Wall Screen
   const suite1Table = new THREE.Mesh(roundedBox(3.2, 0.07, 1.4, 0.04), smokedWalnutMat);
-  suite1Table.position.set(-20.0, 0.74, 11.0);
+  suite1Table.position.set(-20.0, 0.74, 11.5);
   suite1Table.castShadow = true;
   furnitureGroup.add(suite1Table);
 
   const suite1Bezel = new THREE.Mesh(roundedBox(3.24, 0.074, 1.44, 0.04), brassGoldMat);
-  suite1Bezel.position.set(-20.0, 0.738, 11.0);
+  suite1Bezel.position.set(-20.0, 0.738, 11.5);
   furnitureGroup.add(suite1Bezel);
 
   // Twin walnut pedestals with brass shoes
   [-0.9, 0.9].forEach((px) => {
     const plinth = new THREE.Mesh(roundedBox(0.22, 0.65, 0.85, 0.03), smokedWalnutMat);
-    plinth.position.set(-20.0 + px, 0.35, 11.0);
+    plinth.position.set(-20.0 + px, 0.35, 11.5);
     plinth.castShadow = true;
     furnitureGroup.add(plinth);
 
     const shoe = new THREE.Mesh(roundedBox(0.24, 0.025, 0.88, 0.02), brassGoldMat);
-    shoe.position.set(-20.0 + px, 0.012, 11.0);
+    shoe.position.set(-20.0 + px, 0.012, 11.5);
     furnitureGroup.add(shoe);
   });
 
   // 4 Cantilever Chairs (2 North facing South, 2 South facing North)
-  createCantileverChair(-20.8, 9.8, 0, 'Collaborative Suite 1 North Chair 1');
-  createCantileverChair(-19.2, 9.8, 0, 'Collaborative Suite 1 North Chair 2');
-  createCantileverChair(-20.8, 12.2, Math.PI, 'Collaborative Suite 1 South Chair 1');
-  createCantileverChair(-19.2, 12.2, Math.PI, 'Collaborative Suite 1 South Chair 2');
+  createCantileverChair(-20.8, 10.3, 0, 'Collaborative Suite 1 North Chair 1');
+  createCantileverChair(-19.2, 10.3, 0, 'Collaborative Suite 1 North Chair 2');
+  createCantileverChair(-20.8, 12.7, Math.PI, 'Collaborative Suite 1 South Chair 1');
+  createCantileverChair(-19.2, 12.7, Math.PI, 'Collaborative Suite 1 South Chair 2');
 
   // Big 4K Ultra-HD Wall Screen mounted flush on West wall (X = -25.82)
   createSpotWallScreen(
-    -25.82, 1.70, 11.0, 4.0, 2.2, Math.PI / 2, 'suite_1_screen',
+    -25.82, 1.70, 11.5, 4.0, 2.2, Math.PI / 2, 'suite_1_screen',
     screenTextures?.createCodeEditorTexture ? screenTextures.createCodeEditorTexture('SuiteArchitecture.ts') : screenTextures?.starryLogoTexture,
     'Collaborative Suite 1 4K Presentation Screen'
   );
-  registerObstacle(-20.0, 11.0, 1.8, 0.9, 'Suite 1 Meeting Table');
+  registerObstacle(-20.0, 11.5, 1.8, 0.9, 'Suite 1 Meeting Table');
 
   // --- COLLABORATIVE BREAKOUT SUITE 2 (South Suite: X: -26 to -14, Z: 14 to 20) ---
   // Luxury creative lounge suite: Curved cream bouclé sofa + 2 tub armchairs + marble table + 4K Screen
@@ -2852,16 +2853,16 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   };
 
   // 1. CEO Executive Penthouse Suite (North-West)
-  createExecutiveSuite(-50, -36, 0, 'CEO Executive Suite', 'ceo_screen');
-  createSpotWallScreen(-50, 1.8, -45.8, 4.4, 2.4, 0, 'ceo_wall_screen', screenTextures?.videoTexture, 'CEO Penthouse Keynote Screen');
+  createExecutiveSuite(-52.25, -40, 0, 'CEO Executive Suite', 'ceo_screen');
+  createSpotWallScreen(-52.25, 1.8, -45.8, 4.4, 2.4, 0, 'ceo_wall_screen', screenTextures?.videoTexture, 'CEO Penthouse Keynote Screen');
 
   // 2. VP Executive Suite (North-East of Wing)
-  createExecutiveSuite(-38, -36, 0, 'VP Executive Suite', 'vp_screen');
-  createSpotWallScreen(-38, 1.8, -45.8, 4.4, 2.4, 0, 'vp_wall_screen', screenTextures?.starryLogoTexture, 'VP Suite Keynote Screen');
+  createExecutiveSuite(-39.25, -40, 0, 'VP Executive Suite', 'vp_screen');
+  createSpotWallScreen(-39.25, 1.8, -45.8, 4.4, 2.4, 0, 'vp_wall_screen', screenTextures?.starryLogoTexture, 'VP Suite Keynote Screen');
 
   // 3. Principal Director Suite (South-West of Wing)
-  createExecutiveSuite(-50, -18, 0, 'Principal Suite', 'principal_screen');
-  createSpotWallScreen(-57.8, 1.8, -18, 4.4, 2.4, Math.PI / 2, 'principal_wall_screen', screenTextures?.chartTexture, 'Principal Suite Presentation Screen');
+  createExecutiveSuite(-52.25, -22, 0, 'Principal Suite', 'principal_screen');
+  createSpotWallScreen(-57.8, 1.8, -22, 4.4, 2.4, Math.PI / 2, 'principal_wall_screen', screenTextures?.chartTexture, 'Principal Suite Presentation Screen');
 
   // 4. Executive Private Board Meeting Suite (South-East of Wing: -38, -18)
   const execBoard = new THREE.Group();

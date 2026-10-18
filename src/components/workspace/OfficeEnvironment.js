@@ -1069,13 +1069,15 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createWall(-37.745, -8, 11.49, WALL_THICKNESS); // East segment: -43.49 to -32
 
   // Central Corridor Dividing Wall along Z = -28 (separating North CEO/VP from South Suites, span 26m)
-  // CEO Suite Single Door at X = -51 (outer frame: -51.81 to -50.19)
-  createWall(-54.905, -28, 6.19, WALL_THICKNESS); // Far West segment: -58 to -51.81
-  createSingleDoor(-51, -28, 0, 'CEO Executive Suite Door');
-  createWall(-46.5, -28, 7.38, WALL_THICKNESS); // Segment between CEO and VP door: -50.19 to -42.81
-  // VP Suite Single Door at X = -42 (outer frame: -42.81 to -41.19)
-  createSingleDoor(-42, -28, 0, 'VP Executive Suite Door');
-  createWall(-36.595, -28, 9.19, WALL_THICKNESS); // Segment to East wall: -41.19 to -32
+  // CEO Executive Suite Grand Glass Double Doors centered at X = -52.25 (bay: -58 to -46.5, door outer frame: -53.76 to -50.74)
+  createWall(-55.88, -28, 4.24, WALL_THICKNESS); // Far West segment: -58 to -53.76
+  createGlassDoubleDoor(-52.25, -28, 0, 'CEO Executive Suite Double Doors');
+  createWall(-48.62, -28, 4.24, WALL_THICKNESS); // Segment to dividing wall: -50.74 to -46.5
+
+  // VP Executive Suite Grand Glass Double Doors centered at X = -39.25 (bay: -46.5 to -32, door outer frame: -40.76 to -37.74)
+  createWall(-43.63, -28, 5.74, WALL_THICKNESS); // Segment from dividing wall: -46.5 to -40.76
+  createGlassDoubleDoor(-39.25, -28, 0, 'VP Executive Suite Double Doors');
+  createWall(-34.87, -28, 5.74, WALL_THICKNESS); // Segment to East wall: -37.74 to -32
 
   // Center Dividing Wall North-South at X = -46.5 (dividing CEO from VP, Z: -46 to -28, span 18m)
   createWall(-46.5, -37, WALL_THICKNESS, 18);
@@ -1305,10 +1307,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   westRoad.position.set(-68, -0.04, 0);
   seattleGroup.add(westRoad);
 
-  // Sidewalk directly outside north clerestory
-  const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 6), sidewalkMat);
-  northSidewalk.position.set(0, 0.06, -29.5);
-  seattleGroup.add(northSidewalk);
+
 
   // Broken white lane divider lines on outer roadway streets (Z = -54 and Z = +54)
   for (let x = -60; x <= 60; x += 6) {
@@ -1374,11 +1373,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     seattleGroup.add(bench);
   };
 
-  // Place Park Benches outside north glass wall FACING NORTH towards sidewalk, trees, and city skyline (rotY = Math.PI)
-  createParkBench(-18, -26.4, Math.PI);
-  createParkBench(-8, -26.4, Math.PI);
-  createParkBench(2, -26.4, Math.PI);
-  createParkBench(12, -26.4, Math.PI);
+
 
   // Helper: Photorealistic Architectural Street Tree with Cast Iron Grate, Mulch, & Branching Foliage
   const createStreetTree = (x, z, scale = 1.0) => {
@@ -1509,13 +1504,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     seattleGroup.add(tree);
   };
 
-  // Trees planted outside north clerestory along sidewalk
-  createStreetTree(-24, -29.5, 1.05);
-  createStreetTree(-13, -29.5, 1.15);
-  createStreetTree(-3, -29.5, 1.0);
-  createStreetTree(7, -29.5, 1.10);
-  createStreetTree(17, -29.5, 1.05);
-  createStreetTree(27, -29.5, 1.15);
+
 
   // 8. Scenic Outer Zone Environment matching Spot Virtual reference (media_1792144700841.png)
   // Procedural Sky Dome with soft clouds
@@ -1706,10 +1695,7 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     seattleGroup.add(pGroup);
   };
 
-  // Place continuous luxury boxwood hedge planter boxes directly outside the clerestory glass
-  createTerracePlanter(-18, -25.2, 14);
-  createTerracePlanter(0, -25.2, 14);
-  createTerracePlanter(18, -25.2, 14);
+
 
   // Add Seattle City Environment to scene so roads, crosswalks, skyline, and hills render
   scene.add(seattleGroup);
