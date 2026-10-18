@@ -17,25 +17,329 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   furnitureGroup.name = 'office_furniture_group';
   scene.add(furnitureGroup);
 
-  // Common Materials
-  const blackMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.85 });
-  const blackLeatherMat = new THREE.MeshStandardMaterial({ color: 0x1f242c, roughness: 0.7 });
-  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
-  const whiteChairMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.65 });
-  const tubArmchairMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.8 });
-  const brassGoldMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.25 });
-  const chromeMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.2 });
-  const darkTableMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
-  const woodDeskMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.7 });
+  // =========================================================================
+  // LUXURY PROCEDURAL TEXTURE GENERATORS (Canvas2D)
+  // Photorealistic Italian Nero Marquina & Calacatta marble, smoked walnut,
+  // full-grain luxury leather, and textured warm ivory bouclé wool fabric.
+  // =========================================================================
+
+  // 1. Nero Marquina Black Italian Marble Texture
+  const createNeroMarquinaTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // Deep crystalline charcoal/black base with subtle micro-tonal variation
+    const baseGrad = ctx.createLinearGradient(0, 0, 1024, 1024);
+    baseGrad.addColorStop(0, '#0c0f14');
+    baseGrad.addColorStop(0.5, '#121620');
+    baseGrad.addColorStop(1, '#090c10');
+    ctx.fillStyle = baseGrad;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    // Subtle dark mineral clouding
+    for (let i = 0; i < 40; i++) {
+      const cx = (i * 137.5) % 1024;
+      const cy = (i * 249.3) % 1024;
+      const r = 80 + (i % 7) * 20;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, 'rgba(28, 36, 50, 0.22)');
+      grad.addColorStop(1, 'rgba(12, 15, 20, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Elegant branching white & champagne gold marble veins
+    const drawVein = (startX, startY, angle, length, branchDepth, mainColor, branchColor) => {
+      ctx.save();
+      let x = startX;
+      let y = startY;
+      let curAngle = angle;
+      const steps = Math.floor(length / 8);
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+
+      for (let s = 0; s < steps; s++) {
+        curAngle += Math.sin(s * 0.35 + startX) * 0.25;
+        const dist = 8;
+        x += Math.cos(curAngle) * dist;
+        y += Math.sin(curAngle) * dist;
+        ctx.lineTo(x, y);
+
+        if (branchDepth > 0 && s % 12 === 0) {
+          drawVein(x, y, curAngle + (s % 2 === 0 ? 0.7 : -0.7), length * 0.45, branchDepth - 1, branchColor, 'rgba(255, 255, 255, 0.35)');
+        }
+      }
+
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // Soft vein mineral bleed
+      ctx.lineWidth = 5.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    drawVein(80, 100, 0.65, 950, 2, 'rgba(240, 245, 255, 0.88)', 'rgba(226, 186, 102, 0.75)');
+    drawVein(320, 50, 0.82, 850, 2, 'rgba(235, 240, 250, 0.80)', 'rgba(255, 255, 255, 0.5)');
+    drawVein(150, 600, 0.55, 750, 2, 'rgba(226, 186, 102, 0.82)', 'rgba(245, 248, 255, 0.6)');
+    drawVein(650, 120, 0.95, 820, 2, 'rgba(245, 248, 255, 0.75)', 'rgba(212, 175, 55, 0.65)');
+    drawVein(50, 850, 0.45, 600, 1, 'rgba(240, 245, 255, 0.70)', 'rgba(255, 255, 255, 0.4)');
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  // 2. Calacatta Gold White Italian Marble Texture
+  const createCalacattaGoldTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    const baseGrad = ctx.createLinearGradient(0, 0, 1024, 1024);
+    baseGrad.addColorStop(0, '#fbfcfd');
+    baseGrad.addColorStop(0.5, '#f4f6f9');
+    baseGrad.addColorStop(1, '#eef1f5');
+    ctx.fillStyle = baseGrad;
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    for (let i = 0; i < 35; i++) {
+      const cx = (i * 179.3) % 1024;
+      const cy = (i * 311.7) % 1024;
+      const r = 90 + (i % 6) * 25;
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, 'rgba(160, 170, 185, 0.16)');
+      grad.addColorStop(1, 'rgba(250, 250, 252, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const drawCalacattaVein = (startX, startY, angle, length, mainColor, accentColor) => {
+      ctx.save();
+      let x = startX;
+      let y = startY;
+      let curAngle = angle;
+      const steps = Math.floor(length / 10);
+
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+
+      for (let s = 0; s < steps; s++) {
+        curAngle += Math.sin(s * 0.4 + startY) * 0.22;
+        const dist = 9;
+        x += Math.cos(curAngle) * dist;
+        y += Math.sin(curAngle) * dist;
+        ctx.lineTo(x, y);
+      }
+
+      ctx.strokeStyle = mainColor;
+      ctx.lineWidth = 4.2;
+      ctx.lineCap = 'round';
+      ctx.stroke();
+
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      ctx.restore();
+    };
+
+    drawCalacattaVein(100, 80, 0.72, 900, 'rgba(148, 163, 184, 0.45)', 'rgba(212, 175, 55, 0.85)');
+    drawCalacattaVein(420, 60, 0.85, 820, 'rgba(160, 170, 185, 0.40)', 'rgba(202, 138, 4, 0.80)');
+    drawCalacattaVein(120, 550, 0.58, 800, 'rgba(148, 163, 184, 0.38)', 'rgba(212, 175, 55, 0.75)');
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  // 3. Smoked Architectural Walnut Wood Texture
+  const createSmokedWalnutTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#241710';
+    ctx.fillRect(0, 0, 1024, 1024);
+
+    for (let x = 0; x < 1024; x += 4) {
+      const wave = Math.sin(x * 0.015) * 20 + Math.sin(x * 0.06) * 8;
+      const alpha = 0.08 + Math.sin(x * 0.025 + wave * 0.1) * 0.08;
+      ctx.fillStyle = `rgba(68, 44, 28, ${alpha})`;
+      ctx.fillRect(x, 0, 4, 1024);
+    }
+
+    for (let i = 0; i < 400; i++) {
+      const px = (i * 263.3) % 1024;
+      const py = (i * 179.7) % 1024;
+      const plen = 25 + (i % 10) * 8;
+      ctx.fillStyle = 'rgba(16, 9, 6, 0.28)';
+      ctx.fillRect(px, py, 1.2, plen);
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  // 4. Textured Bouclé Wool Fabric Texture
+  const createBoucleTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#f7f5ef';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let y = 0; y < 512; y += 8) {
+      for (let x = 0; x < 512; x += 8) {
+        const shade = (x + y) % 16 === 0 ? 'rgba(230, 224, 212, 0.55)' : 'rgba(255, 255, 255, 0.65)';
+        ctx.fillStyle = shade;
+        ctx.beginPath();
+        ctx.arc(x + 4, y + 4, 3.0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(4, 4);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  // 5. Full-Grain Luxury Leather Texture
+  const createLeatherTexture = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#161920';
+    ctx.fillRect(0, 0, 512, 512);
+
+    for (let y = 0; y < 512; y += 6) {
+      for (let x = 0; x < 512; x += 6) {
+        const shade = (x * 3 + y * 7) % 13 > 6 ? 'rgba(32, 38, 48, 0.45)' : 'rgba(10, 12, 16, 0.50)';
+        ctx.fillStyle = shade;
+        ctx.beginPath();
+        ctx.arc(x + 3, y + 3, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(3, 3);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  const neroMarbleTex = createNeroMarquinaTexture();
+  const calacattaMarbleTex = createCalacattaGoldTexture();
+  const smokedWalnutTex = createSmokedWalnutTexture();
+  const boucleTex = createBoucleTexture();
+  const leatherTex = createLeatherTexture();
+
+  // Premium Luxury Materials Suite
+  const blackMat = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.65 });
+  const blackLeatherMat = new THREE.MeshStandardMaterial({
+    color: 0x181c24,
+    map: leatherTex,
+    roughness: 0.38,
+    metalness: 0.08
+  });
+  const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 });
+  const whiteChairMat = new THREE.MeshStandardMaterial({
+    color: 0xf4f6fa,
+    map: leatherTex,
+    roughness: 0.35,
+    metalness: 0.06
+  });
+  const tubArmchairMat = new THREE.MeshStandardMaterial({
+    color: 0xfaf8f4,
+    map: boucleTex,
+    roughness: 0.82
+  });
+  const brassGoldMat = new THREE.MeshStandardMaterial({
+    color: 0xe5c158,
+    metalness: 0.88,
+    roughness: 0.20
+  });
+  const champagneBrassMat = brassGoldMat;
+  const chromeMat = new THREE.MeshStandardMaterial({
+    color: 0xe2e8f0,
+    metalness: 0.85,
+    roughness: 0.22
+  });
+  const neroMarbleMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: neroMarbleTex,
+    roughness: 0.16,
+    metalness: 0.12
+  });
+  const darkTableMat = neroMarbleMat;
+  const calacattaMarbleMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: calacattaMarbleTex,
+    roughness: 0.18,
+    metalness: 0.10
+  });
+  const smokedWalnutMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    map: smokedWalnutTex,
+    roughness: 0.32,
+    metalness: 0.04
+  });
+  const woodDeskMat = smokedWalnutMat;
+  const smokedGlassMat = new THREE.MeshStandardMaterial({
+    color: 0x0f172a,
+    transparent: true,
+    opacity: 0.62,
+    roughness: 0.12,
+    metalness: 0.18
+  });
+  const velvetOchreMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.85 });
+  const velvetEmeraldMat = new THREE.MeshStandardMaterial({ color: 0x065f46, roughness: 0.85 });
+  const porcelainMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.14, metalness: 0.02 });
+  const candleAmberMat = new THREE.MeshStandardMaterial({
+    color: 0xb45309,
+    transparent: true,
+    opacity: 0.82,
+    roughness: 0.15,
+    metalness: 0.10
+  });
+
   const screenBezelMat = new THREE.MeshStandardMaterial({ color: 0x090d16, roughness: 0.4 });
   const screenGlowMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
   const turquoiseMat = new THREE.MeshStandardMaterial({ color: 0x0d9488, roughness: 0.65 });
-  const cushionYellowMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.8 });
+  const cushionYellowMat = velvetOchreMat;
   const cushionOrangeMat = new THREE.MeshStandardMaterial({ color: 0xe11d48, roughness: 0.8 });
   const billiardGreenMat = new THREE.MeshStandardMaterial({ color: 0x059669, roughness: 0.85 });
   const pingPongBlueMat = new THREE.MeshStandardMaterial({ color: 0x1d4ed8, roughness: 0.6 });
-  const woodTeakMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.65 });
-  const whiteResortMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+  const woodTeakMat = smokedWalnutMat;
+  const whiteResortMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35 });
   const gymRedMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.6 });
 
   const roundedBox = (width, height, depth, radius = 0.045) => {
@@ -133,44 +437,114 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return displayMesh;
   };
 
-  // Helper: Cantilever Sled-Base White Conference Chair (media_1791969444037.png)
-  const createCantileverChair = (cx, cz, crot, chairName = 'Conference Chair') => {
+  // Helper: Luxury Bauhaus Soft-Pad Cantilever Conference Chair (Eames / Breuer style)
+  const createCantileverChair = (cx, cz, crot, chairName = 'Conference Chair', cushionMat = whiteChairMat) => {
     const chair = new THREE.Group();
     const chairPos = new THREE.Vector3(cx, 0, cz);
 
-    // Chrome sled tubular base
-    const skidL = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.58), chromeMat);
-    skidL.position.set(-0.25, 0.035, 0);
+    // 1. Continuous Tubular Sled Frame in Mirror Chrome
+    const frameMat = chromeMat;
+    const pipeRadius = 0.016;
+
+    // Sled base runners
+    const skidL = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.56, 14), frameMat);
+    skidL.rotation.x = Math.PI / 2;
+    skidL.position.set(-0.24, 0.022, 0);
+    skidL.castShadow = true;
     chair.add(skidL);
 
-    const skidR = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.58), chromeMat);
-    skidR.position.set(0.25, 0.035, 0);
+    const skidR = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.56, 14), frameMat);
+    skidR.rotation.x = Math.PI / 2;
+    skidR.position.set(0.24, 0.022, 0);
+    skidR.castShadow = true;
     chair.add(skidR);
 
-    // Cantilever upright risers
-    const riserL = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.42, 0.035), chromeMat);
-    riserL.position.set(-0.25, 0.24, -0.27);
+    // Front horizontal crossbar linking skids
+    const crossbarFront = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.48, 14), frameMat);
+    crossbarFront.rotation.z = Math.PI / 2;
+    crossbarFront.position.set(0, 0.022, 0.28);
+    chair.add(crossbarFront);
+
+    // Upright vertical cantilever risers
+    const riserL = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.44, 14), frameMat);
+    riserL.position.set(-0.24, 0.24, -0.26);
+    riserL.castShadow = true;
     chair.add(riserL);
 
-    const riserR = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.42, 0.035), chromeMat);
-    riserR.position.set(0.25, 0.24, -0.27);
+    const riserR = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.44, 14), frameMat);
+    riserR.position.set(0.24, 0.24, -0.26);
+    riserR.castShadow = true;
     chair.add(riserR);
 
-    // White leather cushion seat (top at y = 0.49)
-    const seat = new THREE.Mesh(roundedBox(0.52, 0.08, 0.48, 0.03), whiteChairMat);
-    seat.position.set(0, 0.45, 0);
-    seat.castShadow = true;
-    seat.name = 'clickable_chair';
-    seat.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
-    chair.add(seat);
+    // Upper seat support arms extending forward
+    const upperArmL = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.48, 14), frameMat);
+    upperArmL.rotation.x = Math.PI / 2;
+    upperArmL.position.set(-0.24, 0.44, -0.02);
+    chair.add(upperArmL);
 
-    // White ribbed backrest
-    const back = new THREE.Mesh(roundedBox(0.48, 0.48, 0.06, 0.03), whiteChairMat);
-    back.position.set(0, 0.72, -0.23);
-    back.castShadow = true;
-    back.name = 'clickable_chair';
-    back.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
-    chair.add(back);
+    const upperArmR = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.48, 14), frameMat);
+    upperArmR.rotation.x = Math.PI / 2;
+    upperArmR.position.set(0.24, 0.44, -0.02);
+    chair.add(upperArmR);
+
+    // 2. Soft-Pad Channeled Leather Seating (3 horizontal cushioned ribs)
+    const seatBase = new THREE.Mesh(roundedBox(0.50, 0.04, 0.46, 0.015), cushionMat);
+    seatBase.position.set(0, 0.43, 0);
+    seatBase.castShadow = true;
+    seatBase.name = 'clickable_chair';
+    seatBase.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
+    chair.add(seatBase);
+
+    [-0.14, 0.0, 0.14].forEach((rz) => {
+      const rib = new THREE.Mesh(roundedBox(0.48, 0.045, 0.13, 0.02), cushionMat);
+      rib.position.set(0, 0.46, rz);
+      rib.castShadow = true;
+      rib.name = 'clickable_chair';
+      rib.userData = seatBase.userData;
+      chair.add(rib);
+    });
+
+    // 3. Ergonomic Channeled Backrest with Tubular Perimeter Frame & Upholstered Back
+    // Chrome tubular perimeter rails
+    [-0.24, 0.24].forEach((sx) => {
+      const sideRail = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.50, 14), frameMat);
+      sideRail.position.set(sx, 0.72, -0.25);
+      sideRail.castShadow = true;
+      chair.add(sideRail);
+    });
+    const topRail = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.48, 14), frameMat);
+    topRail.rotation.z = Math.PI / 2;
+    topRail.position.set(0, 0.97, -0.25);
+    topRail.castShadow = true;
+    chair.add(topRail);
+
+    // Upholstered tailored back panel
+    const backPanel = new THREE.Mesh(roundedBox(0.46, 0.48, 0.024, 0.012), cushionMat);
+    backPanel.position.set(0, 0.72, -0.24);
+    backPanel.castShadow = true;
+    chair.add(backPanel);
+
+    // 4 front horizontal cushioned ribs
+    [-0.15, -0.05, 0.05, 0.15].forEach((ry) => {
+      const rib = new THREE.Mesh(roundedBox(0.46, 0.09, 0.055, 0.02), cushionMat);
+      rib.position.set(0, 0.72 + ry, -0.205);
+      rib.castShadow = true;
+      rib.name = 'clickable_chair';
+      rib.userData = seatBase.userData;
+      chair.add(rib);
+    });
+
+    // 4. Padded Leather Armrest Sleeves
+    [-0.25, 0.25].forEach((ax) => {
+      const armRiser = new THREE.Mesh(new THREE.CylinderGeometry(pipeRadius, pipeRadius, 0.22, 12), frameMat);
+      armRiser.position.set(ax, 0.54, 0.08);
+      chair.add(armRiser);
+
+      const armPad = new THREE.Mesh(roundedBox(0.045, 0.024, 0.32, 0.01), cushionMat);
+      armPad.position.set(ax, 0.65, -0.06);
+      armPad.castShadow = true;
+      chair.add(armPad);
+    });
 
     chair.position.set(cx, 0, cz);
     chair.rotation.y = crot;
@@ -184,7 +558,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return chair;
   };
 
-  // Helper: Black 3-Seater Sofa (media_1791969444037.png)
+  // Helper: Luxury Italian Black Leather 3-Seater Sofa with Floating Brass Plinth & Accent Pillows
   const createBlackSofa = (cx, cz, crot, sofaName = 'Boardroom Sofa') => {
     const sofa = new THREE.Group();
     const defaultCenterPos = new THREE.Vector3(
@@ -195,13 +569,18 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     sofa.name = 'clickable_chair';
     sofa.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
 
-    // Base plinth
-    const base = new THREE.Mesh(roundedBox(2.4, 0.22, 0.88, 0.06), blackMat);
-    base.position.y = 0.2;
+    // 1. Recessed Floating Champagne Brass Shadow Plinth
+    const brassReveal = new THREE.Mesh(roundedBox(2.32, 0.04, 0.82, 0.02), brassGoldMat);
+    brassReveal.position.y = 0.02;
+    sofa.add(brassReveal);
+
+    // 2. Main Charcoal Leather Plinth Body
+    const base = new THREE.Mesh(roundedBox(2.40, 0.20, 0.88, 0.05), blackMat);
+    base.position.y = 0.18;
     base.castShadow = true;
     sofa.add(base);
 
-    // 3 Individual Seat Cushions with accurate world positions
+    // 3. 3 Individual Tailored Seat Cushions with Double-Piped Welt Borders
     [-0.72, 0, 0.72].forEach((sx, idx) => {
       const cosR = Math.cos(crot);
       const sinR = Math.sin(crot);
@@ -210,7 +589,8 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       const worldZ = cz - sx * sinR + localZ * cosR;
       const cushionWorldPos = new THREE.Vector3(worldX, 0, worldZ);
 
-      const cushion = new THREE.Mesh(roundedBox(0.68, 0.16, 0.62, 0.05), blackLeatherMat);
+      // Main cushion core
+      const cushion = new THREE.Mesh(roundedBox(0.68, 0.15, 0.62, 0.05), blackLeatherMat);
       cushion.position.set(sx, 0.38, 0.08);
       cushion.castShadow = true;
       cushion.name = 'clickable_chair';
@@ -223,6 +603,16 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       };
       sofa.add(cushion);
 
+      // Tailored welt cord piping along perimeter edge
+      const welt = new THREE.Mesh(roundedBox(0.695, 0.024, 0.635, 0.012), blackLeatherMat);
+      welt.position.set(sx, 0.44, 0.08);
+      sofa.add(welt);
+
+      // Subtle center leather button tuft indentation
+      const tuft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.010, 12), blackMat);
+      tuft.position.set(sx, 0.455, 0.08);
+      sofa.add(tuft);
+
       if (chairsRef?.current) {
         chairsRef.current.push({
           name: `${sofaName} Cushion ${idx + 1}`,
@@ -233,26 +623,52 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
       }
     });
 
-    // Backrest
-    const back = new THREE.Mesh(roundedBox(2.36, 0.52, 0.22, 0.06), blackLeatherMat);
-    back.position.set(0, 0.64, -0.32);
-    back.castShadow = true;
-    back.name = 'clickable_chair';
-    back.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
-    sofa.add(back);
+    // 4. Contoured Backrest Frame with 3 Padded Lumbar Cushions
+    const backFrame = new THREE.Mesh(roundedBox(2.36, 0.52, 0.20, 0.05), blackMat);
+    backFrame.position.set(0, 0.64, -0.33);
+    backFrame.castShadow = true;
+    backFrame.name = 'clickable_chair';
+    backFrame.userData = sofa.userData;
+    sofa.add(backFrame);
 
-    // Left and right armrests with cream caps matching media_1792293223270.png & media_1792293223278.png
+    [-0.72, 0, 0.72].forEach((bx) => {
+      const backCushion = new THREE.Mesh(roundedBox(0.67, 0.38, 0.12, 0.04), blackLeatherMat);
+      backCushion.position.set(bx, 0.67, -0.22);
+      backCushion.castShadow = true;
+      sofa.add(backCushion);
+    });
+
+    // 5. Tailored Armrests with Champagne Brass Inlay & Italian Cream Leather Arm Caps
     [-1.12, 1.12].forEach((ax) => {
-      const arm = new THREE.Mesh(roundedBox(0.18, 0.36, 0.84, 0.05), blackLeatherMat);
+      const arm = new THREE.Mesh(roundedBox(0.18, 0.36, 0.84, 0.04), blackLeatherMat);
       arm.position.set(ax, 0.46, 0);
       arm.castShadow = true;
       sofa.add(arm);
 
-      const cap = new THREE.Mesh(roundedBox(0.20, 0.06, 0.86, 0.03), whiteResortMat);
-      cap.position.set(ax, 0.65, 0);
+      const brassTrim = new THREE.Mesh(roundedBox(0.186, 0.018, 0.846, 0.008), brassGoldMat);
+      brassTrim.position.set(ax, 0.63, 0);
+      sofa.add(brassTrim);
+
+      const cap = new THREE.Mesh(roundedBox(0.20, 0.055, 0.86, 0.025), whiteChairMat);
+      cap.position.set(ax, 0.665, 0);
       cap.castShadow = true;
       sofa.add(cap);
     });
+
+    // 6. Designer Throw Pillows / Bolster Accents
+    // Left: Textured cream bouclé lumbar pillow
+    const pillowL = new THREE.Mesh(roundedBox(0.38, 0.26, 0.14, 0.04), tubArmchairMat);
+    pillowL.position.set(-0.92, 0.50, 0.05);
+    pillowL.rotation.set(0.1, 0.22, 0.22);
+    pillowL.castShadow = true;
+    sofa.add(pillowL);
+
+    // Right: Burnt ochre / camel velvet accent pillow
+    const pillowR = new THREE.Mesh(roundedBox(0.32, 0.32, 0.13, 0.04), velvetOchreMat);
+    pillowR.position.set(0.92, 0.50, 0.05);
+    pillowR.rotation.set(0.1, -0.25, -0.20);
+    pillowR.castShadow = true;
+    sofa.add(pillowR);
 
     sofa.position.set(cx, 0, cz);
     sofa.rotation.y = crot;
@@ -261,37 +677,71 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return sofa;
   };
 
-  // Helper: White Tub Armchair with brass legs (media_1791969444037.png)
+  // Helper: Luxury Sculptural Tub Armchair in Ivory Bouclé with Tapered Champagne Brass Spindle Legs
   const createTubArmchair = (cx, cz, crot, chairName = 'Boardroom Tub Chair') => {
     const chair = new THREE.Group();
     const tubPos = new THREE.Vector3(cx, 0, cz);
     chair.name = 'clickable_chair';
     chair.userData = { isChair: true, name: chairName, chairPos: tubPos, chairRotY: crot, seatHeight: 0.46 };
 
-    // Tub curved bucket seat
-    const tub = new THREE.Mesh(roundedBox(0.82, 0.52, 0.78, 0.12), tubArmchairMat);
+    // 1. Sculptural Curved Barrel Bucket Shell
+    const tub = new THREE.Mesh(roundedBox(0.84, 0.52, 0.78, 0.14), tubArmchairMat);
     tub.position.y = 0.42;
     tub.castShadow = true;
     tub.name = 'clickable_chair';
     tub.userData = { isChair: true, name: chairName, chairPos: tubPos, chairRotY: crot, seatHeight: 0.46 };
     chair.add(tub);
 
-    // Deep seat cushion
-    const cushion = new THREE.Mesh(roundedBox(0.64, 0.14, 0.58, 0.05), whiteMat);
+    // Inner back vertical fluted channels
+    [-0.24, -0.12, 0, 0.12, 0.24].forEach((fx) => {
+      const flute = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.38, 12), tubArmchairMat);
+      flute.position.set(fx, 0.48, -0.22);
+      chair.add(flute);
+    });
+
+    // 2. Deep Removable Seat Cushion with Welt Piping
+    const cushion = new THREE.Mesh(roundedBox(0.64, 0.14, 0.58, 0.06), tubArmchairMat);
     cushion.position.set(0, 0.42, 0.06);
+    cushion.castShadow = true;
     cushion.name = 'clickable_chair';
-    cushion.userData = { isChair: true, name: chairName, chairPos: tubPos, chairRotY: crot, seatHeight: 0.46 };
+    cushion.userData = chair.userData;
     chair.add(cushion);
 
-    // 4 Splayed Brass Legs
+    const welt = new THREE.Mesh(roundedBox(0.655, 0.02, 0.595, 0.01), tubArmchairMat);
+    welt.position.set(0, 0.48, 0.06);
+    chair.add(welt);
+
+    // 3. Curved Lumbar Support Cushion Nestled Inside
+    const lumbar = new THREE.Mesh(roundedBox(0.48, 0.18, 0.10, 0.04), whiteMat);
+    lumbar.position.set(0, 0.46, -0.16);
+    chair.add(lumbar);
+
+    // 4. Splayed Tapered Champagne Brass Legs with Solid Turned Ferrules
     [-1, 1].forEach((lx) => {
       [-1, 1].forEach((lz) => {
+        const legGrp = new THREE.Group();
+        legGrp.position.set(lx * 0.28, 0, lz * 0.26);
+
+        // Tapered spindle leg
         const leg = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.022, 0.026, 0.28, 10),
+          new THREE.CylinderGeometry(0.016, 0.026, 0.28, 12),
           brassGoldMat
         );
-        leg.position.set(lx * 0.28, 0.14, lz * 0.26);
-        chair.add(leg);
+        leg.position.y = 0.14;
+        leg.rotation.z = lx * -0.08;
+        leg.rotation.x = lz * 0.08;
+        leg.castShadow = true;
+        legGrp.add(leg);
+
+        // Polished brass floor ferrule glide
+        const ferrule = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.022, 0.022, 0.035, 12),
+          brassGoldMat
+        );
+        ferrule.position.y = 0.018;
+        legGrp.add(ferrule);
+
+        chair.add(legGrp);
       });
     });
 
@@ -305,56 +755,196 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return chair;
   };
 
-  // Helper: Low Circular Black Coffee Table with Gold Pedestal/Legs
-  const createRoundCoffeeTable = (cx, cz, radius = 0.7, height = 0.42) => {
+  // Helper: Luxury Marble & Champagne Brass Coffee & Tea Table with Dual Tier & Tea Service Staging
+  const createRoundCoffeeTable = (cx, cz, radius = 0.7, height = 0.42, options = {}) => {
     const table = new THREE.Group();
 
-    // Dark circular tabletop
-    const top = new THREE.Mesh(
-      new THREE.CylinderGeometry(radius, radius, 0.05, 32),
-      darkTableMat
+    // 1. Polished Marble Tabletop (Nero Marquina black marble with high-gloss veining)
+    const marbleTop = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius, radius, 0.042, 48),
+      neroMarbleMat
     );
-    top.position.y = height;
-    top.castShadow = true;
-    table.add(top);
+    marbleTop.position.y = height;
+    marbleTop.castShadow = true;
+    marbleTop.receiveShadow = true;
+    table.add(marbleTop);
 
-    // Gold pedestal base
-    const stem = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.045, 0.055, height - 0.05, 16),
+    // 2. Solid Beveled Champagne Brass Edge Bezel Ring
+    const brassRim = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius + 0.016, radius + 0.016, 0.044, 48, 1, true),
       brassGoldMat
     );
-    stem.position.y = (height - 0.05) / 2;
+    brassRim.position.y = height;
+    table.add(brassRim);
+
+    // 3. Secondary Floating Lower Shelf in Smoked Glass (at y = 0.16)
+    const lowerRadius = radius * 0.78;
+    const lowerShelf = new THREE.Mesh(
+      new THREE.CylinderGeometry(lowerRadius, lowerRadius, 0.018, 36),
+      smokedGlassMat
+    );
+    lowerShelf.position.y = 0.16;
+    table.add(lowerShelf);
+
+    // 4 Architectural Brass Standoff Rods supporting the lower shelf
+    for (let i = 0; i < 4; i++) {
+      const ang = (i * Math.PI) / 2;
+      const sr = lowerRadius * 0.75;
+      const standoff = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, height - 0.16, 12), brassGoldMat);
+      standoff.position.set(Math.cos(ang) * sr, (height + 0.16) / 2, Math.sin(ang) * sr);
+      table.add(standoff);
+    }
+
+    // 4. Central Fluted Architectural Brass Column & Stepped Heavy Base
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.065, 0.08, height - 0.045, 24),
+      brassGoldMat
+    );
+    stem.position.y = (height - 0.045) / 2;
     table.add(stem);
 
+    // Collar rings on stem
+    const collarTop = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.085, 0.024, 24), brassGoldMat);
+    collarTop.position.y = height - 0.035;
+    table.add(collarTop);
+
     const basePlate = new THREE.Mesh(
-      new THREE.CylinderGeometry(radius * 0.55, radius * 0.55, 0.025, 24),
+      new THREE.CylinderGeometry(radius * 0.58, radius * 0.62, 0.030, 36),
       brassGoldMat
     );
     basePlate.position.y = 0.015;
+    basePlate.castShadow = true;
     table.add(basePlate);
+
+    // Recessed floor shadow gap ring
+    const shadowPlinth = new THREE.Mesh(
+      new THREE.CylinderGeometry(radius * 0.50, radius * 0.50, 0.012, 24),
+      blackMat
+    );
+    shadowPlinth.position.y = 0.006;
+    table.add(shadowPlinth);
+
+    // 5. Luxury Hospitality Staging: Designer Tea Service, Amber Candle & Art Monograph
+    // (Rendered on key hospitality tables like the Main Lobby)
+    const isMainTeaTable = options.isTeaTable ?? false;
+    if (isMainTeaTable) {
+      const teaSet = new THREE.Group();
+      teaSet.position.set(0, height + 0.021, 0);
+
+      // A. Brushed Champagne Brass Serving Tray
+      const tray = new THREE.Mesh(roundedBox(0.42, 0.016, 0.28, 0.02), brassGoldMat);
+      tray.position.set(0.08, 0.008, 0.04);
+      tray.rotation.y = 0.15;
+      tray.castShadow = true;
+      teaSet.add(tray);
+
+      // Tray lip handles
+      [-0.20, 0.20].forEach((hx) => {
+        const handle = new THREE.Mesh(roundedBox(0.018, 0.024, 0.12, 0.008), brassGoldMat);
+        handle.position.set(0.08 + hx * Math.cos(0.15), 0.022, 0.04 + hx * Math.sin(0.15));
+        handle.rotation.y = 0.15;
+        teaSet.add(handle);
+      });
+
+      // B. Modern Minimalist Porcelain Teapot
+      const potBody = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.09, 18), porcelainMat);
+      potBody.position.set(0.02, 0.06, 0.04);
+      potBody.castShadow = true;
+      teaSet.add(potBody);
+
+      const potLid = new THREE.Mesh(new THREE.CylinderGeometry(0.048, 0.052, 0.018, 18), porcelainMat);
+      potLid.position.set(0.02, 0.11, 0.04);
+      teaSet.add(potLid);
+
+      const potKnob = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.015, 12), brassGoldMat);
+      potKnob.position.set(0.02, 0.125, 0.04);
+      teaSet.add(potKnob);
+
+      const potHandle = new THREE.Mesh(new THREE.TorusGeometry(0.042, 0.008, 8, 16, Math.PI), smokedWalnutMat);
+      potHandle.position.set(0.02, 0.135, 0.04);
+      potHandle.rotation.x = Math.PI / 2;
+      teaSet.add(potHandle);
+
+      // C. 2 Modern Ceramic Tea Cups with Saucers
+      [[-0.08, 0.02], [-0.04, -0.07]].forEach(([cx, cz]) => {
+        const saucer = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.038, 0.008, 16), porcelainMat);
+        saucer.position.set(cx + 0.08, 0.02, cz + 0.04);
+        teaSet.add(saucer);
+
+        const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.022, 0.045, 16), porcelainMat);
+        cup.position.set(cx + 0.08, 0.045, cz + 0.04);
+        cup.castShadow = true;
+        teaSet.add(cup);
+
+        // Tea liquid surface
+        const teaLiquid = new THREE.Mesh(new THREE.CircleGeometry(0.024, 16), new THREE.MeshBasicMaterial({ color: 0x92400e }));
+        teaLiquid.rotation.x = -Math.PI / 2;
+        teaLiquid.position.set(cx + 0.08, 0.062, cz + 0.04);
+        teaSet.add(teaLiquid);
+      });
+
+      // D. Scented Fluted Amber Glass Candle with Warm Ambient Glow
+      const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.065, 18), candleAmberMat);
+      candle.position.set(-0.24, 0.035, -0.12);
+      candle.castShadow = true;
+      teaSet.add(candle);
+
+      const flame = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 8), new THREE.MeshBasicMaterial({ color: 0xfde047 }));
+      flame.scale.set(1.0, 1.8, 1.0);
+      flame.position.set(-0.24, 0.075, -0.12);
+      teaSet.add(flame);
+
+      const candleGlow = new THREE.PointLight(0xfbbf24, 0.45, 2.5);
+      candleGlow.position.set(-0.24, 0.09, -0.12);
+      teaSet.add(candleGlow);
+
+      // E. Hardcover Luxury Art Monograph Book ("SPOT ARCHITECTURE & DESIGN")
+      const book = new THREE.Mesh(roundedBox(0.24, 0.028, 0.18, 0.012), new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.5 }));
+      book.position.set(-0.16, 0.014, 0.16);
+      book.rotation.y = -0.32;
+      book.castShadow = true;
+      teaSet.add(book);
+
+      table.add(teaSet);
+    }
 
     table.position.set(cx, 0, cz);
     furnitureGroup.add(table);
     return table;
   };
 
-  // Helper: Small Gold Drink Table
+  // Helper: Luxury Marble & Champagne Brass Drink Table
   const createDrinkTable = (cx, cz) => {
     const table = new THREE.Group();
-    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.03, 20), brassGoldMat);
+
+    // Polished Calacatta Gold marble top with beveled brass casing
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.032, 28), calacattaMarbleMat);
     top.position.y = 0.48;
+    top.castShadow = true;
     table.add(top);
 
-    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.48, 10), brassGoldMat);
+    const brassRim = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.035, 28, 1, true), brassGoldMat);
+    brassRim.position.y = 0.48;
+    table.add(brassRim);
+
+    // Slender brass stem with turned knurled collar
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.024, 0.48, 14), brassGoldMat);
     leg.position.y = 0.24;
     table.add(leg);
 
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.02, 20), brassGoldMat);
-    base.position.y = 0.01;
+    const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.025, 16), brassGoldMat);
+    collar.position.y = 0.38;
+    table.add(collar);
+
+    // Heavy stepped brass disc base
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.20, 0.22, 0.026, 28), brassGoldMat);
+    base.position.y = 0.013;
+    base.castShadow = true;
     table.add(base);
 
     table.position.set(cx, 0, cz);
     furnitureGroup.add(table);
+    return table;
   };
 
   // Helper: Flower Vase with purple/lavender flower (media_1792165933956.png & media_1792165933914.png)
@@ -438,7 +1028,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return plant;
   };
 
-  // Helper: Curved Pillowy Cream Sofa (media_1792165933956.png)
+  // Helper: Luxury Curved Pillowy Ivory Bouclé Sectional Sofa (Meeting Cabin)
   const createCreamCurvedSofa = (cx, cz, crot, sofaName = 'Meeting Cabin Curved Sofa') => {
     const sofa = new THREE.Group();
     const defaultCenterPos = new THREE.Vector3(
@@ -449,30 +1039,55 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     sofa.name = 'clickable_chair';
     sofa.userData = { isChair: true, name: sofaName, chairPos: defaultCenterPos, chairRotY: crot, seatHeight: 0.46 };
 
-    const creamLeatherMat = new THREE.MeshStandardMaterial({ color: 0xf3f0ea, roughness: 0.72 });
-    const creamDarkMat = new THREE.MeshStandardMaterial({ color: 0xe2ded7, roughness: 0.8 });
+    // 1. Recessed Champagne Brass Plinth Reveal Ring
+    const brassReveal = new THREE.Mesh(roundedBox(2.72, 0.04, 0.98, 0.08), brassGoldMat);
+    brassReveal.position.y = 0.02;
+    sofa.add(brassReveal);
 
-    // Rounded tubular base plinth
-    const base = new THREE.Mesh(roundedBox(2.8, 0.22, 1.05, 0.10), creamDarkMat);
-    base.position.y = 0.18;
+    // 2. Rounded Tubular Base in Cream Bouclé
+    const base = new THREE.Mesh(roundedBox(2.80, 0.20, 1.05, 0.10), tubArmchairMat);
+    base.position.y = 0.17;
     base.castShadow = true;
     sofa.add(base);
 
-    // Pillowy curved seat cushion
-    const cushion = new THREE.Mesh(roundedBox(2.6, 0.24, 0.92, 0.12), creamLeatherMat);
-    cushion.position.set(0, 0.34, 0.06);
+    // 3. Pillowy Curved Continuous Seat Cushion with Welt Piping
+    const cushion = new THREE.Mesh(roundedBox(2.62, 0.22, 0.92, 0.12), tubArmchairMat);
+    cushion.position.set(0, 0.35, 0.06);
     cushion.castShadow = true;
     cushion.name = 'clickable_chair';
     cushion.userData = sofa.userData;
     sofa.add(cushion);
 
-    // Rounded pillowy backrest
-    const back = new THREE.Mesh(roundedBox(2.7, 0.48, 0.30, 0.14), creamLeatherMat);
+    const welt = new THREE.Mesh(roundedBox(2.64, 0.024, 0.935, 0.015), tubArmchairMat);
+    welt.position.set(0, 0.45, 0.06);
+    sofa.add(welt);
+
+    // 4. Vertical Channel-Tufted Fluted Backrest
+    const back = new THREE.Mesh(roundedBox(2.70, 0.48, 0.30, 0.14), tubArmchairMat);
     back.position.set(0, 0.58, -0.36);
     back.castShadow = true;
     back.name = 'clickable_chair';
     back.userData = sofa.userData;
     sofa.add(back);
+
+    [-0.9, -0.45, 0, 0.45, 0.9].forEach((fx) => {
+      const flute = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.42, 12), tubArmchairMat);
+      flute.position.set(fx, 0.60, -0.22);
+      sofa.add(flute);
+    });
+
+    // 5. Designer Velvet Throw Pillows
+    const pillowL = new THREE.Mesh(roundedBox(0.36, 0.36, 0.14, 0.04), velvetEmeraldMat);
+    pillowL.position.set(-0.85, 0.52, -0.05);
+    pillowL.rotation.set(0.12, 0.25, 0.18);
+    pillowL.castShadow = true;
+    sofa.add(pillowL);
+
+    const pillowR = new THREE.Mesh(roundedBox(0.32, 0.32, 0.12, 0.04), velvetOchreMat);
+    pillowR.position.set(0.85, 0.52, -0.05);
+    pillowR.rotation.set(0.12, -0.25, -0.18);
+    pillowR.castShadow = true;
+    sofa.add(pillowR);
 
     sofa.position.set(cx, 0, cz);
     sofa.rotation.y = crot;
@@ -489,34 +1104,40 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return sofa;
   };
 
-  // Helper: Cream Bench Armchair with Black Base (media_1792165947435.png)
+  // Helper: Luxury Cream Bouclé Bench Armchair with Brass Reveal Feet
   const createBenchArmchair = (cx, cz, crot, chairName = 'Lounge Bench Armchair') => {
     const chair = new THREE.Group();
     const benchPos = new THREE.Vector3(cx, 0, cz);
     chair.name = 'clickable_chair';
     chair.userData = { isChair: true, name: chairName, chairPos: benchPos, chairRotY: crot, seatHeight: 0.44 };
 
+    // Floating brass reveal feet
+    [-0.52, 0.52].forEach((fx) => {
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.035, 0.64), brassGoldMat);
+      foot.position.set(fx, 0.0175, 0);
+      foot.castShadow = true;
+      chair.add(foot);
+    });
+
     // Dark base frame
-    const base = new THREE.Mesh(roundedBox(1.3, 0.14, 0.72, 0.04), blackMat);
+    const base = new THREE.Mesh(roundedBox(1.30, 0.12, 0.72, 0.04), blackMat);
     base.position.y = 0.12;
     chair.add(base);
 
-    // Thick ribbed cream seat cushion
-    const cushion = new THREE.Mesh(
-      roundedBox(1.24, 0.22, 0.68, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0xf5f3ee, roughness: 0.68 })
-    );
+    // Thick ribbed cream bouclé seat cushion
+    const cushion = new THREE.Mesh(roundedBox(1.24, 0.22, 0.68, 0.08), tubArmchairMat);
     cushion.position.y = 0.30;
     cushion.castShadow = true;
     cushion.name = 'clickable_chair';
     cushion.userData = chair.userData;
     chair.add(cushion);
 
-    // Low backrest
-    const back = new THREE.Mesh(
-      roundedBox(1.24, 0.26, 0.16, 0.06),
-      new THREE.MeshStandardMaterial({ color: 0xf5f3ee, roughness: 0.68 })
-    );
+    const welt = new THREE.Mesh(roundedBox(1.255, 0.02, 0.695, 0.01), tubArmchairMat);
+    welt.position.y = 0.39;
+    chair.add(welt);
+
+    // Low contour backrest
+    const back = new THREE.Mesh(roundedBox(1.24, 0.26, 0.16, 0.06), tubArmchairMat);
     back.position.set(0, 0.44, -0.26);
     back.castShadow = true;
     back.name = 'clickable_chair';
@@ -533,22 +1154,27 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     return chair;
   };
 
-  // Helper: Curved Black Armchair with Gold Trim for Window Promenade (media_1792165933914.png)
+  // Helper: Luxury Curved Black Armchair with Beveled Brass Swivel Base
   const createWindowArmchair = (cx, cz, crot, chairName = 'Window Armchair') => {
     const chair = new THREE.Group();
     const chairPos = new THREE.Vector3(cx, 0, cz);
     chair.name = 'clickable_chair';
     chair.userData = { isChair: true, name: chairName, chairPos, chairRotY: crot, seatHeight: 0.46 };
 
-    // Gold circular base trim
+    // 1. Heavy Stepped Champagne Brass Swivel Plinth
     const goldRing = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.44, 0.44, 0.04, 24),
+      new THREE.CylinderGeometry(0.42, 0.45, 0.045, 32),
       brassGoldMat
     );
-    goldRing.position.y = 0.02;
+    goldRing.position.y = 0.0225;
+    goldRing.castShadow = true;
     chair.add(goldRing);
 
-    // Curved black bucket body
+    const shadowRing = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.015, 24), blackMat);
+    shadowRing.position.y = 0.0075;
+    chair.add(shadowRing);
+
+    // 2. Sculptural Wrap-around Shell in Italian Nero Leather
     const body = new THREE.Mesh(
       roundedBox(0.84, 0.54, 0.82, 0.14),
       blackLeatherMat
@@ -559,15 +1185,25 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     body.userData = chair.userData;
     chair.add(body);
 
-    // Black cushion
+    // Vertical Champagne Brass Spine Detail running up rear
+    const spine = new THREE.Mesh(roundedBox(0.04, 0.42, 0.025, 0.01), brassGoldMat);
+    spine.position.set(0, 0.42, -0.40);
+    chair.add(spine);
+
+    // 3. Deep Tufted Seat Cushion
     const cushion = new THREE.Mesh(
-      roundedBox(0.68, 0.12, 0.64, 0.06),
-      blackMat
+      roundedBox(0.66, 0.14, 0.62, 0.06),
+      blackLeatherMat
     );
     cushion.position.set(0, 0.42, 0.06);
+    cushion.castShadow = true;
     cushion.name = 'clickable_chair';
     cushion.userData = chair.userData;
     chair.add(cushion);
+
+    const welt = new THREE.Mesh(roundedBox(0.675, 0.02, 0.635, 0.01), blackLeatherMat);
+    welt.position.set(0, 0.48, 0.06);
+    chair.add(welt);
 
     chair.position.set(cx, 0, cz);
     chair.rotation.y = crot;
@@ -590,17 +1226,82 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
     'Boardroom Presentation Screen'
   );
 
-  // Large Dark Conference Table (8.0m long x 1.8m wide)
-  const boardTable = new THREE.Mesh(roundedBox(8.0, 0.1, 1.8, 0.06), darkTableMat);
-  boardTable.position.set(-23.0, 0.74, -16.0);
-  boardTable.castShadow = true;
-  furnitureGroup.add(boardTable);
+  // Luxury Architectural Boardroom Conference Table (8.0m long x 1.8m wide)
+  // 1. Primary tabletop slab in book-matched smoked architectural walnut
+  const boardTableTop = new THREE.Mesh(roundedBox(8.0, 0.07, 1.8, 0.04), smokedWalnutMat);
+  boardTableTop.position.set(-23.0, 0.745, -16.0);
+  boardTableTop.castShadow = true;
+  furnitureGroup.add(boardTableTop);
 
-  // Table plinth pedestals
+  // 2. Continuous beveled champagne brass perimeter edge bezel
+  const boardTableBezel = new THREE.Mesh(roundedBox(8.04, 0.074, 1.84, 0.04), brassGoldMat);
+  boardTableBezel.position.set(-23.0, 0.743, -16.0);
+  furnitureGroup.add(boardTableBezel);
+
+  // 3. Recessed dark floating shadow gap sub-frame
+  const boardTableSubframe = new THREE.Mesh(roundedBox(7.82, 0.03, 1.62, 0.03), blackMat);
+  boardTableSubframe.position.set(-23.0, 0.70, -16.0);
+  furnitureGroup.add(boardTableSubframe);
+
+  // 4. Integrated center brushed brass power & AV connectivity trough (4.2m long)
+  const boardTroughHousing = new THREE.Mesh(roundedBox(4.2, 0.012, 0.28, 0.015), brassGoldMat);
+  boardTroughHousing.position.set(-23.0, 0.782, -16.0);
+  furnitureGroup.add(boardTroughHousing);
+
+  [-1.05, 1.05].forEach((tx) => {
+    const lid = new THREE.Mesh(roundedBox(2.02, 0.008, 0.23, 0.01), brassGoldMat);
+    lid.position.set(-23.0 + tx, 0.784, -16.0);
+    furnitureGroup.add(lid);
+  });
+
+  // 5. Heavy Architectural Trestle Plinth Pedestals with champagne brass collars
   [-2.6, 0, 2.6].forEach((px) => {
-    const leg = new THREE.Mesh(roundedBox(0.18, 0.68, 1.2, 0.04), blackMat);
-    leg.position.set(-23.0 + px, 0.36, -16.0);
-    furnitureGroup.add(leg);
+    // Walnut columnar body
+    const legBody = new THREE.Mesh(roundedBox(0.24, 0.64, 1.12, 0.04), smokedWalnutMat);
+    legBody.position.set(-23.0 + px, 0.35, -16.0);
+    legBody.castShadow = true;
+    furnitureGroup.add(legBody);
+
+    // Top brass collar
+    const legTopCollar = new THREE.Mesh(roundedBox(0.26, 0.035, 1.16, 0.02), brassGoldMat);
+    legTopCollar.position.set(-23.0 + px, 0.68, -16.0);
+    furnitureGroup.add(legTopCollar);
+
+    // Bottom floor brass shoe plinth
+    const legBaseShoe = new THREE.Mesh(roundedBox(0.28, 0.03, 1.18, 0.02), brassGoldMat);
+    legBaseShoe.position.set(-23.0 + px, 0.015, -16.0);
+    legBaseShoe.castShadow = true;
+    furnitureGroup.add(legBaseShoe);
+  });
+
+  // 6. Executive Boardroom Centerpiece: Brushed brass tray with smoked glass carafes
+  const carafeTray = new THREE.Mesh(roundedBox(1.1, 0.014, 0.22, 0.01), brassGoldMat);
+  carafeTray.position.set(-23.0, 0.788, -16.0);
+  carafeTray.castShadow = true;
+  furnitureGroup.add(carafeTray);
+
+  [-0.30, 0.30].forEach((cx) => {
+    const carafe = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.052, 0.16, 16), smokedGlassMat);
+    carafe.position.set(-23.0 + cx, 0.875, -16.0);
+    carafe.castShadow = true;
+    furnitureGroup.add(carafe);
+
+    const carafeCap = new THREE.Mesh(new THREE.SphereGeometry(0.024, 12, 12), smokedWalnutMat);
+    carafeCap.position.set(-23.0 + cx, 0.965, -16.0);
+    furnitureGroup.add(carafeCap);
+  });
+
+  // 7. Executive Leather Desk Blotters for all 12 seating positions
+  [-3.0, -1.8, -0.6, 0.6, 1.8, 3.0].forEach((bx) => {
+    // North seat blotter
+    const northBlotter = new THREE.Mesh(roundedBox(0.56, 0.005, 0.38, 0.01), blackLeatherMat);
+    northBlotter.position.set(-23.0 + bx, 0.782, -16.58);
+    furnitureGroup.add(northBlotter);
+
+    // South seat blotter
+    const southBlotter = new THREE.Mesh(roundedBox(0.56, 0.005, 0.38, 0.01), blackLeatherMat);
+    southBlotter.position.set(-23.0 + bx, 0.782, -15.42);
+    furnitureGroup.add(southBlotter);
   });
 
   // 12 White Cantilever Chairs (6 north, 6 south) matching media_1792165933867.png
@@ -755,46 +1456,80 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   const create3DiscCoffeeCluster = (cx, cz) => {
     const cluster = new THREE.Group();
 
-    // Center disc (highest)
-    const d1 = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.70, 0.045, 32), darkTableMat);
+    // Disc 1: Center disc (highest) - Polished Nero Marquina black marble with champagne brass bezel
+    const d1 = new THREE.Mesh(new THREE.CylinderGeometry(0.70, 0.70, 0.045, 32), neroMarbleMat);
     d1.position.set(0, 0.42, 0);
     d1.castShadow = true;
     cluster.add(d1);
-    const stem1 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.40, 16), brassGoldMat);
+    const d1Bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.708, 0.708, 0.048, 32, 1, true), brassGoldMat);
+    d1Bezel.position.set(0, 0.42, 0);
+    cluster.add(d1Bezel);
+
+    const stem1 = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.40, 24), brassGoldMat);
     stem1.position.set(0, 0.20, 0);
     cluster.add(stem1);
-    const base1 = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.025, 24), brassGoldMat);
+    const collar1 = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.025, 24), brassGoldMat);
+    collar1.position.set(0, 0.38, 0);
+    cluster.add(collar1);
+    const base1 = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.44, 0.025, 24), brassGoldMat);
     base1.position.set(0, 0.015, 0);
     cluster.add(base1);
 
-    // Overlapping disc 2 (left/south)
-    const d2 = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.045, 32), darkTableMat);
+    // Disc 2: Overlapping disc 2 (left/south) - Smoked architectural walnut with champagne brass rim
+    const d2 = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.65, 0.045, 32), smokedWalnutMat);
     d2.position.set(-0.85, 0.36, 0.45);
     d2.castShadow = true;
     cluster.add(d2);
-    const stem2 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.34, 16), brassGoldMat);
+    const d2Bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.658, 0.658, 0.048, 32, 1, true), brassGoldMat);
+    d2Bezel.position.set(-0.85, 0.36, 0.45);
+    cluster.add(d2Bezel);
+
+    const stem2 = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.085, 0.34, 24), brassGoldMat);
     stem2.position.set(-0.85, 0.17, 0.45);
     cluster.add(stem2);
-    const base2 = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.025, 24), brassGoldMat);
+    const collar2 = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.025, 24), brassGoldMat);
+    collar2.position.set(-0.85, 0.32, 0.45);
+    cluster.add(collar2);
+    const base2 = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.40, 0.025, 24), brassGoldMat);
     base2.position.set(-0.85, 0.015, 0.45);
     cluster.add(base2);
 
-    // Overlapping disc 3 (right/south)
-    const d3 = new THREE.Mesh(new THREE.CylinderGeometry(0.60, 0.60, 0.045, 32), darkTableMat);
+    // Disc 3: Overlapping disc 3 (right/south) - Polished Calacatta Gold white marble with champagne brass rim
+    const d3 = new THREE.Mesh(new THREE.CylinderGeometry(0.60, 0.60, 0.045, 32), calacattaMarbleMat);
     d3.position.set(0.80, 0.38, 0.40);
     d3.castShadow = true;
     cluster.add(d3);
-    const stem3 = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.36, 16), brassGoldMat);
+    const d3Bezel = new THREE.Mesh(new THREE.CylinderGeometry(0.608, 0.608, 0.048, 32, 1, true), brassGoldMat);
+    d3Bezel.position.set(0.80, 0.38, 0.40);
+    cluster.add(d3Bezel);
+
+    const stem3 = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.085, 0.36, 24), brassGoldMat);
     stem3.position.set(0.80, 0.18, 0.40);
     cluster.add(stem3);
-    const base3 = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.025, 24), brassGoldMat);
+    const collar3 = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.025, 24), brassGoldMat);
+    collar3.position.set(0.80, 0.34, 0.40);
+    cluster.add(collar3);
+    const base3 = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.38, 0.025, 24), brassGoldMat);
     base3.position.set(0.80, 0.015, 0.40);
     cluster.add(base3);
+
+    // Staging: Stacked architectural design monographs on Disc 3
+    const book1 = new THREE.Mesh(roundedBox(0.24, 0.022, 0.18, 0.01), new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 }));
+    book1.position.set(0.80, 0.413, 0.40);
+    book1.rotation.y = 0.25;
+    book1.castShadow = true;
+    cluster.add(book1);
+
+    const book2 = new THREE.Mesh(roundedBox(0.22, 0.020, 0.16, 0.01), new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.6 }));
+    book2.position.set(0.80, 0.434, 0.40);
+    book2.rotation.y = -0.12;
+    book2.castShadow = true;
+    cluster.add(book2);
 
     cluster.position.set(cx, 0, cz);
     furnitureGroup.add(cluster);
 
-    // Flower vase on center disc
+    // Elegant fluted ceramic vase with lavender orchids on center marble disc
     createFlowerVase(cx, 0.42, cz);
   };
 
@@ -868,8 +1603,7 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   // round coffee table, and facing the panoramic glass window overlooking Seattle city skyline.
   // =========================================================================
   createBlackSofa(0, -43.8, 0, 'Lobby Black Sofa');
-  createRoundCoffeeTable(0, -41.2, 0.75, 0.45);
-  createFlowerVase(0, 0.45, -41.2);
+  createRoundCoffeeTable(0, -41.2, 0.75, 0.45, { isTeaTable: true });
   createPottedPlant(-2.4, -43.5, 'Lobby Ficus Plant');
   createWindowArmchair(2.8, -41.2, -Math.PI / 2, 'Lobby Guest Armchair');
 
@@ -1696,41 +2430,125 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   const createExecutiveSuite = (ex, ez, rotY = 0, name = 'CEO Executive Desk', screenKey = 'exec_screen') => {
     const es = new THREE.Group();
-    // Executive walnut mahogany desk
-    const desk = new THREE.Mesh(roundedBox(2.8, 0.75, 1.3, 0.04), new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.65 }));
-    desk.position.set(0, 0.375, 0);
-    desk.castShadow = true;
-    es.add(desk);
 
-    // Leather blotter mat
-    const blotter = new THREE.Mesh(roundedBox(1.3, 0.02, 0.7, 0.02), blackLeatherMat);
-    blotter.position.set(0, 0.76, 0.05);
+    // 1. Executive Architectural Smoked Walnut Desk
+    // Top slab
+    const deskTop = new THREE.Mesh(roundedBox(2.8, 0.065, 1.3, 0.03), smokedWalnutMat);
+    deskTop.position.set(0, 0.74, 0);
+    deskTop.castShadow = true;
+    es.add(deskTop);
+
+    // Beveled champagne brass perimeter edge bezel
+    const deskBezel = new THREE.Mesh(roundedBox(2.84, 0.07, 1.34, 0.03), brassGoldMat);
+    deskBezel.position.set(0, 0.738, 0);
+    es.add(deskBezel);
+
+    // Architectural side plinths with champagne brass collars & shoes
+    [-1.15, 1.15].forEach((px) => {
+      const plinthBody = new THREE.Mesh(roundedBox(0.24, 0.65, 1.12, 0.03), smokedWalnutMat);
+      plinthBody.position.set(px, 0.35, 0);
+      plinthBody.castShadow = true;
+      es.add(plinthBody);
+
+      const topCollar = new THREE.Mesh(roundedBox(0.26, 0.03, 1.15, 0.02), brassGoldMat);
+      topCollar.position.set(px, 0.69, 0);
+      es.add(topCollar);
+
+      const shoePlinth = new THREE.Mesh(roundedBox(0.27, 0.025, 1.16, 0.02), brassGoldMat);
+      shoePlinth.position.set(px, 0.012, 0);
+      shoePlinth.castShadow = true;
+      es.add(shoePlinth);
+    });
+
+    // Recessed architectural modesty panel with subtle brass inlay
+    const modestyPanel = new THREE.Mesh(roundedBox(2.0, 0.45, 0.03, 0.01), smokedWalnutMat);
+    modestyPanel.position.set(0, 0.45, -0.42);
+    es.add(modestyPanel);
+
+    // Hand-stitched full-grain leather desk blotter
+    const blotter = new THREE.Mesh(roundedBox(1.2, 0.006, 0.65, 0.02), blackLeatherMat);
+    blotter.position.set(0, 0.776, 0.08);
     es.add(blotter);
 
-    // Brass desk lamp
-    const lamp = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.42, 12), brassGoldMat);
-    lamp.position.set(-1.05, 0.96, -0.2);
-    es.add(lamp);
+    // Brushed champagne brass desk lamp
+    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.02, 16), brassGoldMat);
+    lampBase.position.set(-1.05, 0.785, -0.2);
+    es.add(lampBase);
 
-    // Executive Swivel High-Back Chair
+    const lampStem = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.42, 12), brassGoldMat);
+    lampStem.position.set(-1.05, 0.98, -0.2);
+    es.add(lampStem);
+
+    const lampShade = new THREE.Mesh(roundedBox(0.28, 0.04, 0.12, 0.01), brassGoldMat);
+    lampShade.position.set(-1.00, 1.18, -0.15);
+    lampShade.rotation.z = -0.15;
+    es.add(lampShade);
+
+    // 2. High-End Executive Swivel High-Back Chair (Eames Soft-Pad Style)
     const chairGroup = new THREE.Group();
-    const seat = new THREE.Mesh(roundedBox(0.68, 0.12, 0.62, 0.04), blackLeatherMat);
-    seat.position.set(0, 0.46, 0);
-    seat.castShadow = true;
-    chairGroup.add(seat);
 
-    const backrest = new THREE.Mesh(roundedBox(0.64, 0.80, 0.12, 0.04), blackLeatherMat);
-    backrest.position.set(0, 0.86, -0.28);
-    backrest.castShadow = true;
-    chairGroup.add(backrest);
+    // Horizontal channeled cushion ribs on seat
+    [0.16, 0.0, -0.16].forEach((rz) => {
+      const rib = new THREE.Mesh(roundedBox(0.62, 0.048, 0.17, 0.024), blackLeatherMat);
+      rib.position.set(0, 0.435, rz);
+      rib.castShadow = true;
+      chairGroup.add(rib);
+    });
 
-    // Chrome swivel stem
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.40, 12), chromeMat);
-    stem.position.set(0, 0.20, 0);
+    // Seat welt border
+    const seatBorder = new THREE.Mesh(roundedBox(0.66, 0.05, 0.58, 0.02), blackLeatherMat);
+    seatBorder.position.set(0, 0.41, 0);
+    chairGroup.add(seatBorder);
+
+    // High-Back with 4 horizontal pillowed cushions & integrated headrest
+    [0.55, 0.72, 0.89, 1.06].forEach((ry, idx) => {
+      const ribH = idx === 3 ? 0.16 : 0.14;
+      const backRib = new THREE.Mesh(roundedBox(0.60, ribH, 0.065, 0.024), blackLeatherMat);
+      backRib.position.set(0, ry, -0.28);
+      backRib.castShadow = true;
+      chairGroup.add(backRib);
+    });
+
+    // Rear architectural chrome spine
+    const spineL = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.65, 12), chromeMat);
+    spineL.position.set(-0.25, 0.80, -0.32);
+    chairGroup.add(spineL);
+
+    const spineR = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.65, 12), chromeMat);
+    spineR.position.set(0.25, 0.80, -0.32);
+    chairGroup.add(spineR);
+
+    // Padded leather armrests with tubular chrome stanchions
+    [-0.34, 0.34].forEach((ax) => {
+      const armPad = new THREE.Mesh(roundedBox(0.07, 0.028, 0.36, 0.015), blackLeatherMat);
+      armPad.position.set(ax, 0.64, -0.02);
+      chairGroup.add(armPad);
+
+      const armStanchion = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 12), chromeMat);
+      armStanchion.position.set(ax, 0.52, -0.02);
+      chairGroup.add(armStanchion);
+    });
+
+    // Chrome swivel stem & 5-star castor base
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.38, 16), chromeMat);
+    stem.position.set(0, 0.19, 0);
     chairGroup.add(stem);
+
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * Math.PI * 2) / 5;
+      const legArm = new THREE.Mesh(roundedBox(0.03, 0.022, 0.32, 0.008), chromeMat);
+      legArm.position.set(Math.sin(angle) * 0.16, 0.04, Math.cos(angle) * 0.16);
+      legArm.rotation.y = angle;
+      chairGroup.add(legArm);
+
+      const castor = new THREE.Mesh(new THREE.SphereGeometry(0.025, 10, 10), blackMat);
+      castor.position.set(Math.sin(angle) * 0.30, 0.025, Math.cos(angle) * 0.30);
+      chairGroup.add(castor);
+    }
 
     chairGroup.position.set(ex, 0, ez - 0.82);
     chairGroup.rotation.y = rotY;
+    chairGroup.name = 'clickable_chair';
     chairGroup.userData = {
       isChair: true,
       name: `${name} Chair`,
@@ -1764,28 +2582,47 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
 
   // 4. Executive Private Board Meeting Suite (South-East of Wing: -38, -18)
   const execBoard = new THREE.Group();
-  const confTable = new THREE.Mesh(roundedBox(3.4, 0.74, 1.6, 0.06), new THREE.MeshStandardMaterial({ color: 0x1f1914, roughness: 0.55 }));
-  confTable.position.set(0, 0.37, 0);
-  confTable.castShadow = true;
-  execBoard.add(confTable);
 
-  // 6 Conference Leather Chairs
-  [-1.0, 0, 1.0].forEach((cx) => {
-    [1.15, -1.15].forEach((cz, idx) => {
-      const c = new THREE.Mesh(roundedBox(0.58, 0.10, 0.52, 0.04), blackLeatherMat);
-      c.position.set(cx, 0.46, cz);
-      c.castShadow = true;
-      execBoard.add(c);
-      chairsRef.current.push({
-        name: `Executive Board Chair`,
-        pos: new THREE.Vector3(-38 + cx, 0.46, -18 + cz),
-        rot: idx === 0 ? Math.PI : 0,
-        seatHeight: 0.46
-      });
-    });
+  // Smoked walnut conference table with champagne brass bezel
+  const confTableTop = new THREE.Mesh(roundedBox(3.4, 0.065, 1.6, 0.03), smokedWalnutMat);
+  confTableTop.position.set(0, 0.74, 0);
+  confTableTop.castShadow = true;
+  execBoard.add(confTableTop);
+
+  const confTableBezel = new THREE.Mesh(roundedBox(3.44, 0.07, 1.64, 0.03), brassGoldMat);
+  confTableBezel.position.set(0, 0.738, 0);
+  execBoard.add(confTableBezel);
+
+  // Center brass power/AV connectivity trough
+  const confTrough = new THREE.Mesh(roundedBox(1.8, 0.012, 0.24, 0.01), brassGoldMat);
+  confTrough.position.set(0, 0.776, 0);
+  execBoard.add(confTrough);
+
+  // Walnut plinth pedestals with brass collars
+  [-0.9, 0.9].forEach((px) => {
+    const plinth = new THREE.Mesh(roundedBox(0.24, 0.65, 1.05, 0.03), smokedWalnutMat);
+    plinth.position.set(px, 0.35, 0);
+    plinth.castShadow = true;
+    execBoard.add(plinth);
+
+    const collar = new THREE.Mesh(roundedBox(0.26, 0.03, 1.08, 0.02), brassGoldMat);
+    collar.position.set(px, 0.69, 0);
+    execBoard.add(collar);
+
+    const shoe = new THREE.Mesh(roundedBox(0.27, 0.025, 1.10, 0.02), brassGoldMat);
+    shoe.position.set(px, 0.012, 0);
+    shoe.castShadow = true;
+    execBoard.add(shoe);
   });
+
   execBoard.position.set(-38, 0, -18);
   furnitureGroup.add(execBoard);
+
+  // 6 Conference Luxury Black Leather Cantilever Chairs (3 north, 3 south)
+  [-1.0, 0, 1.0].forEach((cx, idx) => {
+    createCantileverChair(-38 + cx, -18 - 1.15, 0, `Exec Board North Chair ${idx + 1}`, blackLeatherMat);
+    createCantileverChair(-38 + cx, -18 + 1.15, Math.PI, `Exec Board South Chair ${idx + 1}`, blackLeatherMat);
+  });
 
   return { ...screensMap, furnitureGroup };
 }
