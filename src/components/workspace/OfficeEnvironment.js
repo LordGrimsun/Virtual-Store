@@ -227,6 +227,36 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
     metalness: 0.05
   });
 
+  // Grand Event Market & Bazaar Artisan Herringbone / Cobblestone Pavers
+  const marketCanvas = document.createElement('canvas');
+  marketCanvas.width = 512;
+  marketCanvas.height = 512;
+  const mkCtx = marketCanvas.getContext('2d');
+  mkCtx.fillStyle = '#dfd5c6'; // Warm limestone paver base
+  mkCtx.fillRect(0, 0, 512, 512);
+  // Cobblestone / Paver grid with warm rustic variance
+  for (let y = 0; y < 512; y += 32) {
+    for (let x = 0; x < 512; x += 32) {
+      const offset = (Math.floor(y / 32) % 2) * 16;
+      const px = (x + offset) % 512;
+      const shade = ((px * 13 + y * 17) % 26) - 13;
+      mkCtx.fillStyle = `rgb(${218 + shade}, ${206 + shade}, ${192 + shade})`;
+      mkCtx.fillRect(px + 1, y + 1, 30, 30);
+      mkCtx.strokeStyle = 'rgba(120, 100, 85, 0.22)';
+      mkCtx.lineWidth = 1.5;
+      mkCtx.strokeRect(px + 0.5, y + 0.5, 31, 31);
+    }
+  }
+  const marketTex = new THREE.CanvasTexture(marketCanvas);
+  marketTex.wrapS = THREE.RepeatWrapping;
+  marketTex.wrapT = THREE.RepeatWrapping;
+  marketTex.repeat.set(8, 16);
+  materials.marketFloorMat = new THREE.MeshStandardMaterial({
+    map: marketTex,
+    roughness: 0.88,
+    metalness: 0.05
+  });
+
   // Mirrored Glass for Fitness Center
   materials.mirrorMat = new THREE.MeshStandardMaterial({
     color: 0x94a3b8,
@@ -454,6 +484,16 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   cabinFloor.receiveShadow = true;
   cabinFloor.name = 'floor_executive_cabins';
   environmentGroup.add(cabinFloor);
+
+  // E. Grand Event Market & Bazaar Hall Floor Overlay (Behind Auditorium: X: 32 to 58, Z: -46 to +8)
+  const marketFloor = new THREE.Mesh(
+    new THREE.BoxGeometry(25.8, 0.42, 53.8),
+    materials.marketFloorMat
+  );
+  marketFloor.position.set(45, -0.19, -19);
+  marketFloor.receiveShadow = true;
+  marketFloor.name = 'floor_market_hall';
+  environmentGroup.add(marketFloor);
 
   // 4. Exact Wall Builder Helpers (Dollhouse Cutaway Height: 2.85m matching Spot desktop reference)
   const WALL_HEIGHT = 2.85;
@@ -981,8 +1021,10 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
 
   // B. WORKSPACE A & COLLABORATION SUITE (X = -14 to +14, Z = 8 to 20) - Fully Enclosed
   // Front Wall along Z = 8 (from X = -14 to +14, total span = 28m)
-  // Central Double Door at X = 0 (outer frame: -1.51 to +1.51)
-  createWall(-7.755, 8, 12.49, WALL_THICKNESS); // Left front wall: -14.0 to -1.51
+  // Symmetrical Glass Double Doors for Second Room at X = -7.755 and Central Concourse Door at X = 0
+  createWall(-11.6325, 8, 4.735, WALL_THICKNESS); // West segment: -14.0 to -9.265
+  createGlassDoubleDoor(-7.755, 8, 0, 'Workspace A West Double Doors'); // Second Room Front Glass Double Doors
+  createWall(-3.8775, 8, 4.735, WALL_THICKNESS); // Middle segment: -6.245 to -1.51
   createDoubleDoor(0, 8, 0, 'Workspace A Concourse Door'); // Central Double Doors from Lounge C concourse
   createWall(7.755, 8, 12.49, WALL_THICKNESS); // Right front wall: +1.51 to +14.0
 
@@ -1263,14 +1305,10 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   westRoad.position.set(-68, -0.04, 0);
   seattleGroup.add(westRoad);
 
-  // Sidewalks directly outside north and south clerestory
+  // Sidewalk directly outside north clerestory
   const northSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 6), sidewalkMat);
   northSidewalk.position.set(0, 0.06, -29.5);
   seattleGroup.add(northSidewalk);
-
-  const southSidewalk = new THREE.Mesh(new THREE.BoxGeometry(120, 0.14, 6), sidewalkMat);
-  southSidewalk.position.set(0, 0.06, 29.5);
-  seattleGroup.add(southSidewalk);
 
   // Broken white lane divider lines on outer roadway streets (Z = -54 and Z = +54)
   for (let x = -60; x <= 60; x += 6) {
@@ -1341,12 +1379,6 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createParkBench(-8, -26.4, Math.PI);
   createParkBench(2, -26.4, Math.PI);
   createParkBench(12, -26.4, Math.PI);
-
-  // Place Park Benches outside south glass wall FACING SOUTH towards courtyard and trees (rotY = 0)
-  createParkBench(-10, 26.4, 0);
-  createParkBench(-4, 26.4, 0);
-  createParkBench(4, 26.4, 0);
-  createParkBench(10, 26.4, 0);
 
   // Helper: Photorealistic Architectural Street Tree with Cast Iron Grate, Mulch, & Branching Foliage
   const createStreetTree = (x, z, scale = 1.0) => {
@@ -1485,12 +1517,6 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   createStreetTree(17, -29.5, 1.05);
   createStreetTree(27, -29.5, 1.15);
 
-  // Trees outside south clerestory along courtyard sidewalk
-  createStreetTree(-16, 29.5, 1.05);
-  createStreetTree(-6, 29.5, 1.12);
-  createStreetTree(6, 29.5, 1.08);
-  createStreetTree(16, 29.5, 1.15);
-
   // 8. Scenic Outer Zone Environment matching Spot Virtual reference (media_1792144700841.png)
   // Procedural Sky Dome with soft clouds
   const skyCanvas = document.createElement('canvas');
@@ -1530,16 +1556,16 @@ export function buildOfficeEnvironment(scene, screenTextures, currentEnvironment
   skyDome.position.y = -5;
   seattleGroup.add(skyDome);
 
-  // Rolling Green Hills on the left horizon (matching media_1792144700841.png)
+  // Rolling Green Hills on far horizon (safe distance, never clips into building)
   const hillMat = new THREE.MeshStandardMaterial({ color: 0x4d7c0f, roughness: 0.95 });
-  const hill1 = new THREE.Mesh(new THREE.ConeGeometry(55, 28, 16), hillMat);
-  hill1.position.set(-85, 4, -65);
-  hill1.scale.set(1.4, 0.7, 1.0);
+  const hill1 = new THREE.Mesh(new THREE.ConeGeometry(50, 26, 16), hillMat);
+  hill1.position.set(-170, 8, -130);
+  hill1.scale.set(1.2, 0.8, 1.0);
   seattleGroup.add(hill1);
 
-  const hill2 = new THREE.Mesh(new THREE.ConeGeometry(65, 34, 16), hillMat);
-  hill2.position.set(-110, 6, -45);
-  hill2.scale.set(1.3, 0.8, 1.2);
+  const hill2 = new THREE.Mesh(new THREE.ConeGeometry(60, 32, 16), hillMat);
+  hill2.position.set(-190, 10, -110);
+  hill2.scale.set(1.1, 0.85, 1.1);
   seattleGroup.add(hill2);
 
   // Low-poly Modern City Skyline in the far distance (Z = -65 to -105, completely outside office)

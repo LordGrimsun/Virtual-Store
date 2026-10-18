@@ -1290,6 +1290,13 @@ export default function WorkspacePlatform({ user, onExit }) {
               executeSitOnChair(clickedObj);
               return;
             }
+            if (clickedObj.name === 'clickable_market_stall' || clickedObj.userData?.isMarketStall) {
+              playSound('click');
+              const toastMsg = clickedObj.userData?.toast || `Market Stall: ${clickedObj.userData?.name || 'Grand Event Bazaar'} 🛍️`;
+              setDonutToast(toastMsg);
+              setTimeout(() => setDonutToast(null), 4000);
+              return;
+            }
             if (clickedObj.name === 'confAudioPuck') {
               playSound('click');
               setIsMuted((prev) => !prev);
@@ -1451,17 +1458,24 @@ export default function WorkspacePlatform({ user, onExit }) {
           detectedRoom = 'Grand Central Atrium';
           detectedSlug = 'grand-atrium';
         } else if (point.z < -8) {
-          // North wing (Boardroom, Meeting Cabin, Auditorium)
+          // North wing (Boardroom, Meeting Cabin, Auditorium, Market Hall)
           if (point.x < -14) {
             detectedRoom = 'Boardroom';
             detectedSlug = 'boardroom';
           } else if (point.x < 6) {
             detectedRoom = 'Meeting Cabin';
             detectedSlug = 'conference-b';
+          } else if (point.x > 32) {
+            detectedRoom = 'Grand Market Hall';
+            detectedSlug = 'market-hall';
           } else {
             detectedRoom = 'Auditorium';
             detectedSlug = 'auditorium';
           }
+        } else if (point.x >= 32 && point.z <= 8) {
+          // Grand Market Hall
+          detectedRoom = 'Grand Market Hall';
+          detectedSlug = 'market-hall';
         } else if (point.x >= 6 && point.z < 4) {
           // Auditorium open atrium stage and tiered seating
           detectedRoom = 'Auditorium';
@@ -1514,6 +1528,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (x >= -26 && x <= -14 && z >= 8 && z <= 14) {
         return x < -19.5 ? 'cubicle-1' : 'cubicle-2';
       }
+      if (x > 32 && z <= 8) return 'market-hall';
       if (z < -8) {
         if (x < -14) return 'boardroom';
         if (x < 6) return 'conference-b';
@@ -1537,6 +1552,7 @@ export default function WorkspacePlatform({ user, onExit }) {
       if (x >= -20 && x <= 20 && z > 20) return 'Arcade & Game Zone';
       if (x < -26 && z < -8) return 'Executive Cabins';
       if (x >= -16 && x <= 16 && z >= -8 && z <= 16) return 'Grand Central Atrium';
+      if (x > 32 && z <= 8) return 'Grand Market Hall';
       if (z < -8) {
         if (x < -14) return 'Boardroom';
         if (x < 6) return 'Meeting Cabin';
@@ -2376,7 +2392,9 @@ export default function WorkspacePlatform({ user, onExit }) {
             obj.name?.startsWith('widget_') ||
             obj.name === 'doughnutPlate' ||
             obj.name === 'appleBowl' ||
-            obj.name === 'confAudioPuck'
+            obj.name === 'confAudioPuck' ||
+            obj.name === 'clickable_market_stall' ||
+            obj.userData?.isMarketStall
           ) {
             isInteractive = true;
             break;
@@ -4512,9 +4530,13 @@ export default function WorkspacePlatform({ user, onExit }) {
             <div title="Executive Cabins" style={{ position: 'absolute', left: '2%', top: '2%', width: '26%', height: '40%', border: '1px dashed #64748b', borderRadius: 2, background: 'rgba(51, 65, 85, 0.3)' }}>
               <span style={{ fontSize: '6px', color: '#94a3b8', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>CABINS</span>
             </div>
-            {/* Auditorium (Top-Right) */}
-            <div title="Auditorium" style={{ position: 'absolute', right: '2%', top: '2%', width: '38%', height: '40%', border: '1px dashed #38bdf8', borderRadius: 2, background: 'rgba(14, 165, 233, 0.12)' }}>
-              <span style={{ fontSize: '6px', color: '#38bdf8', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>AUDITORIUM</span>
+            {/* Auditorium (Center-Right) */}
+            <div title="Auditorium" style={{ position: 'absolute', left: '52%', top: '2%', width: '22%', height: '40%', border: '1px dashed #38bdf8', borderRadius: 2, background: 'rgba(14, 165, 233, 0.12)' }}>
+              <span style={{ fontSize: '5.5px', color: '#38bdf8', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>AUDITORIUM</span>
+            </div>
+            {/* Grand Market Hall (Far-Right behind Auditorium) */}
+            <div title="Grand Event Market Hall" style={{ position: 'absolute', right: '2%', top: '2%', width: '22%', height: '46%', border: '1px dashed #f97316', borderRadius: 2, background: 'rgba(249, 115, 22, 0.15)' }}>
+              <span style={{ fontSize: '5.5px', color: '#fb923c', position: 'absolute', top: '1px', left: '2px', fontWeight: 700 }}>MARKET</span>
             </div>
             {/* Central Atrium */}
             <div title="Grand Central Atrium" style={{ position: 'absolute', left: '34%', top: '38%', width: '28%', height: '26%', border: '1px dotted #475569', borderRadius: 2 }}>

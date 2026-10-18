@@ -157,6 +157,17 @@ export default function CampusMapModal({
       x1: -24, z1: -46, x2: 6, z2: -24,
       target: { x: -9, z: -35, name: 'Chess Terrace' },
       description: 'Giant outdoor chessboard, manicured boxwood hedges & park benches'
+    },
+    {
+      id: 'market-hall',
+      name: 'Grand Event Market & Bazaar Hall',
+      badge: '🛍️',
+      color: '#f97316',
+      bg: 'rgba(249, 115, 22, 0.15)',
+      border: '#fb923c',
+      x1: 32, z1: -46, x2: 58, z2: 8,
+      target: { x: 45, z: -20, name: 'Grand Market Hall' },
+      description: '8 artisan market stalls: electronics, groceries, bakery, boba cafe, swag, books & gathering plaza'
     }
   ];
 
@@ -164,6 +175,7 @@ export default function CampusMapModal({
   const quickRooms = [
     { name: 'Lobby', badge: '🏢', x: -4, z: 4 },
     { name: 'Auditorium', badge: '🎭', x: 20, z: -6 },
+    { name: 'Grand Market Hall', badge: '🛍️', x: 45, z: -20 },
     { name: 'Boardroom', badge: '📊', x: -38, z: -28 },
     { name: 'Collaborative Suite 1', badge: '💡', x: -20, z: 11 },
     { name: 'Collaborative Suite 2', badge: '🛋️', x: -20, z: 17 },

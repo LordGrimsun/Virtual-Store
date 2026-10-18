@@ -2910,6 +2910,647 @@ export function buildOfficeFurniture(scene, screenTextures, chairsRef) {
   createSpotWallScreen(-38, 1.8, -27.8, 4.4, 2.4, 0, 'exec_board_wall_screen', screenTextures?.videoTexture, 'Executive Board Keynote Screen');
   registerObstacle(-38, -18, 1.9, 1.0, 'Executive Board Conference Table');
 
+  // =========================================================================
+  // MEGA-CAMPUS EXPANSION: 5. GRAND EVENT MARKET & BAZAAR HALL (X: 32 to 58, Z: -46 to +8)
+  // Area: 26m x 54m (1,400 m²). Vibrant indoor market with 8 themed mini stalls,
+  // festoon string lighting, central bistro cafe plaza, and obstacle collisions.
+  // =========================================================================
+
+  const createMarketSignTexture = (text, bgColor = '#1e293b', textColor = '#ffffff', accentColor = '#f59e0b') => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 512, 128);
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 6;
+    ctx.strokeRect(4, 4, 504, 120);
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 30px "Inter", "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, 256, 64);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  };
+
+  const timberMat = new THREE.MeshStandardMaterial({ color: 0x5c3a21, roughness: 0.8 });
+  const lightWoodMat = new THREE.MeshStandardMaterial({ color: 0xdfb78c, roughness: 0.7 });
+  const chalkBoardMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.9 });
+  const festoonBulbMat = new THREE.MeshBasicMaterial({ color: 0xfef08a });
+  const festoonWireMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
+
+  // Helper: Create a Stylized Market Stall with Awning, Sign, Shelving, and Themed Merchandise
+  const createMarketStall = (sx, sz, rotY, stallData) => {
+    const stall = new THREE.Group();
+    stall.name = 'clickable_market_stall';
+    stall.userData = {
+      isMarketStall: true,
+      stallId: stallData.id,
+      name: stallData.name,
+      category: stallData.category,
+      desc: stallData.desc,
+      toast: stallData.toast
+    };
+
+    // 1. Rustic Timber Counter Base (4.2m wide x 0.92m high x 1.4m deep)
+    const counterBase = new THREE.Mesh(roundedBox(4.2, 0.92, 1.4, 0.03), timberMat);
+    counterBase.position.y = 0.46;
+    counterBase.castShadow = true;
+    counterBase.receiveShadow = true;
+    counterBase.name = 'clickable_market_stall';
+    counterBase.userData = stall.userData;
+    stall.add(counterBase);
+
+    // Front wood plank paneling slats
+    for (let py = 0.14; py <= 0.82; py += 0.17) {
+      const plank = new THREE.Mesh(roundedBox(4.14, 0.14, 0.03, 0.01), lightWoodMat);
+      plank.position.set(0, py, 0.71);
+      stall.add(plank);
+    }
+
+    // Polished Countertop (White Calacatta or Nero Marquina)
+    const topMat = stallData.counterMat || calacattaMarbleMat;
+    const counterTop = new THREE.Mesh(roundedBox(4.36, 0.06, 1.54, 0.02), topMat);
+    counterTop.position.y = 0.95;
+    counterTop.castShadow = true;
+    counterTop.name = 'clickable_market_stall';
+    counterTop.userData = stall.userData;
+    stall.add(counterTop);
+
+    // 2. Timber Corner Support Posts for Awning
+    [
+      [-2.0, 0.6],
+      [2.0, 0.6],
+      [-2.0, -0.6],
+      [2.0, -0.6]
+    ].forEach(([px, pz]) => {
+      const post = new THREE.Mesh(roundedBox(0.10, 2.4, 0.10, 0.02), timberMat);
+      post.position.set(px, 1.2, pz);
+      post.castShadow = true;
+      stall.add(post);
+    });
+
+    // 3. Striped Fabric Canopy / Awning (pitched forward at 15 degrees)
+    const matA = new THREE.MeshStandardMaterial({ color: stallData.colorA, roughness: 0.85 });
+    const matB = new THREE.MeshStandardMaterial({ color: stallData.colorB, roughness: 0.85 });
+    const stripeCount = 8;
+    const stripeW = 4.4 / stripeCount;
+    for (let i = 0; i < stripeCount; i++) {
+      const sMat = i % 2 === 0 ? matA : matB;
+      const stripe = new THREE.Mesh(roundedBox(stripeW - 0.01, 0.04, 1.7, 0.01), sMat);
+      stripe.position.set(-2.2 + stripeW / 2 + i * stripeW, 2.38, 0.1);
+      stripe.rotation.x = 0.18; // Pitch forward
+      stripe.castShadow = true;
+      stall.add(stripe);
+
+      // Scalloped front valance fringe
+      const valance = new THREE.Mesh(roundedBox(stripeW - 0.01, 0.18, 0.03, 0.01), sMat);
+      valance.position.set(-2.2 + stripeW / 2 + i * stripeW, 2.22, 0.92);
+      stall.add(valance);
+    }
+
+    // 4. Overhead Hanging Signboard
+    const signTex = createMarketSignTexture(stallData.signText, stallData.signBg || '#0f172a', '#ffffff', stallData.signAccent || '#f59e0b');
+    const signMesh = new THREE.Mesh(
+      roundedBox(3.2, 0.55, 0.06, 0.02),
+      new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.4 })
+    );
+    signMesh.position.set(0, 2.14, 0.88);
+    signMesh.castShadow = true;
+    signMesh.name = 'clickable_market_stall';
+    signMesh.userData = stall.userData;
+    stall.add(signMesh);
+
+    // Hanging chains
+    [-1.2, 1.2].forEach((cx) => {
+      const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.22, 6), chromeMat);
+      chain.position.set(cx, 2.45, 0.88);
+      stall.add(chain);
+    });
+
+    // 5. Back Shelving Unit (3 tiers)
+    const backWall = new THREE.Mesh(roundedBox(4.0, 2.2, 0.08, 0.02), timberMat);
+    backWall.position.set(0, 1.1, -0.72);
+    stall.add(backWall);
+
+    [1.15, 1.55, 1.95].forEach((sy) => {
+      const shelf = new THREE.Mesh(roundedBox(3.8, 0.04, 0.32, 0.01), lightWoodMat);
+      shelf.position.set(0, sy, -0.58);
+      shelf.castShadow = true;
+      stall.add(shelf);
+    });
+
+    // 6. Themed 3D Merchandise according to stall type
+    if (stallData.type === 'coffee') {
+      // Chrome dual-group Espresso Machine
+      const espBody = new THREE.Mesh(roundedBox(0.9, 0.45, 0.45, 0.02), chromeMat);
+      espBody.position.set(-1.1, 1.21, 0.1);
+      stall.add(espBody);
+      const espCup = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.03, 0.07, 10), porcelainMat);
+      espCup.position.set(-1.1, 1.48, 0.1);
+      stall.add(espCup);
+
+      // Grinder & Bean Hopper
+      const grinder = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.42, 12), blackLeatherMat);
+      grinder.position.set(-0.45, 1.19, 0.1);
+      stall.add(grinder);
+
+      // Paper cup stacks on counter
+      [-0.1, 0.06, 0.22].forEach((cx, idx) => {
+        const stack = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.04, 0.22 + idx * 0.06, 12), whiteResortMat);
+        stack.position.set(cx, 1.09 + idx * 0.03, 0.2);
+        stall.add(stack);
+      });
+
+      // Syrup pump bottles on back shelf
+      [-1.2, -0.9, -0.6, -0.3, 0.0, 0.3].forEach((bx) => {
+        const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.22, 10), candleAmberMat);
+        bottle.position.set(bx, 1.28, -0.58);
+        stall.add(bottle);
+      });
+
+      // Chalkboard Menu
+      const menu = new THREE.Mesh(roundedBox(0.65, 0.45, 0.04, 0.01), chalkBoardMat);
+      menu.position.set(1.2, 1.22, 0.2);
+      stall.add(menu);
+    } else if (stallData.type === 'bakery') {
+      // Glass display showcase
+      const glassCase = new THREE.Mesh(roundedBox(2.2, 0.45, 0.55, 0.02), smokedGlassMat);
+      glassCase.position.set(-0.4, 1.21, 0.15);
+      stall.add(glassCase);
+
+      // Golden croissants (curved torus)
+      const croissantMat = new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.7 });
+      [-1.1, -0.8, -0.5, -0.2].forEach((cx) => {
+        const croissant = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.03, 8, 12, Math.PI * 1.3), croissantMat);
+        croissant.rotation.x = Math.PI / 2;
+        croissant.position.set(cx, 1.05, 0.15);
+        stall.add(croissant);
+      });
+
+      // Sourdough bread loaves on wooden trays
+      const breadMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.85 });
+      [0.6, 1.1].forEach((bx) => {
+        const tray = new THREE.Mesh(roundedBox(0.42, 0.03, 0.35, 0.01), lightWoodMat);
+        tray.position.set(bx, 0.99, 0.15);
+        stall.add(tray);
+        const loaf = new THREE.Mesh(roundedBox(0.32, 0.12, 0.18, 0.05), breadMat);
+        loaf.position.set(bx, 1.07, 0.15);
+        stall.add(loaf);
+      });
+
+      // Baguettes on back shelf
+      [-1.2, -0.8, -0.4, 0.0, 0.4].forEach((bx) => {
+        const baguette = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.45, 8), croissantMat);
+        baguette.rotation.z = Math.PI / 3;
+        baguette.position.set(bx, 1.72, -0.58);
+        stall.add(baguette);
+      });
+    } else if (stallData.type === 'electronics') {
+      // 2 Ultra-thin Silver Laptops
+      const laptopMat = chromeMat;
+      [-1.0, 0.3].forEach((lx) => {
+        const base = new THREE.Mesh(roundedBox(0.42, 0.02, 0.30, 0.01), laptopMat);
+        base.position.set(lx, 0.99, 0.15);
+        stall.add(base);
+        const screen = new THREE.Mesh(roundedBox(0.42, 0.28, 0.015, 0.01), screenBezelMat);
+        screen.position.set(lx, 1.13, 0.02);
+        screen.rotation.x = -0.22;
+        stall.add(screen);
+        const screenGlow = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.24), screenGlowMat);
+        screenGlow.position.set(lx, 1.13, 0.028);
+        screenGlow.rotation.x = -0.22;
+        stall.add(screenGlow);
+      });
+
+      // VR Headset display stand
+      const vrMat = blackLeatherMat;
+      const vrStand = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.24, 12), chromeMat);
+      vrStand.position.set(1.2, 1.10, 0.15);
+      stall.add(vrStand);
+      const vrGoggles = new THREE.Mesh(roundedBox(0.24, 0.12, 0.16, 0.03), vrMat);
+      vrGoggles.position.set(1.2, 1.25, 0.15);
+      stall.add(vrGoggles);
+      const vrVisor = new THREE.Mesh(roundedBox(0.22, 0.09, 0.02, 0.01), new THREE.MeshBasicMaterial({ color: 0x06b6d4 }));
+      vrVisor.position.set(1.2, 1.25, 0.24);
+      stall.add(vrVisor);
+
+      // RGB Mechanical Keyboards on shelf
+      [-1.2, 0.0, 1.2].forEach((kx) => {
+        const kbd = new THREE.Mesh(roundedBox(0.46, 0.03, 0.16, 0.01), blackLeatherMat);
+        kbd.position.set(kx, 1.58, -0.58);
+        stall.add(kbd);
+      });
+    } else if (stallData.type === 'groceries') {
+      // 3 Tilted Rustic Produce Crates with colorful fruit spheres
+      const fruitColors = [
+        { name: 'apples', col: 0xdc2626 },
+        { name: 'oranges', col: 0xf97316 },
+        { name: 'lemons', col: 0xeab308 }
+      ];
+      [-1.1, 0.0, 1.1].forEach((cx, idx) => {
+        const crate = new THREE.Mesh(roundedBox(0.85, 0.22, 0.55, 0.02), lightWoodMat);
+        crate.position.set(cx, 1.08, 0.15);
+        crate.rotation.x = 0.2;
+        stall.add(crate);
+
+        const fMat = new THREE.MeshStandardMaterial({ color: fruitColors[idx].col, roughness: 0.5 });
+        for (let fx = -0.3; fx <= 0.3; fx += 0.15) {
+          for (let fz = -0.15; fz <= 0.15; fz += 0.15) {
+            const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.055, 8, 8), fMat);
+            fruit.position.set(cx + fx, 1.15 - fz * 0.2, 0.15 + fz);
+            stall.add(fruit);
+          }
+        }
+      });
+
+      // Watermelons on bottom
+      const melonMat = billiardGreenMat;
+      [-1.2, -0.6, 0.6, 1.2].forEach((mx) => {
+        const melon = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), melonMat);
+        melon.scale.set(1.0, 0.85, 1.2);
+        melon.position.set(mx, 0.22, 0.95);
+        stall.add(melon);
+      });
+    } else if (stallData.type === 'apparel') {
+      // Garment display rack with hanging hoodies
+      const rackPipe = chromeMat;
+      const rackTop = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 2.0, 10), rackPipe);
+      rackTop.rotation.z = Math.PI / 2;
+      rackTop.position.set(-0.6, 1.7, -0.58);
+      stall.add(rackTop);
+
+      const clothMats = [
+        new THREE.MeshStandardMaterial({ color: 0x7c3aed, roughness: 0.8 }),
+        new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.8 }),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.8 }),
+        new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 })
+      ];
+      [-1.3, -0.9, -0.5, -0.1].forEach((hx, idx) => {
+        const hoodie = new THREE.Mesh(roundedBox(0.28, 0.45, 0.08, 0.02), clothMats[idx % clothMats.length]);
+        hoodie.position.set(hx, 1.45, -0.58);
+        stall.add(hoodie);
+      });
+
+      // Spot Caps and Backpacks on counter
+      const capMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+      const capLogoMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+      [0.6, 1.2].forEach((cx) => {
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+        cap.position.set(cx, 1.05, 0.15);
+        stall.add(cap);
+        const visor = new THREE.Mesh(roundedBox(0.12, 0.015, 0.10, 0.01), capMat);
+        visor.position.set(cx, 1.05, 0.24);
+        stall.add(visor);
+        const logo = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), capLogoMat);
+        logo.position.set(cx, 1.12, 0.22);
+        stall.add(logo);
+      });
+    } else if (stallData.type === 'streetfood') {
+      // Bamboo steamer baskets
+      const bambooMat = new THREE.MeshStandardMaterial({ color: 0xd4a373, roughness: 0.85 });
+      [-1.1, -0.7].forEach((bx) => {
+        for (let tier = 0; tier < 3; tier++) {
+          const steamer = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.09, 14), bambooMat);
+          steamer.position.set(bx, 1.03 + tier * 0.095, 0.15);
+          stall.add(steamer);
+        }
+      });
+
+      // Ramen bowls with chopsticks
+      const ramenBowlMat = blackLeatherMat;
+      const ramenBrothMat = new THREE.MeshStandardMaterial({ color: 0x9a3412, roughness: 0.3 });
+      [0.0, 0.5].forEach((rx) => {
+        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.08, 0.12, 14), ramenBowlMat);
+        bowl.position.set(rx, 1.04, 0.18);
+        stall.add(bowl);
+        const broth = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.01, 14), ramenBrothMat);
+        broth.position.set(rx, 1.09, 0.18);
+        stall.add(broth);
+        const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.24, 6), lightWoodMat);
+        stick.rotation.z = Math.PI / 3;
+        stick.position.set(rx, 1.11, 0.18);
+        stall.add(stick);
+      });
+
+      // Sushi boat platter
+      const sushiBoat = new THREE.Mesh(roundedBox(0.55, 0.03, 0.25, 0.01), lightWoodMat);
+      sushiBoat.position.set(1.2, 0.99, 0.15);
+      stall.add(sushiBoat);
+      const salmonMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.4 });
+      const riceMat = porcelainMat;
+      [-0.15, 0.0, 0.15].forEach((sx) => {
+        const rice = new THREE.Mesh(roundedBox(0.08, 0.035, 0.045, 0.01), riceMat);
+        rice.position.set(1.2 + sx, 1.02, 0.15);
+        stall.add(rice);
+        const nigiri = new THREE.Mesh(roundedBox(0.085, 0.02, 0.05, 0.01), salmonMat);
+        nigiri.position.set(1.2 + sx, 1.045, 0.15);
+        stall.add(nigiri);
+      });
+    } else if (stallData.type === 'books') {
+      // 30+ Colorful Books on shelves
+      const bookMats = [
+        new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.6 }),
+        new THREE.MeshStandardMaterial({ color: 0xdc2626, roughness: 0.6 }),
+        new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.6 }),
+        new THREE.MeshStandardMaterial({ color: 0x9333ea, roughness: 0.6 }),
+        new THREE.MeshStandardMaterial({ color: 0x0891b2, roughness: 0.6 }),
+        new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.6 })
+      ];
+      [1.18, 1.58, 1.98].forEach((sy) => {
+        for (let bx = -1.6; bx <= 1.6; bx += 0.12) {
+          const bMat = bookMats[Math.floor(Math.abs(bx * 7)) % bookMats.length];
+          const bHeight = 0.22 + ((bx * 3) % 0.06);
+          const book = new THREE.Mesh(roundedBox(0.08, bHeight, 0.22, 0.005), bMat);
+          book.position.set(bx, sy + bHeight / 2, -0.58);
+          stall.add(book);
+        }
+      });
+
+      // Notebook stacks and brass globe on counter
+      const globeBase = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.03, 12), brassGoldMat);
+      globeBase.position.set(1.2, 0.99, 0.15);
+      stall.add(globeBase);
+      const globeArm = new THREE.Mesh(new THREE.TorusGeometry(0.10, 0.01, 8, 16, Math.PI), brassGoldMat);
+      globeArm.position.set(1.2, 1.10, 0.15);
+      stall.add(globeArm);
+      const globeSphere = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.4 }));
+      globeSphere.position.set(1.2, 1.10, 0.15);
+      stall.add(globeSphere);
+    } else if (stallData.type === 'plants') {
+      // Terracotta potted houseplants
+      const potMat = new THREE.MeshStandardMaterial({ color: 0xc2410c, roughness: 0.9 });
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.5 });
+      [-1.2, -0.4, 0.4, 1.2].forEach((px, idx) => {
+        const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.12 + idx * 0.02, 0.08, 0.22, 12), potMat);
+        pot.position.set(px, 1.08, 0.15);
+        stall.add(pot);
+
+        // Branching leaves
+        for (let l = 0; l < 5; l++) {
+          const leaf = new THREE.Mesh(roundedBox(0.14, 0.24, 0.02, 0.01), leafMat);
+          leaf.rotation.z = (l - 2) * 0.35;
+          leaf.rotation.x = (idx % 2 === 0 ? 0.2 : -0.2);
+          leaf.position.set(px + (l - 2) * 0.04, 1.30 + l * 0.03, 0.15);
+          stall.add(leaf);
+        }
+      });
+
+      // Brass watering can
+      const canMat = brassGoldMat;
+      const canBody = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.09, 0.18, 10), canMat);
+      canBody.position.set(0.0, 1.06, 0.25);
+      stall.add(canBody);
+      const canSpout = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.018, 0.28, 8), canMat);
+      canSpout.rotation.z = -Math.PI / 4;
+      canSpout.position.set(0.14, 1.15, 0.25);
+      stall.add(canSpout);
+    }
+
+    stall.position.set(sx, 0, sz);
+    stall.rotation.y = rotY;
+    furnitureGroup.add(stall);
+
+    // Register solid obstacle collision box
+    registerObstacle(sx, sz, 2.3, 1.1, stallData.name);
+    return stall;
+  };
+
+  const marketStallsData = [
+    // Row 1: Z = -38
+    {
+      id: 'coffee_stall',
+      name: 'Artisan Espresso & Boba Tea Bar',
+      category: 'Beverages & Cafe',
+      type: 'coffee',
+      x: 36.5, z: -38, rotY: Math.PI / 2,
+      colorA: 0x881337, colorB: 0xfef3c7,
+      signText: '☕ ARTISAN COFFEE & BOBA',
+      signBg: '#4c0519', signAccent: '#fbbf24',
+      desc: 'Single-origin espresso, oat milk flat whites & brown sugar boba tea',
+      toast: '☕ Ordered a hot Vanilla Oat Latte & Brown Sugar Boba!'
+    },
+    {
+      id: 'bakery_stall',
+      name: 'Gourmet Bakery & Patisserie',
+      category: 'Artisan Food',
+      type: 'bakery',
+      x: 53.5, z: -38, rotY: -Math.PI / 2,
+      colorA: 0xd97706, colorB: 0xffedd5,
+      signText: '🥐 GOURMET BAKERY',
+      signBg: '#78350f', signAccent: '#fde68a',
+      desc: 'Golden flaky butter croissants, sourdough baguettes & artisan pastries',
+      toast: '🥐 Got a warm buttery almond croissant from the bakery!'
+    },
+    // Row 2: Z = -26
+    {
+      id: 'tech_stall',
+      name: 'Cyber Electronics & Smart Gadgets',
+      category: 'Technology',
+      type: 'electronics',
+      x: 36.5, z: -26, rotY: Math.PI / 2,
+      colorA: 0x0284c7, colorB: 0x0f172a,
+      signText: '💻 CYBER GADGETS & TECH',
+      signBg: '#082f49', signAccent: '#38bdf8',
+      desc: 'Ultra-thin laptops, OLED tablets, next-gen VR headsets & RGB mechanical gear',
+      toast: '💻 Testing the Next-Gen VR Headset & Mechanical Keyboard!'
+    },
+    {
+      id: 'groceries_stall',
+      name: 'Organic Farmers Market & Fresh Fruits',
+      category: 'Organic Grocery',
+      type: 'groceries',
+      x: 53.5, z: -26, rotY: -Math.PI / 2,
+      colorA: 0x16a34a, colorB: 0xf0fdf4,
+      signText: '🍎 FARMERS GROCERY MARKET',
+      signBg: '#14532d', signAccent: '#86efac',
+      desc: 'Crisp organic Honeycrisp apples, citrus oranges, farm-fresh berries & melons',
+      toast: '🍎 Picked up a basket of fresh organic apples & citrus!'
+    },
+    // Row 3: Z = -14
+    {
+      id: 'apparel_stall',
+      name: 'Spot Swag & Campus Apparel',
+      category: 'Fashion & Merchandise',
+      type: 'apparel',
+      x: 36.5, z: -14, rotY: Math.PI / 2,
+      colorA: 0x7c3aed, colorB: 0xf5f3ff,
+      signText: '👕 SPOT SWAG & APPAREL',
+      signBg: '#3b0764', signAccent: '#c084fc',
+      desc: 'Limited-edition embroidered hoodies, Spot dad caps, tech backpacks & sneakers',
+      toast: '👕 Picked up an exclusive Spot embroidered team hoodie!'
+    },
+    {
+      id: 'streetfood_stall',
+      name: 'Street Food & Gourmet Ramen / Sushi',
+      category: 'Gourmet Dining',
+      type: 'streetfood',
+      x: 53.5, z: -14, rotY: -Math.PI / 2,
+      colorA: 0xdc2626, colorB: 0x171717,
+      signText: '🍜 STREET FOOD & RAMEN',
+      signBg: '#450a0a', signAccent: '#f87171',
+      desc: 'Steaming tonkotsu ramen bowls, fresh salmon nigiri, and dim sum steamers',
+      toast: '🍜 Savored a hot bowl of spicy tonkotsu ramen!'
+    },
+    // Row 4: Z = -2
+    {
+      id: 'books_stall',
+      name: 'Books, Manga & Tech Stationery Pop-Up',
+      category: 'Books & Gifts',
+      type: 'books',
+      x: 36.5, z: -2, rotY: Math.PI / 2,
+      colorA: 0x0d9488, colorB: 0xccfbf1,
+      signText: '📚 BOOKS & STATIONERY',
+      signBg: '#134e4a', signAccent: '#5eead4',
+      desc: 'Curated technical books, architecture monographs, manga & fountain pens',
+      toast: '📚 Purchased a design monograph & leather-bound journal!'
+    },
+    {
+      id: 'plants_stall',
+      name: 'Botanical Flora & Houseplants Boutique',
+      category: 'Flora & Botanicals',
+      type: 'plants',
+      x: 53.5, z: -2, rotY: -Math.PI / 2,
+      colorA: 0x4d7c0f, colorB: 0xecfccb,
+      signText: '🪴 BOTANICAL & PLANTS',
+      signBg: '#365314', signAccent: '#bef264',
+      desc: 'Lush potted Monsteras, Fiddle Leaf Figs, succulent terrariums & ceramic pots',
+      toast: '🪴 Adopted a miniature Monstera Deliciosa for your desk!'
+    }
+  ];
+
+  marketStallsData.forEach((sData) => {
+    createMarketStall(sData.x, sData.z, sData.rotY, sData);
+  });
+
+  // Central Plaza Planter Tree & Circular Curb at (X = 45, Z = -20)
+  const curbMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.8 });
+  const curb = new THREE.Mesh(new THREE.CylinderGeometry(1.9, 2.0, 0.45, 24), curbMat);
+  curb.position.set(45, 0.22, -20);
+  curb.castShadow = true;
+  curb.receiveShadow = true;
+  furnitureGroup.add(curb);
+
+  const soilMat = new THREE.MeshStandardMaterial({ color: 0x271c19, roughness: 0.95 });
+  const soil = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.75, 0.05, 24), soilMat);
+  soil.position.set(45, 0.44, -20);
+  furnitureGroup.add(soil);
+
+  // Olive / Japanese Maple Tree Trunk & Foliage
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.9 });
+  const treeTrunk = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.20, 2.4, 10), trunkMat);
+  treeTrunk.position.set(45, 1.4, -20);
+  treeTrunk.castShadow = true;
+  furnitureGroup.add(treeTrunk);
+
+  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x3f6212, roughness: 0.85 });
+  const canopy1 = new THREE.Mesh(new THREE.SphereGeometry(1.2, 12, 10), foliageMat);
+  canopy1.position.set(45, 2.7, -20);
+  canopy1.scale.set(1.4, 0.9, 1.4);
+  canopy1.castShadow = true;
+  furnitureGroup.add(canopy1);
+
+  registerObstacle(45, -20, 2.1, 2.1, 'Market Plaza Centerpiece');
+
+  // 4 Parisian Cafe Bistro Tables with Striped Parasols & Chairs
+  const bistroPositions = [
+    { x: 41.5, z: -23.5 },
+    { x: 48.5, z: -23.5 },
+    { x: 41.5, z: -16.5 },
+    { x: 48.5, z: -16.5 }
+  ];
+
+  const createBistroTable = (bx, bz, idx) => {
+    const table = new THREE.Group();
+    // Ornate Cast Iron Pedestal Base
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.04, 16), blackLeatherMat);
+    base.position.y = 0.02;
+    table.add(base);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.70, 12), blackLeatherMat);
+    stem.position.y = 0.37;
+    table.add(stem);
+
+    // Marble Top
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.60, 0.60, 0.04, 20), calacattaMarbleMat);
+    top.position.y = 0.74;
+    top.castShadow = true;
+    table.add(top);
+
+    // Striped Parasol
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.9, 8), brassGoldMat);
+    pole.position.y = 1.65;
+    table.add(pole);
+    const parasolColors = [0x881337, 0x0284c7, 0x16a34a, 0x7c3aed];
+    const parasolMat = new THREE.MeshStandardMaterial({ color: parasolColors[idx % parasolColors.length], roughness: 0.8 });
+    const parasol = new THREE.Mesh(new THREE.ConeGeometry(1.25, 0.40, 12), parasolMat);
+    parasol.position.y = 2.45;
+    parasol.castShadow = true;
+    table.add(parasol);
+
+    table.position.set(bx, 0, bz);
+    furnitureGroup.add(table);
+    registerObstacle(bx, bz, 0.7, 0.7, `Market Bistro Table ${idx + 1}`);
+
+    // 2 Chairs per table (facing each other)
+    createCantileverChair(bx - 0.75, bz, Math.PI / 2, `Market Bistro Table ${idx + 1} Chair A`, whiteChairMat);
+    createCantileverChair(bx + 0.75, bz, -Math.PI / 2, `Market Bistro Table ${idx + 1} Chair B`, whiteChairMat);
+  };
+
+  bistroPositions.forEach((bp, idx) => {
+    createBistroTable(bp.x, bp.z, idx);
+  });
+
+  // Overhead Festoon String Canopy Lights crisscrossing aisle at Y = 2.7m
+  const festoonZ = [-42, -34, -26, -20, -14, -8, -2, 4];
+  festoonZ.forEach((fz) => {
+    // Catenary wire span
+    const wire = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 18, 6), festoonWireMat);
+    wire.rotation.z = Math.PI / 2;
+    wire.position.set(45, 2.7, fz);
+    furnitureGroup.add(wire);
+
+    // 5 warm glowing Edison bulbs per span
+    for (let bx = 38; bx <= 52; bx += 3.5) {
+      const sag = Math.sin(((bx - 36) / 18) * Math.PI) * 0.18;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 8), festoonBulbMat);
+      bulb.position.set(bx, 2.68 - sag, fz);
+      furnitureGroup.add(bulb);
+    }
+  });
+
+  // Grand Market Entrance Illuminated Portal Banner at (X = 32, Z = 6)
+  const portalGrp = new THREE.Group();
+  const portalFrameMat = timberMat;
+  const pPostL = new THREE.Mesh(roundedBox(0.22, 3.2, 0.22, 0.02), portalFrameMat);
+  pPostL.position.set(32, 1.6, 4.4);
+  portalGrp.add(pPostL);
+  const pPostR = new THREE.Mesh(roundedBox(0.22, 3.2, 0.22, 0.02), portalFrameMat);
+  pPostR.position.set(32, 1.6, 7.6);
+  portalGrp.add(pPostR);
+  const pHeader = new THREE.Mesh(roundedBox(0.26, 0.45, 3.6, 0.02), portalFrameMat);
+  pHeader.position.set(32, 3.0, 6.0);
+  portalGrp.add(pHeader);
+
+  const bannerTex = createMarketSignTexture('GRAND EVENT MARKET BAZAAR 🛒✨', '#1e1b4b', '#fef08a', '#fbbf24');
+  const bannerSign = new THREE.Mesh(
+    roundedBox(0.06, 0.42, 3.4, 0.02),
+    new THREE.MeshStandardMaterial({ map: bannerTex, roughness: 0.3 })
+  );
+  bannerSign.position.set(32.12, 3.0, 6.0);
+  bannerSign.name = 'clickable_market_stall';
+  bannerSign.userData = {
+    isMarketStall: true,
+    name: 'Grand Event Market & Bazaar',
+    category: 'Event Gathering Hall',
+    desc: 'Bustling artisan market featuring 8 mini stalls, fresh food, gadgets, swag & boba cafe!',
+    toast: '✨ Welcome to the Grand Event Market & Bazaar Hall!'
+  };
+  portalGrp.add(bannerSign);
+  furnitureGroup.add(portalGrp);
+
   // Register Mega Arcade & Games obstacles
   registerObstacle(-14, 32, 2.8, 2.8, 'Tournament Chessboard');
   registerObstacle(-14, 40, 1.3, 1.8, 'Tournament Billiards Table');
