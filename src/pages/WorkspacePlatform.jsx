@@ -5,7 +5,7 @@ import {
   Users, Bot, MessageSquare, Edit3, Share2, LogOut, Settings,
   Sparkles, Send, Plus, Check, ChevronRight, ChevronDown, X, PhoneCall, VolumeX,
   Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, HelpCircle, Coffee, Compass,
-  Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar,
+  Terminal, Sliders, Camera, Layers, Radio, Play, Smile, MapPin, Calendar, Map,
   TrendingUp, Tv, CheckCircle2, UserCheck, Activity, Eye, Tag,
   Grid, Mail, Clock, Hammer, Search, Home, MoreVertical, MoreHorizontal,
   Paperclip, BarChart3, Crosshair, Globe, Youtube, ArrowLeft, UserPlus
@@ -32,6 +32,7 @@ import SharedBrowserWidget from '../components/workspace/widgets/SharedBrowserWi
 import PollWidget from '../components/workspace/widgets/PollWidget';
 import YouTubeWidget from '../components/workspace/widgets/YouTubeWidget';
 import TimerWidget from '../components/workspace/widgets/TimerWidget';
+import CampusMapModal from '../components/workspace/CampusMapModal';
 
 export default function WorkspacePlatform({ user, onExit }) {
   const mountRef = useRef(null);
@@ -56,6 +57,7 @@ export default function WorkspacePlatform({ user, onExit }) {
   const [buildModeTab, setBuildModeTab] = useState('Floorplan'); // 'Add', 'Floorplan', 'Environment', 'Brand'
   const [currentEnvTheme, setCurrentEnvTheme] = useState('Seattle');
   const [isTopDownBlueprint, setIsTopDownBlueprint] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isTrialBannerOpen, setIsTrialBannerOpen] = useState(true);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isMailOpen, setIsMailOpen] = useState(false);
@@ -827,7 +829,13 @@ export default function WorkspacePlatform({ user, onExit }) {
         setShowNameplates((prev) => !prev);
       }
 
+      if (e.code === 'KeyM') {
+        setIsMapModalOpen((prev) => !prev);
+        playSound('click');
+      }
+
       if (e.code === 'Escape') {
+        setIsMapModalOpen(false);
         if (showcaseScreenRef.current) {
           exitShowcaseScreen();
         }
@@ -1945,7 +1953,9 @@ export default function WorkspacePlatform({ user, onExit }) {
           camera.position.lerp(camTargetPos, 0.08);
           camera.lookAt(sPos.x, sPos.y, sPos.z);
         } else if (isTopDownBlueprint) {
-          camera.position.lerp(new THREE.Vector3(0, 68, 0), 0.08);
+          // Top-down tactical aerial blueprint view
+          // Offset Z slightly to eliminate collinear singularity with camera up vector (0, 1, 0)
+          camera.position.lerp(new THREE.Vector3(0, 72, 0.1), 0.08);
           camera.lookAt(0, 0, 0);
         } else if (playerMeshRef.current) {
           const p = playerMeshRef.current.position;
@@ -3455,15 +3465,16 @@ export default function WorkspacePlatform({ user, onExit }) {
         </div>
       </div>
 
-      {/* 3. Top-Right Floating Viewport Action Buttons (Matching media_1791993853484.png) */}
+      {/* 3. Top-Right Floating Viewport Action Buttons (Single Unified Non-Overlapping Toolbar) */}
       <div style={{
-        position: 'absolute',
+        position: 'fixed',
         top: isTrialBannerOpen ? '48px' : '16px',
         right: isBuildModeOpen ? '336px' : '16px',
         display: 'flex',
+        alignItems: 'center',
         gap: '8px',
-        zIndex: 60,
-        transition: 'right 0.2s ease'
+        zIndex: 90,
+        transition: 'right 0.2s ease, top 0.2s ease'
       }}>
         {/* Zoom In Button */}
         <button
@@ -3478,7 +3489,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             height: '40px',
             borderRadius: '50%',
             background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
@@ -3506,7 +3517,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             height: '40px',
             borderRadius: '50%',
             background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
@@ -3521,7 +3532,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           <ZoomOut size={18} />
         </button>
 
-        {/* Blue Avatar / Focus Avatar View Toggle (media_1791993853484.png) */}
+        {/* Blue Avatar / Focus Avatar View Toggle */}
         <button
           onClick={() => {
             if (showcaseScreenRef.current) {
@@ -3542,7 +3553,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             height: '40px',
             borderRadius: '50%',
             background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
@@ -3557,7 +3568,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           <UserCheck size={18} />
         </button>
 
-        {/* Recenter / GTA San Andreas Chase View Button */}
+        {/* Recenter / GTA Chase Cam View */}
         <button
           onClick={() => {
             if (showcaseScreenRef.current) {
@@ -3572,25 +3583,58 @@ export default function WorkspacePlatform({ user, onExit }) {
             cameraTargetYOffsetRef.current = 0;
             playSound('click');
           }}
-          title="Recenter Camera / GTA Chase Cam (Target Icon)"
+          title="Recenter Camera / GTA Chase Cam"
           style={{
             width: '40px',
             height: '40px',
             borderRadius: '50%',
             background: '#ffffff',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: '#4b5563',
+            color: '#475569',
             transition: 'all 0.15s ease'
           }}
           onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
           onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
         >
           <Compass size={18} />
+        </button>
+
+        {/* Proximity Audio Mode Toggle */}
+        <button
+          onClick={() => {
+            setProximityMode(!proximityMode);
+            setToastMessage(proximityMode ? 'Proximity Audio: Disabled 🌐' : 'Proximity Audio: Enabled 🎧');
+            setTimeout(() => setToastMessage(null), 2500);
+            playSound('click');
+          }}
+          title={proximityMode ? 'Proximity Audio: Active (Click to Disable)' : 'Proximity Audio: Off (Click to Enable)'}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: proximityMode ? '#0284c7' : '#ffffff',
+            border: proximityMode ? '1px solid #0284c7' : '1px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: proximityMode ? '#ffffff' : '#64748b',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (!proximityMode) e.currentTarget.style.background = '#f8fafc';
+          }}
+          onMouseLeave={(e) => {
+            if (!proximityMode) e.currentTarget.style.background = '#ffffff';
+          }}
+        >
+          <Radio size={18} />
         </button>
 
         {/* Showcase Room Screen View Button */}
@@ -3605,7 +3649,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             height: '40px',
             borderRadius: '50%',
             background: showcaseScreenTarget ? '#10b981' : '#ffffff',
-            border: '1px solid #e5e7eb',
+            border: showcaseScreenTarget ? '1px solid #10b981' : '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
@@ -3624,29 +3668,63 @@ export default function WorkspacePlatform({ user, onExit }) {
           <Tv size={18} />
         </button>
 
-        {/* 3x3 Grid Icon: Apps / Blueprint Toggle (media_1791993853484.png) */}
+        {/* Interactive Campus Map & Floorplan Modal Toggle */}
         <button
-          onClick={() => setIsTopDownBlueprint(!isTopDownBlueprint)}
-          title={isTopDownBlueprint ? 'Switch to 3D Perspective View' : 'Switch to Floorplan Blueprint View'}
+          onClick={() => {
+            setIsMapModalOpen(!isMapModalOpen);
+            playSound('click');
+          }}
+          title="Interactive Campus Map & Floorplan Navigation (M)"
           style={{
             width: '40px',
             height: '40px',
             borderRadius: '50%',
-            background: isTopDownBlueprint ? '#0091ff' : '#ffffff',
-            border: '1px solid #e5e7eb',
+            background: isMapModalOpen ? '#0284c7' : '#ffffff',
+            border: isMapModalOpen ? '1px solid #0284c7' : '1px solid #e2e8f0',
             boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            color: isTopDownBlueprint ? '#ffffff' : '#4b5563',
+            color: isMapModalOpen ? '#ffffff' : '#0284c7',
             transition: 'all 0.15s ease'
           }}
           onMouseEnter={(e) => {
-            if (!isTopDownBlueprint) e.currentTarget.style.background = '#f8fafc';
+            if (!isMapModalOpen) e.currentTarget.style.background = '#f0f9ff';
           }}
           onMouseLeave={(e) => {
-            if (!isTopDownBlueprint) e.currentTarget.style.background = '#ffffff';
+            if (!isMapModalOpen) e.currentTarget.style.background = '#ffffff';
+          }}
+        >
+          <Map size={18} />
+        </button>
+
+        {/* Spaces Directory / Rooms Grid Toggle */}
+        <button
+          onClick={() => {
+            setIsSpacesSidebarOpen(!isSpacesSidebarOpen);
+            playSound('click');
+          }}
+          title="Toggle Spaces & Rooms Directory"
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            background: isSpacesSidebarOpen ? '#0284c7' : '#ffffff',
+            border: isSpacesSidebarOpen ? '1px solid #0284c7' : '1px solid #e2e8f0',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            color: isSpacesSidebarOpen ? '#ffffff' : '#475569',
+            transition: 'all 0.15s ease'
+          }}
+          onMouseEnter={(e) => {
+            if (!isSpacesSidebarOpen) e.currentTarget.style.background = '#f8fafc';
+          }}
+          onMouseLeave={(e) => {
+            if (!isSpacesSidebarOpen) e.currentTarget.style.background = '#ffffff';
           }}
         >
           <Grid size={18} />
@@ -4361,24 +4439,51 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         )}
 
-        {/* 7. Interactive Radar Minimap HUD (Bottom-Right) */}
+        {/* 7. Interactive Radar Minimap HUD (Bottom-Right, Elevated Above 52px Dock) */}
         <div className="Platform_minimap" style={{
           position: 'absolute',
-          bottom: '24px',
-          right: '24px',
-          width: '160px',
-          height: '110px',
-          background: 'rgba(15, 23, 42, 0.88)',
+          bottom: '68px',
+          right: isBuildModeOpen ? '336px' : '20px',
+          width: '180px',
+          height: '126px',
+          background: 'rgba(15, 23, 42, 0.92)',
           backdropFilter: 'blur(8px)',
           border: '1px solid #334155',
           borderRadius: '12px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
           padding: '6px',
-          zIndex: 35
+          zIndex: 75,
+          transition: 'right 0.2s ease'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
             <span style={{ fontSize: '9px', fontWeight: 800, color: '#94a3b8', letterSpacing: '0.5px' }}>OFFICE RADAR</span>
-            <span style={{ fontSize: '9px', fontWeight: 700, color: '#22c55e' }}>● 11 ONLINE</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '9px', fontWeight: 700, color: '#22c55e' }}>● 11 ONLINE</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMapModalOpen(true);
+                  playSound('click');
+                }}
+                title="Expand Full Interactive Campus Map (M)"
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid #475569',
+                  color: '#38bdf8',
+                  cursor: 'pointer',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  fontSize: '9px',
+                  fontWeight: 700
+                }}
+              >
+                <Maximize2 size={9} />
+                <span>MAP</span>
+              </button>
+            </div>
           </div>
           <div
             onClick={(e) => {
@@ -4393,7 +4498,7 @@ export default function WorkspacePlatform({ user, onExit }) {
             }}
             style={{
               width: '100%',
-              height: '82px',
+              height: '96px',
               background: '#0f172a',
               borderRadius: '6px',
               position: 'relative',
@@ -4466,14 +4571,14 @@ export default function WorkspacePlatform({ user, onExit }) {
         {/* Spot Desktop Client Build Watermark (media_1791967544189.webp) */}
         <div style={{
           position: 'absolute',
-          bottom: '8px',
-          right: '24px',
+          bottom: '56px',
+          right: isBuildModeOpen ? '336px' : '20px',
           color: '#64748b',
-          fontSize: '11px',
+          fontSize: '10px',
           fontFamily: 'monospace',
           pointerEvents: 'none',
           userSelect: 'none',
-          zIndex: 35
+          zIndex: 74
         }}>
           0.0.1-re1fb443a / 60fps (N) (F)
         </div>
@@ -5297,6 +5402,39 @@ export default function WorkspacePlatform({ user, onExit }) {
           onClose={() => setIsPingPongOpen(false)}
         />
 
+        {/* 14e. Interactive Spot Virtual Campus Floorplan & Navigation Modal */}
+        <CampusMapModal
+          isOpen={isMapModalOpen}
+          onClose={() => setIsMapModalOpen(false)}
+          currentRoom={currentRoom}
+          playerCoord={playerCoord}
+          teammates={avatarsRef.current.map(a => ({
+            name: a.name,
+            role: a.role,
+            x: a.mesh ? a.mesh.position.x : 0,
+            z: a.mesh ? a.mesh.position.z : 0,
+            status: a.status,
+            isPlayer: a.isPlayer
+          }))}
+          isTopDownBlueprint={isTopDownBlueprint}
+          onToggleTopDownBlueprint={() => {
+            setIsTopDownBlueprint(!isTopDownBlueprint);
+            playSound('click');
+          }}
+          onTeleport={(roomName, targetX, targetZ) => {
+            targetPosRef.current.set(targetX, 0, targetZ);
+            isSittingRef.current = false;
+            if (playerMeshRef.current) {
+              playerMeshRef.current.position.set(targetX, 0, targetZ);
+            }
+            setCurrentRoom(roomName);
+            playSound('chime');
+            setToastMessage(`Teleported to ${roomName}! 🚀`);
+            setTimeout(() => setToastMessage(null), 3000);
+            setIsMapModalOpen(false);
+          }}
+        />
+
         {/* Floating Swimming Water HUD Indicator */}
         {isSwimming && (
           <div style={{
@@ -5614,91 +5752,7 @@ export default function WorkspacePlatform({ user, onExit }) {
           </div>
         )}
 
-        {/* 22. Top Right Floating 3D Canvas Controls (media_1792293223270.png) */}
-        <div style={{
-          position: 'fixed',
-          top: isTrialBannerOpen ? '50px' : '16px',
-          right: '24px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          zIndex: 100
-        }}>
-          {/* Proximity Audio Mode Toggle */}
-          <button
-            onClick={() => {
-              setProximityMode(!proximityMode);
-              setToastMessage(proximityMode ? 'Proximity Audio: Disabled 🌐' : 'Proximity Audio: Enabled 🎧');
-              setTimeout(() => setToastMessage(null), 2500);
-            }}
-            title="Toggle Proximity Audio"
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: proximityMode ? '#0284c7' : '#64748b',
-              cursor: 'pointer'
-            }}
-          >
-            <Radio size={20} />
-          </button>
 
-          {/* Center Camera on Player Avatar */}
-          <button
-            onClick={() => {
-              if (playerMeshRef.current) {
-                cameraOrbitAngleRef.current = 0;
-                cameraPitchAngleRef.current = 0.24;
-                cameraDistanceRef.current = 4.2;
-                setToastMessage('Camera centered on avatar 🎯');
-                setTimeout(() => setToastMessage(null), 2500);
-              }
-            }}
-            title="Center on Avatar"
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#475569',
-              cursor: 'pointer'
-            }}
-          >
-            <Crosshair size={20} />
-          </button>
-
-          {/* Spaces Directory / Rooms Grid Toggle */}
-          <button
-            onClick={() => setIsSpacesSidebarOpen(!isSpacesSidebarOpen)}
-            title="Toggle Spaces & Rooms Directory"
-            style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '50%',
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#475569',
-              cursor: 'pointer'
-            }}
-          >
-            <Grid size={20} />
-          </button>
-        </div>
 
         {/* 23. Room Chat Drawer matching media_1792293238602.png ("Message Lobby") */}
         {isRoomChatOpen && (
