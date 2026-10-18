@@ -5007,6 +5007,8 @@ export default function WorkspacePlatform({ user, onExit }) {
                         avatarsRef.current.forEach((av, i) => {
                           if (!av.isPlayer && av.mesh) {
                             av.mesh.position.set(p.x + (i + 1) * 1.2, 0, p.z + 1.2);
+                            av.initialSitting = false;
+                            avatarSystem.applyAvatarPose(av.parts, { isSitting: false });
                           }
                         });
                         playSound('chime');

@@ -1084,37 +1084,37 @@ export function createAvatarSystem() {
       const hipPivot = new THREE.Group();
       hipPivot.position.set(legX, 0.48, 0);
 
-      // Slender Leg Shaft (length = 0.42m, reaching from y = 0.48 down to y = 0.06)
-      const legShaft = new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.42, 0.14), pantsMat);
-      legShaft.position.set(0, -0.21, 0);
+      // Slender Leg Shaft (length = 0.48m, reaching from y = 0.48 down to y = 0.00 so shoe bottoms touch floor)
+      const legShaft = new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.48, 0.14), pantsMat);
+      legShaft.position.set(0, -0.24, 0);
       legShaft.castShadow = true;
       hipPivot.add(legShaft);
 
       // If shorts: lower half of leg reveals skin!
       if (pantsType === 'shorts') {
-        const bareKnee = new THREE.Mesh(new THREE.BoxGeometry(0.114, 0.18, 0.138), skinMat);
-        bareKnee.position.set(0, -0.32, 0);
+        const bareKnee = new THREE.Mesh(new THREE.BoxGeometry(0.114, 0.22, 0.138), skinMat);
+        bareKnee.position.set(0, -0.37, 0);
         hipPivot.add(bareKnee);
       }
 
       // Outer Cargo Pocket with Flap
       if (pantsType === 'cargo_pants') {
         const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.11, 0.09), pantsMat);
-        pocket.position.set(legX < 0 ? -0.065 : 0.065, -0.18, 0);
+        pocket.position.set(legX < 0 ? -0.065 : 0.065, -0.20, 0);
         hipPivot.add(pocket);
 
         const flap = new THREE.Mesh(new THREE.BoxGeometry(0.020, 0.025, 0.092), pantsMat);
-        flap.position.set(legX < 0 ? -0.065 : 0.065, -0.115, 0);
+        flap.position.set(legX < 0 ? -0.065 : 0.065, -0.135, 0);
         hipPivot.add(flap);
       } else if (pantsType === 'cyber_pants') {
         const cyberStripeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff });
-        const cStripe = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.38, 0.02), cyberStripeMat);
-        cStripe.position.set(legX < 0 ? -0.062 : 0.062, -0.21, 0);
+        const cStripe = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.44, 0.02), cyberStripeMat);
+        cStripe.position.set(legX < 0 ? -0.062 : 0.062, -0.24, 0);
         hipPivot.add(cStripe);
       }
 
       const kneePivot = new THREE.Group();
-      kneePivot.position.set(0, -0.42, 0);
+      kneePivot.position.set(0, -0.48, 0);
 
       // Footwear / Shoes
       const shoeGroup = new THREE.Group();
@@ -1359,126 +1359,148 @@ export function createAvatarSystem() {
     scene.add(ayush.mesh);
     list.push(ayush);
 
-    // 2. Sarah - Top-Middle: Long brunette waves, white headphones, pink jacket, winking face
-    const sarah = buildAvatar('Sarah', new THREE.Vector3(-17.2, 0, 4.8), {
+    // 2. Sarah - Focus Cubicle 1: Long brunette waves, white headphones, pink jacket, winking face
+    const sarah = buildAvatar('Sarah', new THREE.Vector3(-22.5, 0.06, 11.8), {
       hairType: 'long_waves_headphones',
       hairColor: 0x3e2723,
       clothing: 'pink_jacket',
       faceType: 'wink',
       gender: 'female',
       isSitting: true,
+      initialRot: Math.PI,
+      seatHeight: 0.46,
       role: 'Product Designer'
     });
     scene.add(sarah.mesh);
     list.push(sarah);
 
-    // 3. Stefan - Bottom-Middle: Electric blue spiky anime hair, cyber jacket with neon cyan trims
-    const stefan = buildAvatar('Stefan', new THREE.Vector3(-1.0, 0, 2.0), {
+    // 3. Stefan - Collab Pod 1: Electric blue spiky anime hair, cyber jacket with neon cyan trims
+    const stefan = buildAvatar('Stefan', new THREE.Vector3(-4.85, 0.06, 14.7), {
       hairType: 'cyber_spikes',
       hairColor: 0x0284c7,
       clothing: 'cyber_jacket',
       faceType: 'smirk',
       isSitting: true,
+      initialRot: 0,
+      seatHeight: 0.46,
       role: 'Audio Engineer'
     });
     scene.add(stefan.mesh);
     list.push(stefan);
 
-    // 4. Wes - Top-Right: Chestnut wavy swept hair, dark sleek sunglasses, black moto jacket
-    const wes = buildAvatar('Wes', new THREE.Vector3(6.0, 0, -19.0), {
+    // 4. Wes - Meeting Cabin: Chestnut wavy swept hair, dark sleek sunglasses, black moto jacket
+    const wes = buildAvatar('Wes', new THREE.Vector3(-1.5, 0.00, -17.5), {
       hairType: 'swept_brown',
       hairColor: 0x6b4226,
       clothing: 'moto_jacket',
       faceType: 'sunglasses',
       hasGlasses: true,
+      initialRot: -Math.PI * 0.75,
+      isSitting: false,
       role: 'Platform Architect'
     });
     scene.add(wes.mesh);
     list.push(wes);
 
-    // 5. Phil - Bottom-Left: Adventurer with tan safari fedora hat, khaki outfit, chest compass badge
-    const phil = buildAvatar('Phil', new THREE.Vector3(4.8, 0, 2.5), {
+    // 5. Phil - Lounge C: Adventurer with tan safari fedora hat, khaki outfit, chest compass badge
+    const phil = buildAvatar('Phil', new THREE.Vector3(-5.4, 0.06, 2.0), {
       hairType: 'safari_hat',
       clothing: 'safari_khaki',
       faceType: 'happy',
       isSitting: true,
+      initialRot: Math.PI / 2,
+      seatHeight: 0.46,
       role: 'Infrastructure'
     });
     scene.add(phil.mesh);
     list.push(phil);
 
-    // 6. Chloe - Bottom-Right: Topknot half-bun + cascading brunette waves, honey mustard dungarees
-    const chloe = buildAvatar('Chloe', new THREE.Vector3(-4.5, 0, 4.2), {
+    // 6. Chloe - Collab Pod 1: Topknot half-bun + cascading brunette waves, honey mustard dungarees
+    const chloe = buildAvatar('Chloe', new THREE.Vector3(-3.15, 0.06, 17.3), {
       hairType: 'topknot_waves',
       clothing: 'overalls',
       faceType: 'happy',
       gender: 'female',
       isSitting: true,
-      initialRot: Math.PI / 2,
+      initialRot: Math.PI,
+      seatHeight: 0.46,
       role: 'Growth & Events'
     });
     scene.add(chloe.mesh);
     list.push(chloe);
 
-    // 7. Andi - Energetic twin buns, coral streetwear bomber
-    const andi = buildAvatar('Andi', new THREE.Vector3(-21.5, 0, 5.8), {
+    // 7. Andi - Focus Cubicle 2: Energetic twin buns, coral streetwear bomber
+    const andi = buildAvatar('Andi', new THREE.Vector3(-16.5, 0.06, 11.8), {
       hairType: 'twin_buns',
       hairColor: 0xfbbf24,
       clothing: 'pink_jacket',
       faceType: 'happy',
       gender: 'female',
       isSitting: true,
+      initialRot: Math.PI,
+      seatHeight: 0.46,
       role: 'Operations'
     });
     scene.add(andi.mesh);
     list.push(andi);
 
-    // 8. Steven - Cyber engineer with silver-frosted crop
-    const steven = buildAvatar('Steven', new THREE.Vector3(17.5, 0, -14.1), {
+    // 8. Steven - Auditorium Tier 2: Cyber engineer with silver-frosted crop
+    const steven = buildAvatar('Steven', new THREE.Vector3(17.5, 0.38, -12.25), {
       hairType: 'cyber_spikes',
       hairColor: 0x94a3b8,
       clothing: 'cyber_jacket',
       isSitting: true,
+      initialRot: Math.PI / 2,
+      seatHeight: 0.78,
       role: 'Frontend Engineer'
     });
     scene.add(steven.mesh);
     list.push(steven);
 
-    // 9. Alex - Streetwear developer with knit beanie & hoodie
-    const alex = buildAvatar('Alex', new THREE.Vector3(22.5, 0, -14.1), {
+    // 9. Alex - Auditorium Tier 1: Streetwear developer with knit beanie & hoodie
+    const alex = buildAvatar('Alex', new THREE.Vector3(21.0, 0.06, -13.75), {
       hatType: 'beanie',
       clothing: 'red_hoodie',
       shirtColor: 0x15803d, // Forest green
       isSitting: true,
+      initialRot: Math.PI / 2,
+      seatHeight: 0.46,
       role: 'WebRTC Specialist'
     });
     scene.add(alex.mesh);
     list.push(alex);
 
-    // 10. Graham - Tactical crop with olive bomber
-    const graham = buildAvatar('Graham', new THREE.Vector3(15.2, 0, -5.2), {
+    // 10. Graham - Window Promenade: Tactical crop with olive bomber
+    const graham = buildAvatar('Graham', new THREE.Vector3(14.5, 0.00, -4.5), {
       clothing: 'red_hoodie',
       shirtColor: 0x166534,
+      initialRot: -Math.PI / 2,
+      isSitting: false,
       role: 'Security & DevOps'
     });
     scene.add(graham.mesh);
     list.push(graham);
 
-    // 11. DevBot (Autonomous AI Agent) - High-tech cyber android mascot
-    const devBot = buildAvatar('DevBot (AI)', new THREE.Vector3(0, 0, -17.0), {
+    // 11. DevBot (Autonomous AI Agent) - Meeting Cabin: High-tech cyber android mascot
+    const devBot = buildAvatar('DevBot (AI)', new THREE.Vector3(-4.0, 0.06, -18.08), {
       status: 'ai-agent',
       faceType: 'ai',
       isSitting: true,
+      initialRot: 0,
+      seatHeight: 0.46,
       role: 'Autonomous Agent'
     });
     scene.add(devBot.mesh);
     list.push(devBot);
 
-    // Apply initial sitting posture
+    // Apply initial sitting posture and strict floor/cushion grounding
     list.forEach((av) => {
       if (av.initialSitting) {
-        av.mesh.position.y = -0.18;
+        av.mesh.position.y = (av.seatHeight || 0.46) - 0.40;
         applyAvatarPose(av.parts, { isSitting: true });
+      } else {
+        av.mesh.position.y = 0.00;
+        applyAvatarPose(av.parts, { isSitting: false });
       }
     });
 
